@@ -1,250 +1,370 @@
-import app from './src/firebaseConfig';
-import { db } from './src/firebaseConfig'; // Firestore database
-
-import {
-  and,
-  collection,
-  doc,
-  getDocs,
-  query,
-  setDoc,
-  where,
-} from "firebase/firestore";
-import { useState } from "react";
-import {
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React from 'react';
+import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 
 export default function App() {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
-  const [location, setLocation] = useState("");
-
-  const [filterName, setFilterName] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterLocation, setFilterLocation] = useState("");
-
-  const [results, setResults] = useState("");
-
-  function clearFields() {
-    setName("");
-    setType("");
-    setLocation("");
-  }
-
-  async function checkIfSznLuvExists(sznluvName, sznluvLocation) {
-    const sznluvRef = collection(db, "sznluv");
-
-    const q = query(
-      sznluvRef,
-      and(
-        where("name", "==", sznluvName),
-        where("location", "==", sznluvLocation)
-      )
-    );
-
-    const querySnapshot = await getDocs(q);
-    console.log(sznluvName);
-
-    if (querySnapshot.empty) {
-      console.log(
-        `No item with the name ${name} exists in the ${location} location.`
-      );
-      return false;
-    } else {
-      console.log("Item with that name already exists in that location.");
-      return true;
-    }
-  }
-
-  async function insertNewSznLuv() {
-    if (await checkIfSznLuvExists(name, location)) {
-      console.log(`Item ${name} already exists in the ${location} location.`);
-      clearFields;
-    } else {
-      console.log(
-        `Item ${name} does not exist yet in the ${location} location - adding item ${name}`
-      );
-      try {
-        const docRef = doc(collection(db, "sznluv"));
-        setDoc(docRef, {
-          name: name,
-          type: type,
-          location: location,
-        });
-        console.log("Document written with ID: ", docRef.id);
-        setName("");
-        setType("");
-        setLocation("");
-        Alert.alert(
-          `Item "${name}" in "${location}" location inserted into db.`
-        );
-      } catch (e) {
-        console.error("Error adding document: ", e);
-      }
-    }
-  }
-
-  async function getSznLuv() {
-    const querySnapshot = await getDocs(collection(db, "sznluv"));
-    let allSznLuvItems = [];
-    querySnapshot.forEach((doc) => {
-      console.log(doc.id, "=>", doc.data());
-      allSznLuvItems.push(
-        `${JSON.stringify(doc.data().name)} // ${JSON.stringify(
-          doc.data().type
-        )} // ${JSON.stringify(doc.data().location)}`
-      );
-    });
-    setResults(allSznLuvItems.join("\n"));
-  }
-
-  async function filterSznLuv() {
-    let whereArr = [];
-    let filteredSznLuv = [];
-
-    if (filterName) {
-      whereArr = [where("name", "==", filterName)];
-    }
-
-    if (filterType) {
-      whereArr = [...whereArr, where("type", "==", filterType)];
-    }
-
-    if (filterLocation) {
-      whereArr = [...whereArr, where("location", "==", filterLocation)];
-    }
-
-    const q = query(collection(db, "sznluv"), ...whereArr);
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      console.log("No matching items found.");
-    } else {
-      querySnapshot.forEach((doc) => {
-        console.log(doc.id, "=>", doc.data());
-        filteredSznLuv.push(
-          `${JSON.stringify(doc.data().name)} in ${JSON.stringify(
-            doc.data().location
-          )}`
-        );
-      });
-      setResults(filteredSznLuv.join("\n"));
-    }
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.titleText}>SznLuv Items</Text>
+    <View style={styles.container}>
+      {/* 
+        StatusBar Configuration
+        - Sets the status bar text to light content for better visibility against dark backgrounds.
+        - Background color matches the header for a seamless blend.
+      */}
+      <StatusBar barStyle="light-content" backgroundColor="#333333" />
 
-      <TouchableOpacity onPress={insertNewSznLuv} style={styles.buttons}>
-        <Text>Add Item</Text>
-      </TouchableOpacity>
+      {/* 
+        Header Container
+        - Holds the entire header section.
+        - Background color set to dark gray to match the desired header appearance.
+      */}
+      <View style={styles.headerContainer}>
+        {/* 
+          SafeAreaView for Header
+          - Ensures header content does not overlap with device notches or status bars.
+          - Applies the same background color as the header container for consistency.
+        */}
+        <SafeAreaView style={styles.safeArea}>
+          {/* 
+            Header Content
+            - Arranged in a row with space between the app name and icons.
+            - Vertically centers all header elements.
+          */}
+          <View style={styles.header}>
+            {/* 
+              App Name ("SznLuv")
+              - Positioned on the left side of the header.
+              - Increased font size and weight for prominence.
+            */}
+            <Text style={styles.headerText}>SznLuv</Text>
 
-      <TextInput
-        style={styles.input}
-        onChangeText={setName}
-        value={name}
-        placeholder="Enter item name"
-      />
+            {/* 
+              Header Icons Container
+              - Holds the heart and user icons.
+              - Arranged horizontally with spacing between each icon.
+            */}
+            <View style={styles.headerIcons}>
+              {/* 
+                Heart Icon Button
+                - Touchable area for the heart icon.
+                - Contains a circular background with a heart symbol.
+              */}
+              <TouchableOpacity style={styles.icon}>
+                <View style={styles.iconCircle}>
+                  <Text style={styles.iconSymbol}>❤️</Text>
+                </View>
+              </TouchableOpacity>
 
-      <TextInput
-        style={styles.input}
-        onChangeText={setType}
-        value={type}
-        placeholder="Enter item type"
-      />
-
-      <TextInput
-        style={styles.input}
-        onChangeText={setLocation}
-        value={location}
-        placeholder="Enter item location"
-      />
-
-      <TouchableOpacity onPress={getSznLuv} style={styles.buttons}>
-        <Text>Show ALL Items</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={filterSznLuv} style={styles.buttons}>
-        <Text>Filter Items</Text>
-      </TouchableOpacity>
-
-      <View style={styles.filterInputs}>
-        <TextInput
-          style={styles.input}
-          onChangeText={setFilterName}
-          value={filterName}
-          placeholder="Enter item name"
-        />
-
-        <TextInput
-          style={styles.input}
-          onChangeText={setFilterType}
-          value={filterType}
-          placeholder="Enter item type"
-        />
-
-        <TextInput
-          style={styles.input}
-          onChangeText={setFilterLocation}
-          value={filterLocation}
-          placeholder="Enter item location"
-        />
+              {/* 
+                User Icon Button
+                - Touchable area for the user icon.
+                - Contains a circular background with a user symbol.
+              */}
+              <TouchableOpacity style={styles.icon}>
+                <View style={styles.iconCircle}>
+                  <Text style={styles.iconSymbol}>👤</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
-      <Text style={styles.outputText}>Output Area</Text>
-      <Text style={styles.resultsText}>{results}</Text>
-    </SafeAreaView>
+
+      {/* 
+        Main Content Area
+        - Contains the greeting, section titles, and seasonal cards.
+        - Padded to separate from the header.
+      */}
+      <View style={styles.content}>
+        {/* 
+          Greeting Text
+          - Displays a personalized greeting to the user.
+          - Bold and large font to serve as the primary focus.
+        */}
+        <Text style={styles.greetingText}>Hello, Vanessa</Text>
+
+        {/* 
+          "In Season" Section Title
+          - Labels the current season section.
+          - Styled to stand out as a secondary heading.
+        */}
+        <Text style={styles.sectionTitle}>In Season</Text>
+
+        {/* 
+          Fall Season Card
+          - Represents the Fall season with associated active ideas.
+          - Styled with a soft orange background and centered content.
+        */}
+        <View style={[styles.card, styles.cardFall]}>
+          {/* 
+            Season Title ("Fall")
+            - Bold and prominent within the card.
+          */}
+          <Text style={styles.cardTitle}>Fall</Text>
+
+          {/* 
+            Active Ideas Badge
+            - Indicates the number of active ideas for the season.
+            - Styled with a semi-transparent background and rounded edges.
+          */}
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>12 Active Ideas</Text>
+          </View>
+        </View>
+
+        {/* 
+          "Upcoming Seasons" Section Title
+          - Labels the upcoming seasons section.
+          - Styled similarly to the "In Season" title for consistency.
+        */}
+        <Text style={styles.sectionTitle}>Upcoming Seasons</Text>
+
+        {/* 
+          Winter Season Card
+          - Represents the Winter season with associated active ideas.
+          - Styled with a soft blue background and centered content.
+        */}
+        <View style={[styles.card, styles.cardWinter]}>
+          <Text style={styles.cardTitle}>Winter</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>2 Active Ideas</Text>
+          </View>
+        </View>
+
+        {/* 
+          Spring Season Card
+          - Represents the Spring season with associated active ideas.
+          - Styled with a soft pink background and centered content.
+        */}
+        <View style={[styles.card, styles.cardSpring]}>
+          <Text style={styles.cardTitle}>Spring</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>5 Active Ideas</Text>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /* 
+    Container Style
+    - Sets up the main container to occupy the full screen.
+    - Applies a warm, soft beige background color.
+  */
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: '#F5F2EF', // Warmer, softer beige
   },
-  titleText: {
-    marginTop: 35,
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: 20,
+
+  /* 
+    Header Container Style
+    - Defines the background color for the header section.
+  */
+  headerContainer: {
+    backgroundColor: '#333333', // Dark gray background for the header
   },
-  input: {
-    height: 50,
-    borderWidth: 2,
-    borderColor: "gray",
-    margin: 10,
-    marginBottom: 10,
-    padding: 10,
+
+  /* 
+    Safe Area Style for Header
+    - Ensures the header content respects safe area boundaries.
+    - Matches the header container's background color.
+  */
+  safeArea: {
+    backgroundColor: '#333333', // Consistent background color
   },
-  buttons: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5cba7",
-    height: 50,
-    padding: 5,
-    margin: 10,
+
+  /* 
+    Header Content Style
+    - Arranges header elements horizontally with space between.
+    - Vertically centers all items within the header.
+    - Adds padding for better spacing within the header.
+  */
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15, // Adjusted padding for vertical spacing
+    paddingHorizontal: 20, // Adjusted padding for horizontal spacing
   },
-  filterInputs: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
+
+  /* 
+    Header Text Style ("SznLuv")
+    - Large, bold font for the app name.
+    - White color to stand out against the dark header background.
+  */
+  headerText: {
+    fontSize: 28, // Increased font size for prominence
+    fontWeight: '700', // Bold font weight
+    color: '#FAF5EF', // White color
+    fontFamily: 'Arial',
   },
-  outputText: {
-    marginTop: 5,
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: 20,
+
+  /* 
+    Header Icons Container Style
+    - Arranges the icons horizontally.
+  */
+  headerIcons: {
+    flexDirection: 'row', // Horizontal arrangement of icons
   },
-  resultsText: {
-    fontSize: 18,
-    padding: 10,
-    backgroundColor: "#e0e0e0",
+
+  /* 
+    Icon Button Style
+    - Adds left margin to space out each icon.
+  */
+  icon: {
+    marginLeft: 20, // Spacing between icons
+  },
+
+  /* 
+    Icon Circle Style
+    - Creates a circular background for each icon.
+    - Dark gray background to match the header aesthetic.
+    - Centers the icon symbol within the circle.
+  */
+  iconCircle: {
+    backgroundColor: '#555555', // Dark gray circle background
+    width: 40, // Width of the circular icon
+    height: 40, // Height of the circular icon
+    borderRadius: 20, // Makes the view circular
+    justifyContent: 'center', // Centers content vertically
+    alignItems: 'center', // Centers content horizontally
+  },
+
+  /* 
+    Icon Symbol Style
+    - Styles the emoji icons within the circular background.
+    - White color for visibility against the dark background.
+  */
+  iconSymbol: {
+    fontSize: 20, // Size of the icon symbol
+    color: '#FFFFFF', // White color for the symbol
+  },
+
+  /* 
+    Content Area Style
+    - Holds the main content below the header.
+    - Adds horizontal padding and top padding to separate from the header.
+  */
+  content: {
+    flex: 1,
+    paddingHorizontal: 20, // Horizontal padding for content
+    paddingTop: 20, // Top padding to separate from the header
+  },
+
+  /* 
+    Greeting Text Style
+    - Large, bold font for the primary greeting.
+    - Centered horizontally for balanced appearance.
+    - Margins added for spacing below the greeting.
+  */
+  greetingText: {
+    fontSize: 36, // Large font size for prominence
+    fontWeight: '800', // Heavier font weight
+    color: '#333333', // Dark gray color
+    marginBottom: 20, // Space below the greeting
+    textAlign: 'center', // Centers the text horizontally
+    fontFamily: 'Arial',
+  },
+
+  /* 
+    Section Title Style ("In Season" & "Upcoming Seasons")
+    - Medium-sized, bold font for section headers.
+    - Warm medium gray color for a softer appearance.
+    - Margins added for vertical spacing between sections.
+    - Centered horizontally for consistency.
+  */
+  sectionTitle: {
+    fontSize: 30, // Increased font size for better readability
+    fontWeight: '700', // Bold font weight
+    color: '#7F7F7F', // Warmer medium gray color
+    marginVertical: 20, // Vertical spacing above and below the title
+    textAlign: 'center', // Centers the text horizontally
+    fontFamily: 'Arial',
+    marginBottom: 20,
+  },
+
+  /* 
+    Card Style (Common for All Seasons)
+    - Adds padding and rounded corners for a modern look.
+    - Vertical margins for spacing between cards.
+    - Centers all content within the card.
+    - Horizontal margins to center the cards within the screen.
+  */
+  card: {
+    padding: 25, // Padding inside the card
+    borderRadius: 20, // Rounded corners for a softer look
+    marginVertical: 10, // Vertical spacing between cards
+    alignItems: 'center', // Centers content horizontally within the card
+    marginHorizontal: 20, // Centers the card within the screen by adding horizontal margins
+  marginBottom: 30,
+  },
+
+  /* 
+    Fall Season Card Style
+    - Specific background color for the Fall season.
+  */
+  cardFall: {
+    backgroundColor: '#FFB27A', // Soft orange for Fall
+  },
+
+  /* 
+    Winter Season Card Style
+    - Specific background color for the Winter season.
+  */
+  cardWinter: {
+    backgroundColor: '#AED7FF', // Light blue for Winter
+  },
+
+  /* 
+    Spring Season Card Style
+    - Specific background color for the Spring season.
+  */
+  cardSpring: {
+    backgroundColor: '#FFCCE5', // Pastel pink for Spring
+  },
+
+  /* 
+    Card Title Style (Season Names)
+    - Large, bold font for the season name.
+    - White color to contrast against the card background.
+    - Centered text for balanced appearance.
+    - Margin below the title to separate from the badge.
+  */
+  cardTitle: {
+    fontSize: 30, // Increased font size for prominence
+    fontWeight: '700', // Bold font weight
+    color: '#FFFFFF', // White color for contrast
+    marginBottom: 15, // Space below the title
+    fontFamily: 'Arial',
+    textAlign: 'center', // Centers the text within the card
+  },
+
+  /* 
+    Badge Style (Active Ideas)
+    - Semi-transparent white background for readability.
+    - Padding and rounded edges for a pill-shaped appearance.
+    - Centers the badge horizontally within the card.
+  */
+  badge: {
+    alignSelf: 'center', // Centers the badge horizontally within the card
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white background
+    paddingVertical: 6, // Vertical padding inside the badge
+    paddingHorizontal: 14, // Horizontal padding inside the badge
+    borderRadius: 15, // Rounded edges for a pill shape
+  },
+
+  /* 
+    Badge Text Style
+    - Medium-sized font for readability.
+    - Dark gray color for contrast against the badge background.
+    - Semi-bold font weight for emphasis.
+    - Centered text within the badge.
+  */
+  badgeText: {
+    fontSize: 16, // Increased font size for better readability
+    color: '#333333', // Dark gray color for text
+    fontWeight: '600', // Semi-bold font weight
+    fontFamily: 'Arial',
+    textAlign: 'center', // Centers the text within the badge
   },
 });
