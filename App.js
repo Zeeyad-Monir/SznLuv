@@ -35,46 +35,42 @@ export default function App() {
     setType("");
     setLocation("");
   }
-  // check if the plant already exists in the specified location
-  async function checkIfPlantExists(plantName, plantLocation) {
-    // Reference to the plants collection
-    const plantsRef = collection(db, "plants");
+
+  async function checkIfSznLuvExists(sznluvName, sznluvLocation) {
+    const sznluvRef = collection(db, "sznluv");
 
     const q = query(
-      plantsRef,
+      sznluvRef,
       and(
-        where("name", "==", plantName),
-        where("location", "==", plantLocation)
+        where("name", "==", sznluvName),
+        where("location", "==", sznluvLocation)
       )
     );
 
-    // Query to find a plant with the given name
     const querySnapshot = await getDocs(q);
-    console.log(plantName);
+    console.log(sznluvName);
 
-    // Check if the query returned any documents
     if (querySnapshot.empty) {
       console.log(
-        `No plant with the name ${name} exists in the ${location} location.`
+        `No item with the name ${name} exists in the ${location} location.`
       );
       return false;
     } else {
-      console.log("Plant with that name already exists in that location.");
+      console.log("Item with that name already exists in that location.");
       return true;
     }
   }
 
-  // function to insert new plant in db
-  async function insertNewPlant() {
-    if (await checkIfPlantExists(name, location)) {
-      console.log(`Plant ${name} already exists in the ${location} location.`);
+  async function insertNewSznLuv() {
+    if (await checkIfSznLuvExists(name, location)) {
+      console.log(`Item ${name} already exists in the ${location} location.`);
       clearFields;
     } else {
       console.log(
-        `Plant ${name} does not exist yet in the ${location} location - adding plant ${name}`
+        `Item ${name} does not exist yet in the ${location} location - adding item ${name}`
       );
       try {
-        const docRef = doc(collection(db, "plants"));
+        const docRef = doc(collection(db, "sznluv"));
         setDoc(docRef, {
           name: name,
           type: type,
@@ -85,7 +81,7 @@ export default function App() {
         setType("");
         setLocation("");
         Alert.alert(
-          `Plant "${name}" in "${location}" location inserted into db.`
+          `Item "${name}" in "${location}" location inserted into db.`
         );
       } catch (e) {
         console.error("Error adding document: ", e);
@@ -93,97 +89,89 @@ export default function App() {
     }
   }
 
-  // function to retrieve all plants from the database
-  async function getPlants() {
-    const querySnapshot = await getDocs(collection(db, "plants"));
-    let allPlants = []; // for display in text box
+  async function getSznLuv() {
+    const querySnapshot = await getDocs(collection(db, "sznluv"));
+    let allSznLuvItems = [];
     querySnapshot.forEach((doc) => {
       console.log(doc.id, "=>", doc.data());
-      allPlants.push(
+      allSznLuvItems.push(
         `${JSON.stringify(doc.data().name)} // ${JSON.stringify(
           doc.data().type
         )} // ${JSON.stringify(doc.data().location)}`
       );
     });
-    setResults(allPlants.join("\n"));
+    setResults(allSznLuvItems.join("\n"));
   }
 
-  // function to filter plants by name, type or location
-  async function filterPlants() {
-    //let plantsRef = collection(db, "plants");
+  async function filterSznLuv() {
     let whereArr = [];
+    let filteredSznLuv = [];
 
-    let filteredPlants = [];
-
-    // conditionally add filters to the query
     if (filterName) {
-      //q = query(plantsRef, and(where("name", "==", filterName)));
       whereArr = [where("name", "==", filterName)];
     }
 
     if (filterType) {
-      //q = query(plantsRef, and(where("type", "==", filterType)));
       whereArr = [...whereArr, where("type", "==", filterType)];
     }
 
     if (filterLocation) {
-      // q = query(plantsRef, and(where("location", "==", filterLocation)));
       whereArr = [...whereArr, where("location", "==", filterLocation)];
     }
 
-    const q = query(collection(db, "plants"), ...whereArr);
+    const q = query(collection(db, "sznluv"), ...whereArr);
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.log("No matching plants found.");
+      console.log("No matching items found.");
     } else {
       querySnapshot.forEach((doc) => {
         console.log(doc.id, "=>", doc.data());
-        filteredPlants.push(
+        filteredSznLuv.push(
           `${JSON.stringify(doc.data().name)} in ${JSON.stringify(
             doc.data().location
           )}`
         );
       });
-      setResults(filteredPlants.join("\n"));
+      setResults(filteredSznLuv.join("\n"));
     }
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.titleText}>My Plants</Text>
+      <Text style={styles.titleText}>SznLuv Items</Text>
 
-      <TouchableOpacity onPress={insertNewPlant} style={styles.buttons}>
-        <Text>Add Plant</Text>
+      <TouchableOpacity onPress={insertNewSznLuv} style={styles.buttons}>
+        <Text>Add Item</Text>
       </TouchableOpacity>
 
       <TextInput
         style={styles.input}
         onChangeText={setName}
         value={name}
-        placeholder="Enter plant name"
+        placeholder="Enter item name"
       />
 
       <TextInput
         style={styles.input}
         onChangeText={setType}
         value={type}
-        placeholder="Enter plant type"
+        placeholder="Enter item type"
       />
 
       <TextInput
         style={styles.input}
         onChangeText={setLocation}
         value={location}
-        placeholder="Enter plant location"
+        placeholder="Enter item location"
       />
 
-      <TouchableOpacity onPress={getPlants} style={styles.buttons}>
-        <Text>Show ALL Plants</Text>
+      <TouchableOpacity onPress={getSznLuv} style={styles.buttons}>
+        <Text>Show ALL Items</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={filterPlants} style={styles.buttons}>
-        <Text>Filter Plants</Text>
+      <TouchableOpacity onPress={filterSznLuv} style={styles.buttons}>
+        <Text>Filter Items</Text>
       </TouchableOpacity>
 
       <View style={styles.filterInputs}>
@@ -191,21 +179,21 @@ export default function App() {
           style={styles.input}
           onChangeText={setFilterName}
           value={filterName}
-          placeholder="Enter plant name"
+          placeholder="Enter item name"
         />
 
         <TextInput
           style={styles.input}
           onChangeText={setFilterType}
           value={filterType}
-          placeholder="Enter plant type"
+          placeholder="Enter item type"
         />
 
         <TextInput
           style={styles.input}
           onChangeText={setFilterLocation}
           value={filterLocation}
-          placeholder="Enter plant location"
+          placeholder="Enter item location"
         />
       </View>
       <Text style={styles.outputText}>Output Area</Text>
@@ -231,7 +219,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "gray",
     margin: 10,
-    marginBotton: 10,
+    marginBottom: 10,
     padding: 10,
   },
   buttons: {
