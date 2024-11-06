@@ -1,3 +1,6 @@
+import app from './src/firebaseConfig';
+import { db } from './src/firebaseConfig'; // Firestore database
+
 import {
   and,
   collection,
@@ -17,7 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { db } from "./src/firebaseConfig.js";
 
 export default function App() {
   const [name, setName] = useState("");
