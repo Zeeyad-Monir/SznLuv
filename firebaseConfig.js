@@ -1,17 +1,11 @@
 // firebaseConfig.js
 
-// Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC5v8gFGRT4Fcuts0oGAxr6_lwShNhT71g",
+  apiKey: "YOUR_API_KEY",
   authDomain: "sznluv.firebaseapp.com",
   projectId: "sznluv",
   storageBucket: "sznluv.firebasestorage.app",
@@ -20,15 +14,12 @@ const firebaseConfig = {
   measurementId: "G-98B5GBKKB7"
 };
 
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
-export const db = getFirestore(app);
-
-// Initialize Firebase Auth
+// Initialize Firebase services
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 
 // Authentication functions
 export const login = (email, password) => {
@@ -42,5 +33,3 @@ export const register = (email, password) => {
 export const logout = () => {
   return signOut(auth);
 };
-
-
