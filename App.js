@@ -10,9 +10,11 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 // Import your screens
 import LoginScreen from './screens/LoginScreen';
+import SignUpScreen from './screens/SignUpScreen'; // Import SignUpScreen
 import HomeScreen from './screens/HomeScreen';
-//import SpinWheelScreen from './screens/SpinWheelScreen';
-//import ProfileScreen from './screens/ProfileScreen';
+// Import other screens as needed
+// import SpinWheelScreen from './screens/SpinWheelScreen';
+// import ProfileScreen from './screens/ProfileScreen';
 
 // Create AuthContext
 export const AuthContext = createContext();
@@ -25,15 +27,13 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
 
   // Handle auth state changes
-  const onAuthStateChangedCallback = (currentUser) => {
-    setUser(currentUser);
-    if (initializing) setInitializing(false);
-  };
-
   useEffect(() => {
-    const subscriber = onAuthStateChanged(auth, onAuthStateChangedCallback);
+    const subscriber = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (initializing) setInitializing(false);
+    });
     return subscriber; // Unsubscribe on unmount
-  }, []);
+  }, [initializing]);
 
   if (initializing) {
     return (
@@ -51,6 +51,11 @@ export default function App() {
         component={LoginScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="SignUp"
+        component={SignUpScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 
@@ -66,8 +71,9 @@ export default function App() {
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Spin the Wheel" component={SpinWheelScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      {/* Uncomment and add other tabs as you implement them */}
+      {/* <Tab.Screen name="Spin the Wheel" component={SpinWheelScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} /> */}
     </Tab.Navigator>
   );
 
