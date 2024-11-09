@@ -17,47 +17,52 @@ import { doc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
 export default function SignUpScreen() {
   const navigation = useNavigation();
+  
+  // States for input fields and loading state
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Shows a spinner during sign-up
 
-  // Email validation using regex
+  // Simple email validation using regex
   const validateEmail = (email) => {
     const regex = /^\S+@\S+\.\S+$/;
     return regex.test(email);
   };
 
-  // Password validation: At least 8 characters, one letter, and one number
+  // Password validation: at least 8 characters, one letter, and one number
   const validatePassword = (password) => {
     const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
     return regex.test(password);
   };
 
-  // Corrected handleSignUp function
+  // Function to handle the sign-up process
   const handleSignUp = async () => {
     const normalizedUsername = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Input Validation
+    // Basic input validation checks
     if (!normalizedUsername || !normalizedEmail || !password) {
       Alert.alert('Error', 'Please fill all fields.');
       return;
     }
 
+    // Validate username length
     if (normalizedUsername.length < 3) {
       Alert.alert('Invalid Username', 'Username must be at least 3 characters long.');
       return;
     }
 
+    // Validate email format
     if (!validateEmail(normalizedEmail)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
+    // Check password strength
     if (!validatePassword(password)) {
       Alert.alert(
         'Weak Password',
@@ -66,20 +71,18 @@ export default function SignUpScreen() {
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // Show loading indicator during registration
 
     try {
-      // First Transaction: Check if username is available
+      // First transaction: check if username is available
       const usernameAvailable = await runTransaction(db, async (transaction) => {
         const usernameRef = doc(db, 'usernames', normalizedUsername);
         const usernameSnap = await transaction.get(usernameRef);
 
         if (usernameSnap.exists()) {
-          // Username is taken
-          return false;
+          return false; // Username is taken
         } else {
-          // Username is available
-          return true;
+          return true; // Username is available
         }
       });
 
@@ -89,20 +92,18 @@ export default function SignUpScreen() {
         return;
       }
 
-      // Register the user with Firebase Authentication
+      // Register the user in Firebase Authentication
       const userCredential = await register(normalizedEmail, password);
       const user = userCredential.user;
 
-      // Second Transaction: Set the username in Firestore
+      // Second transaction: save the username in Firestore
       await runTransaction(db, async (transaction) => {
         const usernameRef = doc(db, 'usernames', normalizedUsername);
         const usernameSnap = await transaction.get(usernameRef);
 
         if (usernameSnap.exists()) {
-          // Username was taken after the first check
-          throw new Error('Username already taken');
+          throw new Error('Username already taken'); // Handle conflict if username is taken
         } else {
-          // Set the username
           transaction.set(usernameRef, {
             uid: user.uid,
             email: normalizedEmail,
@@ -111,9 +112,11 @@ export default function SignUpScreen() {
       });
 
       Alert.alert('Success', 'Account created successfully!');
-      navigation.navigate('Login');
+      navigation.navigate('Login'); // Redirect to login screen
     } catch (error) {
       console.error('Registration failed:', error);
+      
+      // Error handling with specific messages
       let errorMessage = 'Registration failed. Please try again.';
       if (error.message === 'Username already taken') {
         errorMessage = 'This username is already taken. Please choose another one.';
@@ -126,7 +129,7 @@ export default function SignUpScreen() {
       }
       Alert.alert('Registration Failed', errorMessage);
     } finally {
-      setLoading(false);
+      setLoading(false); // Hide loading indicator
     }
   };
 
@@ -134,9 +137,11 @@ export default function SignUpScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9F4EF" />
 
+      {/* App logo and tagline */}
       <Text style={styles.logoText}>SznLuv</Text>
       <Text style={styles.taglineText}>The right date, every season</Text>
 
+      {/* Username input field */}
       <TextInput
         style={styles.input}
         placeholder="Username"
@@ -148,6 +153,7 @@ export default function SignUpScreen() {
       />
       {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
 
+      {/* Email input field */}
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -160,6 +166,7 @@ export default function SignUpScreen() {
       />
       {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
+      {/* Password input field */}
       <TextInput
         style={styles.input}
         placeholder="Password"
@@ -171,15 +178,17 @@ export default function SignUpScreen() {
       />
       {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
+      {/* Sign-Up button */}
       <TouchableOpacity
         style={styles.button}
         onPress={handleSignUp}
-        disabled={loading}
+        disabled={loading} // Disable button when loading
         accessibilityLabel="Sign Up"
       >
         {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
       </TouchableOpacity>
 
+      {/* Link to Login screen */}
       <TouchableOpacity
         style={styles.loginContainer}
         onPress={() => navigation.navigate('Login')}
@@ -194,16 +203,17 @@ export default function SignUpScreen() {
   );
 }
 
+// Style definitions for SignUpScreen components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F4EF',
+    backgroundColor: '#F9F4EF', // Light background for a welcoming feel
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
+    paddingHorizontal: 30, // Padding for inner content
   },
   logoText: {
-    fontSize: 32,
+    fontSize: 32, // Large font for logo
     fontWeight: 'bold',
     color: '#000000',
     marginBottom: 8,
@@ -211,12 +221,12 @@ const styles = StyleSheet.create({
   },
   taglineText: {
     fontSize: 16,
-    color: '#4F4F4F',
-    marginBottom: 40,
+    color: '#4F4F4F', // Grey for contrast
+    marginBottom: 40, // Space below tagline
     textAlign: 'center',
   },
   input: {
-    width: '100%',
+    width: '100%', // Full width input
     backgroundColor: '#FFFFFF',
     borderColor: '#000000',
     borderWidth: 1,
@@ -224,25 +234,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000000',
+    color: '#000000', // Black text for readability
     marginBottom: 20,
   },
   errorText: {
     width: '100%',
-    color: '#FF0000',
+    color: '#FF0000', // Red for error text
     marginBottom: 10,
     textAlign: 'left',
   },
   button: {
     width: '100%',
-    backgroundColor: '#000000',
+    backgroundColor: '#000000', // Black button for contrast
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White text for button
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -255,7 +265,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loginLinkText: {
-    color: '#FFC0CB',
+    color: '#FFC0CB', // Pink for emphasis
     textDecorationLine: 'underline',
   },
 });
