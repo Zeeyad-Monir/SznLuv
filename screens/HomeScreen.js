@@ -25,27 +25,28 @@ export default function HomeScreen() {
   const [summerCount, setSummerCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Fetch username and seasonal date counts when the screen loads
   useEffect(() => {
     const fetchUserName = async () => {
       try {
-        // Fetch the username from Firestore based on the user's UID
+        // Get the current user's name from Firestore
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
           setUserName(userSnap.data().username);
         } else {
-          setUserName('User');
+          setUserName('User'); // Fallback if no username is found
         }
       } catch (error) {
         console.error('Error fetching user name:', error);
-        setUserName('User');
+        setUserName('User'); // Fallback on error
       }
     };
 
     const fetchDateCounts = async () => {
       try {
-        // Fetch the number of active date ideas for each season
+        // Fetch active date ideas count for each season
         const fallDatesRef = doc(db, 'dateCounts', 'fall');
         const fallDatesSnap = await getDoc(fallDatesRef);
         setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 0);
@@ -63,6 +64,7 @@ export default function HomeScreen() {
         setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 0);
       } catch (error) {
         console.error('Error fetching date counts:', error);
+        // Reset counts to 0 if error occurs
         setFallCount(0);
         setWinterCount(0);
         setSpringCount(0);
@@ -70,17 +72,18 @@ export default function HomeScreen() {
       }
     };
 
+    // Combined function to load both username and seasonal data
     const fetchData = async () => {
       await fetchUserName();
       await fetchDateCounts();
-      setLoading(false);
+      setLoading(false); // Stop loading once data is fetched
     };
 
     fetchData();
   }, []);
 
   if (loading) {
-    // Show a loading indicator while fetching data
+    // Loading indicator while data is being fetched
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -90,22 +93,22 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with logo and icons */}
       <View style={styles.header}>
-        {/* Logo */}
+        {/* App logo */}
         <View style={styles.logoContainer}>
           <Text style={styles.logoText}>SznLuv</Text>
           <View style={styles.logoUnderline} />
         </View>
-        {/* Icons */}
+        {/* Profile and favorites icons */}
         <View style={styles.iconContainer}>
-          {/* Heart Icon Placeholder */}
+          {/* Favorites screen link */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
             <View style={styles.iconCircle}>
               <Text style={styles.iconPlaceholderText}>♡</Text>
             </View>
           </TouchableOpacity>
-          {/* Profile Icon Placeholder */}
+          {/* Profile screen link */}
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
             <View style={styles.iconCircle}>
               <Text style={styles.iconPlaceholderText}>☺</Text>
@@ -114,17 +117,17 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Main Content Scrollable */}
+      {/* Main scrollable content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Greeting Section */}
+        {/* Welcome message for the user */}
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingText}>Hello, {userName}</Text>
           <Text style={styles.subtext}>In Season</Text>
         </View>
 
-        {/* Seasonal Blocks */}
+        {/* Seasonal blocks with active date counts */}
         <View style={styles.seasonContainer}>
-          {/* Fall Block */}
+          {/* Fall block with navigation to fall dates */}
           <TouchableOpacity
             style={[styles.seasonBlock, { backgroundColor: '#FF7F50' }]}
             onPress={() => navigation.navigate('FallDatesScreen')}
@@ -135,7 +138,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Winter Block */}
+          {/* Winter block with navigation to winter dates */}
           <TouchableOpacity
             style={[styles.seasonBlock, { backgroundColor: '#ADD8E6' }]}
             onPress={() => navigation.navigate('WinterDatesScreen')}
@@ -146,7 +149,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Spring Block */}
+          {/* Spring block with navigation to spring dates */}
           <TouchableOpacity
             style={[styles.seasonBlock, { backgroundColor: '#FFB6C1' }]}
             onPress={() => navigation.navigate('SpringDatesScreen')}
@@ -157,7 +160,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Summer Block */}
+          {/* Summer block with navigation to summer dates */}
           <TouchableOpacity
             style={[styles.seasonBlock, { backgroundColor: '#FFD700' }]}
             onPress={() => navigation.navigate('SummerDatesScreen')}
@@ -168,7 +171,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Bottom Padding to Avoid Content Being Cut Off */}
+          {/* Bottom padding for scroll view */}
           <View style={{ height: 20 }} />
         </View>
       </ScrollView>
@@ -176,94 +179,89 @@ export default function HomeScreen() {
   );
 }
 
+// Style definitions for HomeScreen components
 const styles = StyleSheet.create({
-  // Overall container
   container: {
     flex: 1,
-    backgroundColor: '#FFF5E4', // Light cream background
+    backgroundColor: '#FFF5E4', // Light cream background color
   },
-  // Header section
   header: {
-    height: 64, // Approximately 4rem
-    backgroundColor: '#333333', // Dark charcoal
+    height: 64, // Height for header section
+    backgroundColor: '#333333', // Dark background for contrast
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20, // 1.25rem
+    paddingHorizontal: 20, // Spacing inside header
   },
   logoContainer: {
     flexDirection: 'column',
   },
   logoText: {
-    fontSize: 24, // 1.5rem
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White logo text
   },
   logoUnderline: {
-    height: 2, // 0.125rem
-    backgroundColor: '#C1A9E5', // Lavender underline
-    marginTop: 4, // 0.25rem spacing below text
+    height: 2, // Thin underline under logo
+    backgroundColor: '#C1A9E5', // Lavender color underline
+    marginTop: 4, // Space between text and underline
   },
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconCircle: {
-    width: 32, // 2rem diameter
+    width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Icon background
     borderWidth: 1,
-    borderColor: '#A9A9A9', // Thin dark grey outline
+    borderColor: '#A9A9A9', // Dark border
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10, // 0.625rem spacing between icons
+    marginLeft: 10, // Space between icons
   },
   iconPlaceholderText: {
-    fontSize: 20, // 1.25rem diameter
-    color: '#333333',
+    fontSize: 20,
+    color: '#333333', // Icon text color
   },
-  // Scrollable content container
   scrollContent: {
-    paddingBottom: 20, // Bottom padding to prevent content cutoff
+    paddingBottom: 20, // Prevent content cutoff
   },
-  // Greeting section
   greetingContainer: {
-    marginTop: 40, // 2.5rem
-    paddingHorizontal: 20, // Consistent horizontal padding
+    marginTop: 40, // Vertical space for greeting
+    paddingHorizontal: 20, // Horizontal padding for greeting
   },
   greetingText: {
-    fontSize: 32, // 2rem
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#333333', // Dark grey
+    color: '#333333', // Greeting text color
   },
   subtext: {
-    marginTop: 10, // 0.625rem spacing
-    fontSize: 14, // 0.875rem
-    color: '#888888', // Light grey
+    marginTop: 10, // Space below greeting
+    fontSize: 14,
+    color: '#888888', // Subtext color
   },
-  // Seasonal blocks container
   seasonContainer: {
-    paddingHorizontal: 20, // Consistent horizontal padding
-    marginTop: 24, // 1.5rem spacing from greeting section
+    paddingHorizontal: 20, // Padding for season blocks
+    marginTop: 24, // Space above season blocks
   },
   seasonBlock: {
     width: '100%',
-    height: 160, // Approximately 10rem
-    borderRadius: 12, // 0.75rem rounded corners
-    marginBottom: 24, // 1.5rem vertical spacing between blocks
-    paddingHorizontal: 20, // Consistent horizontal padding within block
-    paddingTop: 20, // 1.25rem top padding
+    height: 160,
+    borderRadius: 12, // Rounded corners for blocks
+    marginBottom: 24, // Space between blocks
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   seasonTitle: {
-    fontSize: 28, // 1.75rem
+    fontSize: 28,
     fontWeight: 'bold',
   },
   seasonSubtitle: {
-    marginTop: 10, // 0.625rem spacing below title
-    fontSize: 14, // 0.875rem
+    marginTop: 10, // Space below season title
+    fontSize: 14,
   },
-  // Loading indicator
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

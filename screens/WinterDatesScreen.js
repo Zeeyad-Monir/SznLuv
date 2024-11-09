@@ -35,7 +35,7 @@ export default function WinterDatesScreen({ navigation }) {
     },
   ];
 
-  // Handler for Disclaimer Banner Press (optional)
+  // Disclaimer alert for out-of-season dates
   const handleDisclaimerPress = () => {
     Alert.alert(
       "Winter Dates Not in Season",
@@ -46,35 +46,35 @@ export default function WinterDatesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Bar */}
+      {/* Top navigation bar with logo and icons */}
       <View style={styles.navigationBar}>
-        {/* Logo Text Wrapped in TouchableOpacity */}
+        {/* App logo, returns to Home */}
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Text style={styles.logoText}>SznLuv</Text>
         </TouchableOpacity>
         <View style={styles.navigationIcons}>
-          {/* Heart Icon */}
+          {/* Favorites screen icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
             <Icon name="favorite-border" size={24} color="#ADD8E6" style={styles.navIcon} />
           </TouchableOpacity>
-          {/* Profile Icon */}
+          {/* Profile screen icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
             <Icon name="person-outline" size={24} color="#ADD8E6" style={styles.navIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Disclaimer Banner */}
+      {/* Banner for out-of-season warning */}
       <TouchableOpacity style={styles.disclaimerBanner} onPress={handleDisclaimerPress}>
         <Text style={styles.disclaimerText}>⚠️ Winter Dates are not in season.</Text>
       </TouchableOpacity>
 
-      {/* Content */}
+      {/* Main scrollable content section */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Main Title */}
+        {/* Main title for winter dates */}
         <Text style={styles.mainTitle}>Winter Dates</Text>
 
-        {/* Categories */}
+        {/* Category listings */}
         {categories.map((category, index) => (
           <View key={index} style={styles.categorySection}>
             <Text style={styles.categoryTitle}>{category.title}</Text>
@@ -84,12 +84,11 @@ export default function WinterDatesScreen({ navigation }) {
                 style={styles.dateSpotCard}
                 onPress={() => navigation.navigate('DateSpotDetail', { spot })}
               >
-                {/* Favorite Heart Icon */}
+                {/* Favorite button for each spot */}
                 <TouchableOpacity
                   style={styles.cardHeartIcon}
                   onPress={() => {
-                    // Handle favorite toggle here
-                    // For example, update state or call a function to favorite the spot
+                    // Toggle favorite alert for spot
                     Alert.alert(
                       "Favorite",
                       `You have favorited ${spot.name}`,
@@ -100,13 +99,13 @@ export default function WinterDatesScreen({ navigation }) {
                   <Icon name="favorite-border" size={20} color="#A9A9A9" />
                 </TouchableOpacity>
 
-                {/* Text Container */}
+                {/* Spot name and address */}
                 <View style={styles.cardTextContainer}>
                   <Text style={styles.dateSpotName}>{spot.name}</Text>
                   <Text style={styles.addressText}>{spot.address}</Text>
                 </View>
 
-                {/* Arrow Icon */}
+                {/* Arrow icon to go to detailed view */}
                 <TouchableOpacity
                   style={styles.cardArrowIcon}
                   onPress={() => navigation.navigate('DateSpotDetail', { spot })}
@@ -122,21 +121,22 @@ export default function WinterDatesScreen({ navigation }) {
   );
 }
 
+// Style definitions for WinterDatesScreen components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B9CCEC', // Soft light blue for winter
+    backgroundColor: '#B9CCEC', // Soft light blue for winter theme
   },
   navigationBar: {
-    height: 60,
-    backgroundColor: '#333333', // Dark charcoal
+    height: 60, // Height for top navigation
+    backgroundColor: '#333333', // Dark background
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 15, // Padding for navigation items
   },
   logoText: {
-    color: '#B9CCEC', // Light blue
+    color: '#B9CCEC', // Light blue for logo text
     fontSize: 22,
     fontWeight: 'bold',
   },
@@ -144,71 +144,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   navIcon: {
-    marginLeft: 15,
+    marginLeft: 15, // Space between icons
   },
   disclaimerBanner: {
-    backgroundColor: '#FF6347', // Coral red
+    backgroundColor: '#FF6347', // Coral red for warning banner
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   disclaimerText: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White text for visibility
     fontSize: 16,
     fontWeight: 'bold',
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 20, // Padding for main content
+    paddingBottom: 20, // Bottom padding to avoid cutoff
   },
   mainTitle: {
-    color: '#FFFFFF', // White
+    color: '#FFFFFF', // White main title text
     fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 20,
+    marginVertical: 20, // Vertical space for title
   },
   categorySection: {
-    marginBottom: 40,
+    marginBottom: 40, // Space between categories
   },
   categoryTitle: {
-    color: '#F5F5F5', // Light cream or soft gray
+    color: '#F5F5F5', // Soft gray for category title
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 15,
+    marginBottom: 15, // Space below category title
   },
   dateSpotCard: {
-    backgroundColor: '#FFF8F0', // Soft cream
-    borderRadius: 14,
+    backgroundColor: '#FFF8F0', // Soft cream for spot card
+    borderRadius: 14, // Rounded corners
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    marginBottom: 18,
-    // Shadow for iOS
-    shadowColor: '#000',
+    marginBottom: 18, // Space between cards
+    shadowColor: '#000', // Shadow color for iOS
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    // Elevation for Android
-    elevation: 2,
+    elevation: 2, // Elevation for Android shadow
   },
   cardHeartIcon: {
-    marginRight: 16,
+    marginRight: 16, // Space between heart icon and text
   },
   cardTextContainer: {
     flex: 1,
   },
   dateSpotName: {
-    color: '#000000', // Black
+    color: '#000000', // Black for spot name
     fontSize: 22,
     fontWeight: 'bold',
   },
   addressText: {
-    color: '#696969', // Medium gray
+    color: '#696969', // Medium gray for address
     fontSize: 16,
-    marginTop: 4,
+    marginTop: 4, // Space below spot name
   },
   cardArrowIcon: {
-    marginLeft: 16,
+    marginLeft: 16, // Space between text and arrow icon
   },
 });
