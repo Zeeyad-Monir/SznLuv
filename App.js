@@ -4,7 +4,6 @@ import React, { useState, useEffect, createContext } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -12,16 +11,16 @@ import { onAuthStateChanged } from 'firebase/auth';
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import HomeScreen from './screens/HomeScreen';
-// Import other screens as needed
 import FallDatesScreen from './screens/FallDatesScreen';
 import WinterDatesScreen from './screens/WinterDatesScreen';
 import SpringDatesScreen from './screens/SpringDatesScreen';
+import SummerDatesScreen from './screens/SummerDatesScreen';
+// Removed FavoritesScreen, ProfileScreen, DateSpotDetailScreen imports
 
 // Create AuthContext
 export const AuthContext = createContext();
 
 const Stack = createStackNavigator();
-// const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -56,6 +55,8 @@ export default function App() {
               <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
               <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
               <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
+              <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
+              {/* Removed Favorites, Profile, and DateSpotDetail Screens */}
               {/* Add other screens as needed */}
             </>
           ) : (
