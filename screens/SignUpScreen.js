@@ -25,17 +25,19 @@ export default function SignUpScreen() {
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Email validation using regex
   const validateEmail = (email) => {
     const regex = /^\S+@\S+\.\S+$/;
     return regex.test(email);
   };
 
+  // Password validation: At least 8 characters, one letter, and one number
   const validatePassword = (password) => {
-    // At least 8 characters, one letter and one number
     const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
     return regex.test(password);
   };
 
+  // Corrected handleSignUp function
   const handleSignUp = async () => {
     const normalizedUsername = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
@@ -67,21 +69,45 @@ export default function SignUpScreen() {
     setLoading(true);
 
     try {
+      // First Transaction: Check if username is available
+      const usernameAvailable = await runTransaction(db, async (transaction) => {
+        const usernameRef = doc(db, 'usernames', normalizedUsername);
+        const usernameSnap = await transaction.get(usernameRef);
+
+        if (usernameSnap.exists()) {
+          // Username is taken
+          return false;
+        } else {
+          // Username is available
+          return true;
+        }
+      });
+
+      if (!usernameAvailable) {
+        Alert.alert('Username Taken', 'This username is already taken. Please choose another one.');
+        setLoading(false);
+        return;
+      }
+
+      // Register the user with Firebase Authentication
+      const userCredential = await register(normalizedEmail, password);
+      const user = userCredential.user;
+
+      // Second Transaction: Set the username in Firestore
       await runTransaction(db, async (transaction) => {
         const usernameRef = doc(db, 'usernames', normalizedUsername);
         const usernameSnap = await transaction.get(usernameRef);
 
         if (usernameSnap.exists()) {
+          // Username was taken after the first check
           throw new Error('Username already taken');
+        } else {
+          // Set the username
+          transaction.set(usernameRef, {
+            uid: user.uid,
+            email: normalizedEmail,
+          });
         }
-
-        const userCredential = await register(normalizedEmail, password);
-        const user = userCredential.user;
-
-        transaction.set(usernameRef, {
-          uid: user.uid,
-          email: normalizedEmail,
-        });
       });
 
       Alert.alert('Success', 'Account created successfully!');

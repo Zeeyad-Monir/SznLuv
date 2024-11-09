@@ -8,60 +8,102 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login } from '../firebaseConfig';
+import { db } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
-  const [username, setUsername] = useState(''); // Assuming username is used for authentication
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Implement your login logic here
-    // If using email instead of username, adjust accordingly
-    login(username, password).catch((error) => {
-      console.error(error);
-    });
+  // Email validation using regex
+  const validateEmail = (email) => {
+    const regex = /^\S+@\S+\.\S+$/;
+    return regex.test(email);
+  };
+
+  const handleLogin = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Input Validation
+    if (!normalizedEmail || !password) {
+      Alert.alert('Error', 'Please fill all fields.');
+      return;
+    }
+
+    if (!validateEmail(normalizedEmail)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await login(normalizedEmail, password);
+      // Successful login handled by auth state listener in App.js
+    } catch (error) {
+      console.error('Login failed:', error);
+      let errorMessage = 'Login failed. Please try again.';
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'User not found. Please check your credentials.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'The email address is invalid.';
+      }
+      Alert.alert('Login Failed', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* StatusBar configuration */}
       <StatusBar barStyle="dark-content" backgroundColor="#F9F4EF" />
 
-      {/* App Logo */}
       <Text style={styles.logoText}>SznLuv</Text>
       <Text style={styles.taglineText}>The right date, every season</Text>
 
-      {/* Username Input */}
       <TextInput
         style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#FFFFFF"
-        value={username}
-        onChangeText={setUsername}
+        placeholder="Email"
+        placeholderTextColor="#AAAAAA"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        accessibilityLabel="Email"
       />
 
-      {/* Password Input */}
       <TextInput
         style={styles.input}
         placeholder="Password"
-        placeholderTextColor="#FFFFFF"
+        placeholderTextColor="#AAAAAA"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
+        accessibilityLabel="Password"
       />
 
-      {/* Login Button */}
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+        accessibilityLabel="Login"
+      >
+        {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Login</Text>}
       </TouchableOpacity>
 
-      {/* Sign-Up Link */}
       <TouchableOpacity
         style={styles.signupContainer}
         onPress={() => navigation.navigate('SignUp')}
+        accessibilityLabel="Navigate to Sign Up"
       >
         <Text style={styles.signupText}>
           Don't have an account?{' '}
@@ -75,7 +117,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F4EF', // Light, soft beige background
+    backgroundColor: '#F9F4EF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 30,
@@ -83,40 +125,38 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#000000', // Black color
-    fontFamily: 'sans-serif',
+    color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
   },
   taglineText: {
     fontSize: 16,
-    color: '#4F4F4F', // Softer black color
-    fontFamily: 'sans-serif',
+    color: '#4F4F4F',
     marginBottom: 40,
     textAlign: 'center',
   },
   input: {
     width: '100%',
-    backgroundColor: '#FFFFFF', // White background for inputs
-    borderColor: '#000000', // Black border
+    backgroundColor: '#FFFFFF',
+    borderColor: '#000000',
     borderWidth: 1,
-    borderRadius: 8, // Rounded edges
+    borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000000', // Black text inside
+    color: '#000000',
     marginBottom: 20,
   },
   button: {
     width: '100%',
-    backgroundColor: '#000000', // Black background
-    paddingVertical: 12, // Padding for clickable area
-    borderRadius: 10, // Rounded corners
+    backgroundColor: '#000000',
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonText: {
-    color: '#FFFFFF', // White text
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -125,11 +165,11 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: 14,
-    color: '#000000', // Black color for regular text
+    color: '#000000',
     textAlign: 'center',
   },
   signupLinkText: {
-    color: '#FFC0CB', // Soft pink color
+    color: '#FFC0CB',
     textDecorationLine: 'underline',
   },
 });

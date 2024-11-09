@@ -4,23 +4,24 @@ import React, { useState, useEffect, createContext } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 
 // Import your screens
 import LoginScreen from './screens/LoginScreen';
-import SignUpScreen from './screens/SignUpScreen'; // Import SignUpScreen
+import SignUpScreen from './screens/SignUpScreen';
 import HomeScreen from './screens/HomeScreen';
 // Import other screens as needed
-// import SpinWheelScreen from './screens/SpinWheelScreen';
-// import ProfileScreen from './screens/ProfileScreen';
+import FallDatesScreen from './screens/FallDatesScreen';
+import WinterDatesScreen from './screens/WinterDatesScreen';
+import SpringDatesScreen from './screens/SpringDatesScreen';
 
 // Create AuthContext
 export const AuthContext = createContext();
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+// const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -43,44 +44,28 @@ export default function App() {
     );
   }
 
-  // Stack Navigator for Authentication
-  const AuthStack = () => (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SignUp"
-        component={SignUpScreen}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
-  );
-
-  // Bottom Tab Navigator for Main Screens
-  const MainTabs = () => (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { backgroundColor: '#333333' },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#BBBBBB',
-        tabBarLabelStyle: { fontSize: 14, fontWeight: '600' },
-      }}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      {/* Uncomment and add other tabs as you implement them */}
-      {/* <Tab.Screen name="Spin the Wheel" component={SpinWheelScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} /> */}
-    </Tab.Navigator>
-  );
-
+  // Stack Navigator for Authentication and Main App
   return (
     <AuthContext.Provider value={{ user, setUser }}>
       <NavigationContainer>
-        {user ? <MainTabs /> : <AuthStack />}
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {user ? (
+            // Main App Screens for authenticated users
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
+              <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
+              <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
+              {/* Add other screens as needed */}
+            </>
+          ) : (
+            // Authentication Screens for unauthenticated users
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+            </>
+          )}
+        </Stack.Navigator>
       </NavigationContainer>
     </AuthContext.Provider>
   );
