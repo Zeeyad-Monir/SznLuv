@@ -8,7 +8,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-} from 'react-native';
+  Image,
+} 
+
+from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../App';
 import { auth, db } from '../firebaseConfig';
@@ -93,25 +96,39 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+
       {/* Header with logo and icons */}
       <View style={styles.header}>
         {/* App logo */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>SznLuv</Text>
-          <View style={styles.logoUnderline} />
-        </View>
-        {/* Profile and favorites icons */}
+        <Text style={styles.logoText}>SznLuv</Text>
         <View style={styles.iconContainer}>
           {/* Favorites screen link */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconPlaceholderText}>♡</Text>
+              <Image
+                source={require('../assets/FAVOURITES.png')}  // Adjusted path for Favorites image
+                style={styles.iconImage} // Make sure to style the image
+              />
             </View>
           </TouchableOpacity>
+
           {/* Profile screen link */}
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconPlaceholderText}>☺</Text>
+              <Image
+                source={require('../assets/PROFILE.png')}  // Adjusted path for Profile image
+                style={styles.iconImage} // Make sure to style the image
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Custom icon link */}
+          <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
+            <View style={styles.iconCircle}>
+              <Image
+                source={require('../assets/SPINTHEWHEEL.png')}  // Adjusted path for SpinTheWheel image
+                style={styles.iconImage} // Make sure to style the image
+              />
             </View>
           </TouchableOpacity>
         </View>
@@ -189,7 +206,7 @@ const styles = StyleSheet.create({
   },
   
   header: {
-    height: 130, // Height for header section
+    height: 130, // Adjust the height of the header to fit all elements
     backgroundColor: '#333333', // Dark background for contrast
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,19 +218,24 @@ const styles = StyleSheet.create({
     marginTop: 45,
     flexDirection: 'column',
   },
+
   logoText: {
+    marginTop: 45,
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF', // White logo text
   },
+
   logoUnderline: {
     height: 2, // Thin underline under logo
     backgroundColor: '#C1A9E5', // Lavender color underline
     marginTop: 4, // Space between text and underline
   },
+
+
   iconContainer: {
     marginTop: 45,
-    flexDirection: 'row',
+    flexDirection: 'row', // Align the icons horizontally
     alignItems: 'center',
   },
   
@@ -228,6 +250,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 10, // Space between icons
   },
+  
   iconPlaceholderText: {
     fontSize: 20,
     color: '#333333', // Icon text color
@@ -278,4 +301,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  iconImage: {
+    width: 43,
+    height: 43,
+    resizeMode: 'contain',
+  },
+  
 });
