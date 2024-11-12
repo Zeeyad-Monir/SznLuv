@@ -1,4 +1,5 @@
 // screens/FallDatesScreen.js
+// IN PROGRESS
 
 import React, { useState } from 'react';
 import {
@@ -8,7 +9,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
+  
 } from 'react-native';
+
 // Make sure to install react-native-vector-icons and link it properly
 import Icon from 'react-native-vector-icons/MaterialIcons';
 

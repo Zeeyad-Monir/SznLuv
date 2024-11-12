@@ -1,4 +1,5 @@
 // screens/SignUpScreen.js
+// STYLING DONE
 
 import React, { useState } from 'react';
 import {

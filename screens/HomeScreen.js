@@ -1,4 +1,6 @@
+
 // screens/HomeScreen.js
+// IN PROGRESS
 
 import React, { useEffect, useState, useContext } from 'react';
 import {
@@ -95,44 +97,52 @@ export default function HomeScreen() {
   }
 
   return (
+    
     <View style={styles.container}>
-
       {/* Header with logo and icons */}
+
+
       <View style={styles.header}>
         {/* App logo */}
         <Text style={styles.logoText}>SznLuv</Text>
         <View style={styles.iconContainer}>
+          
           {/* Favorites screen link */}
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <View style={styles.iconCircle}>
+          <View style={styles.iconCircle}>
+            <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
               <Image
-                source={require('../assets/FAVOURITES.png')}  // Adjusted path for Favorites image
+                source={require('../assets/FAVOURITES.png')}
                 style={styles.iconImage} // Make sure to style the image
               />
-            </View>
-          </TouchableOpacity>
-
+            </TouchableOpacity>
+          </View>
+          
           {/* Profile screen link */}
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-            <View style={styles.iconCircle}>
+          <View style={styles.iconCircle}>
+            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
               <Image
-                source={require('../assets/PROFILE.png')}  // Adjusted path for Profile image
+                source={require('../assets/PROFILE.png')}
                 style={styles.iconImage} // Make sure to style the image
               />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
 
           {/* Custom icon link */}
-          <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
-            <View style={styles.iconCircle}>
+          <View style={styles.iconCircle}>
+            <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
               <Image
-                source={require('../assets/SPINTHEWHEEL.png')}  // Adjusted path for SpinTheWheel image
+                source={require('../assets/SPINTHEWHEEL.png')}
                 style={styles.iconImage} // Make sure to style the image
               />
-            </View>
-          </TouchableOpacity>
-        </View>
+            </TouchableOpacity>
+          </View>
+          
+
       </View>
+    </View>
+
+
+
 
       {/* Main scrollable content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -307,5 +317,5 @@ const styles = StyleSheet.create({
     height: 43,
     resizeMode: 'contain',
   },
-  
+
 });

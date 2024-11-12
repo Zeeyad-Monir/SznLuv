@@ -1,21 +1,51 @@
 // screens/Favourites.js
 
+// IN PROGRESS- not much changed
+
 import * as React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 const Favourites = () => {
   	return (
-    		<View style={styles.container}>
-      			{/* Top Navigation */}
-      			<View style={styles.topNav}>
-        				<Text style={styles.appTitle}>SznLuv</Text>
-        				<View style={styles.iconContainer}>
-          					<Image style={styles.icon} source={{ uri: "your_icon1_url_here" }} />
-          					<Image style={styles.icon} source={{ uri: "your_icon2_url_here" }} />
-          					<Image style={styles.icon} source={{ uri: "your_icon3_url_here" }} />
-        				</View>
-      			</View>
-      			
+			<View style={styles.container}>
+		
+			  {/* Header with logo and icons */}
+			  <View style={styles.header}>
+				{/* App logo */}
+				<Text style={styles.logoText}>SznLuv</Text>
+				<View style={styles.iconContainer}>
+				  {/* Favorites screen link */}
+				  <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
+					<View style={styles.iconCircle}>
+					  <Image
+						source={require('../assets/FAVOURITES.png')}  // Adjusted path for Favorites image
+						style={styles.iconImage} // Make sure to style the image
+					  />
+					</View>
+				  </TouchableOpacity>
+		
+				  {/* Profile screen link */}
+				  <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+					<View style={styles.iconCircle}>
+					  <Image
+						source={require('../assets/PROFILE.png')}  // Adjusted path for Profile image
+						style={styles.iconImage} // Make sure to style the image
+					  />
+					</View>
+				  </TouchableOpacity>
+		
+				  {/* Custom icon link */}
+				  <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
+					<View style={styles.iconCircle}>
+					  <Image
+						source={require('../assets/SPINTHEWHEEL.png')}  // Adjusted path for SpinTheWheel image
+						style={styles.iconImage} // Make sure to style the image
+					  />
+					</View>
+				  </TouchableOpacity>
+				</View>
+			  </View>
+
       			{/* Header Text */}
       			<View style={styles.header}>
         				<Text style={styles.title}>Favourites</Text>
@@ -122,6 +152,12 @@ const styles = StyleSheet.create({
     		width: 10,
     		height: 10,
   	},
+
+	  iconImage: {
+		width: 43,
+		height: 43,
+		resizeMode: 'contain',
+	  },
 });
 
 export default Favourites;

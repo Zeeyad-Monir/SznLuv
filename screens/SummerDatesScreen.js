@@ -1,3 +1,8 @@
+
+
+// screens/SummerDatesScreen.js
+// IN PROGRESS- not much changed
+
 // screens/SummerDatesScreen.js
 
 import React, { useState } from 'react';
@@ -8,12 +13,36 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
+  
 } from 'react-native';
+
+
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
-export default function SummerDatesScreen() {
+
+const Header = () => {
   const navigation = useNavigation();
+  return (
+    <View style={styles.header}>
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoText}>SznLuv</Text>
+        <View style={styles.logoUnderline} />
+      </View>
+      <View style={styles.iconContainer}>
+        <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
+          <Icon name="favorite" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <Icon name="person" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+export default function SummerDatesScreen() {
   const [favorites, setFavorites] = useState({});
 
   const toggleFavorite = (spotName) => {
@@ -41,25 +70,8 @@ export default function SummerDatesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with logo and icons */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>SznLuv</Text>
-          <View style={styles.logoUnderline} />
-        </View>
-        <View style={styles.iconContainer}>
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.iconPlaceholderText}>♡</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.iconPlaceholderText}>☺</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Use HomeScreen Header */}
+      <Header />
 
       <View style={styles.warningBanner}>
         <Text style={styles.warningText}>⚠️ Summer Dates are not in season.</Text>
@@ -116,9 +128,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
+    paddingTop: 45, // Align with the HomeScreen header position
   },
   logoContainer: {
-    marginTop: 45,
     flexDirection: 'column',
   },
   logoText: {
@@ -132,24 +144,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   iconContainer: {
-    marginTop: 45,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#A9A9A9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  iconPlaceholderText: {
-    fontSize: 20,
-    color: '#333333',
   },
   warningBanner: {
     backgroundColor: '#FF6347',
@@ -216,3 +212,4 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
 });
+

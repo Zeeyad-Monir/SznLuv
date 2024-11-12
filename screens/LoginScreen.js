@@ -1,4 +1,5 @@
 // screens/LoginScreen.js
+// STYLING DONE
 
 import React, { useState } from 'react';
 import {
@@ -10,6 +11,7 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login } from '../firebaseConfig';

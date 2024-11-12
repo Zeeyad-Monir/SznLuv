@@ -1,4 +1,6 @@
+
 // screens/WinterDatesScreen.js
+// IN PROGRESS- not much changed
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
