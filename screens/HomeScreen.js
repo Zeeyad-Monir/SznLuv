@@ -49,19 +49,19 @@ export default function HomeScreen() {
         // Fetch active date ideas count for each season
         const fallDatesRef = doc(db, 'dateCounts', 'fall');
         const fallDatesSnap = await getDoc(fallDatesRef);
-        setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 0);
+        setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 12);
 
         const winterDatesRef = doc(db, 'dateCounts', 'winter');
         const winterDatesSnap = await getDoc(winterDatesRef);
-        setWinterCount(winterDatesSnap.exists() ? winterDatesSnap.data().count : 0);
+        setWinterCount(winterDatesSnap.exists() ? winterDatesSnap.data().count : 4);
 
         const springDatesRef = doc(db, 'dateCounts', 'spring');
         const springDatesSnap = await getDoc(springDatesRef);
-        setSpringCount(springDatesSnap.exists() ? springDatesSnap.data().count : 0);
+        setSpringCount(springDatesSnap.exists() ? springDatesSnap.data().count : 2);
 
         const summerDatesRef = doc(db, 'dateCounts', 'summer');
         const summerDatesSnap = await getDoc(summerDatesRef);
-        setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 0);
+        setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 2);
       } catch (error) {
         console.error('Error fetching date counts:', error);
         // Reset counts to 0 if error occurs
@@ -121,7 +121,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Welcome message for the user */}
         <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>Hello, {userName}</Text>
+          <Text style={styles.greetingText}>Hello, {userName}!</Text>
           <Text style={styles.subtext}>In Season</Text>
         </View>
 
@@ -129,7 +129,7 @@ export default function HomeScreen() {
         <View style={styles.seasonContainer}>
           {/* Fall block with navigation to fall dates */}
           <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#FF7F50' }]}
+            style={[styles.seasonBlock, { backgroundColor: '#FF8657' }]}
             onPress={() => navigation.navigate('FallDatesScreen')}
           >
             <Text style={[styles.seasonTitle, { color: '#FFFFFF' }]}>Fall</Text>
@@ -138,9 +138,11 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
+          <Text style={styles.subtext}>Upcoming Seasons</Text>
+
           {/* Winter block with navigation to winter dates */}
           <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#ADD8E6' }]}
+            style={[styles.seasonBlock, { backgroundColor: '#B9CCEC', marginTop: 28 }]}
             onPress={() => navigation.navigate('WinterDatesScreen')}
           >
             <Text style={[styles.seasonTitle, { color: '#333333' }]}>Winter</Text>
@@ -151,7 +153,7 @@ export default function HomeScreen() {
 
           {/* Spring block with navigation to spring dates */}
           <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#FFB6C1' }]}
+            style={[styles.seasonBlock, { backgroundColor: '#FF9FD2' }]}
             onPress={() => navigation.navigate('SpringDatesScreen')}
           >
             <Text style={[styles.seasonTitle, { color: '#333333' }]}>Spring</Text>
@@ -162,7 +164,7 @@ export default function HomeScreen() {
 
           {/* Summer block with navigation to summer dates */}
           <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#FFD700' }]}
+            style={[styles.seasonBlock, { backgroundColor: '#F8DD74' }]}
             onPress={() => navigation.navigate('SummerDatesScreen')}
           >
             <Text style={[styles.seasonTitle, { color: '#333333' }]}>Summer</Text>
@@ -185,15 +187,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5E4', // Light cream background color
   },
+  
   header: {
-    height: 64, // Height for header section
+    height: 130, // Height for header section
     backgroundColor: '#333333', // Dark background for contrast
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20, // Spacing inside header
   },
+
   logoContainer: {
+    marginTop: 45,
     flexDirection: 'column',
   },
   logoText: {
@@ -207,9 +212,11 @@ const styles = StyleSheet.create({
     marginTop: 4, // Space between text and underline
   },
   iconContainer: {
+    marginTop: 45,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  
   iconCircle: {
     width: 32,
     height: 32,
@@ -233,14 +240,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, // Horizontal padding for greeting
   },
   greetingText: {
-    fontSize: 32,
+    fontSize: 55,
     fontWeight: 'bold',
     color: '#333333', // Greeting text color
   },
   subtext: {
-    marginTop: 10, // Space below greeting
-    fontSize: 14,
-    color: '#888888', // Subtext color
+    marginTop: 20, // Space below greeting
+    fontSize: 18,
+    marginBottom: -12,
+    color: '#C2B697', // Subtext color
+    fontWeight: 'bold',
   },
   seasonContainer: {
     paddingHorizontal: 20, // Padding for season blocks
@@ -255,12 +264,14 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   seasonTitle: {
-    fontSize: 28,
+    marginTop: 55,
+    fontSize: 35,
     fontWeight: 'bold',
   },
   seasonSubtitle: {
-    marginTop: 10, // Space below season title
+    marginTop: 2, // Space below season title
     fontSize: 14,
+    fontWeight: 'bold',
   },
   loadingContainer: {
     flex: 1,

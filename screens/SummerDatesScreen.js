@@ -10,12 +10,12 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
-export default function SummerDatesScreen({ navigation }) {
-  // Track favorite spots in state
+export default function SummerDatesScreen() {
+  const navigation = useNavigation();
   const [favorites, setFavorites] = useState({});
 
-  // Toggle favorite status for a spot with alert confirmation
   const toggleFavorite = (spotName) => {
     setFavorites((prevFavorites) => {
       const updatedFavorites = { ...prevFavorites };
@@ -30,56 +30,43 @@ export default function SummerDatesScreen({ navigation }) {
     });
   };
 
-  // Summer category (currently inactive)
   const category = {
     title: 'Beaches (NOT ACTIVE)',
     spots: [
-      {
-        name: 'Sunset Beach',
-        address: '123 Ocean Drive',
-      },
-      {
-        name: 'Golden Sands',
-        address: '456 Shoreline Ave',
-      },
-      {
-        name: 'Coral Cove',
-        address: '789 Seaside Blvd',
-      },
+      { name: 'Sunset Beach', address: '123 Ocean Drive' },
+      { name: 'Golden Sands', address: '456 Shoreline Ave' },
+      { name: 'Coral Cove', address: '789 Seaside Blvd' },
     ],
   };
 
   return (
     <View style={styles.container}>
-      {/* Top navigation bar */}
-      <View style={styles.navigationBar}>
-        {/* Logo that links back to Home */}
-        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+      {/* Header with logo and icons */}
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
           <Text style={styles.logoText}>SznLuv</Text>
-        </TouchableOpacity>
-        <View style={styles.navigationIcons}>
-          {/* Heart icon for future Favorites screen */}
-          <TouchableOpacity onPress={() => Alert.alert('Favorites', 'Favorites screen is not available yet.')}>
-            <Icon name="favorite-border" size={24} color="#FFD700" style={styles.navIcon} />
+          <View style={styles.logoUnderline} />
+        </View>
+        <View style={styles.iconContainer}>
+          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
+            <View style={styles.iconCircle}>
+              <Text style={styles.iconPlaceholderText}>♡</Text>
+            </View>
           </TouchableOpacity>
-          {/* Profile icon for future Profile screen */}
-          <TouchableOpacity onPress={() => Alert.alert('Profile', 'Profile screen is not available yet.')}>
-            <Icon name="person-outline" size={24} color="#FFD700" style={styles.navIcon} />
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+            <View style={styles.iconCircle}>
+              <Text style={styles.iconPlaceholderText}>☺</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Warning banner to indicate summer dates are out of season */}
       <View style={styles.warningBanner}>
         <Text style={styles.warningText}>⚠️ Summer Dates are not in season.</Text>
       </View>
 
-      {/* Main scrollable content area */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Main title for the Summer Dates screen */}
         <Text style={styles.mainTitle}>Summer Dates</Text>
-
-        {/* Display summer category and list of spots */}
         <View style={styles.categorySection}>
           <Text style={styles.categoryTitle}>{category.title}</Text>
           {category.spots.map((spot, idx) => (
@@ -88,7 +75,6 @@ export default function SummerDatesScreen({ navigation }) {
               style={styles.dateSpotCard}
               onPress={() => Alert.alert('Details', 'Date Spot Detail screen is not available yet.')}
             >
-              {/* Favorite icon that toggles favorite status */}
               <TouchableOpacity
                 style={styles.cardHeartIcon}
                 onPress={() => toggleFavorite(spot.name)}
@@ -96,17 +82,13 @@ export default function SummerDatesScreen({ navigation }) {
                 <Icon
                   name={favorites[spot.name] ? 'favorite' : 'favorite-border'}
                   size={20}
-                  color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'} // Red if favorited, gray if not
+                  color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'}
                 />
               </TouchableOpacity>
-
-              {/* Display the name and address of each spot */}
               <View style={styles.cardTextContainer}>
                 <Text style={styles.dateSpotName}>{spot.name}</Text>
                 <Text style={styles.addressText}>{spot.address}</Text>
               </View>
-
-              {/* Right arrow icon to indicate navigation */}
               <TouchableOpacity
                 style={styles.cardArrowIcon}
                 onPress={() => Alert.alert('Details', 'Date Spot Detail screen is not available yet.')}
@@ -121,93 +103,116 @@ export default function SummerDatesScreen({ navigation }) {
   );
 }
 
-// Styles for SummerDatesScreen components
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8DD74', // Warm muted yellow for a summer vibe
+    backgroundColor: '#F8DD74',
   },
-  navigationBar: {
-    height: 60, // Fixed height for top bar
-    backgroundColor: '#333333', // Dark background for contrast
+  header: {
+    height: 130,
+    backgroundColor: '#333333',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15, // Space on sides of navigation bar
+    paddingHorizontal: 20,
+  },
+  logoContainer: {
+    marginTop: 45,
+    flexDirection: 'column',
   },
   logoText: {
-    color: '#F8DD74', // Matches yellow background for a unified look
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  navigationIcons: {
-    flexDirection: 'row', // Arrange icons horizontally
+  logoUnderline: {
+    height: 2,
+    backgroundColor: '#C1A9E5',
+    marginTop: 4,
   },
-  navIcon: {
-    marginLeft: 15, // Space between icons
+  iconContainer: {
+    marginTop: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#A9A9A9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  iconPlaceholderText: {
+    fontSize: 20,
+    color: '#333333',
   },
   warningBanner: {
-    backgroundColor: '#FF6347', // Coral red to catch attention
+    backgroundColor: '#FF6347',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    alignItems: 'center', // Center-align text inside the banner
+    alignItems: 'center',
   },
   warningText: {
-    color: '#FFFFFF', // White text for visibility on red background
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   contentContainer: {
-    paddingHorizontal: 20, // Padding on sides for main content
-    paddingBottom: 20, // Bottom padding to prevent cutoff
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   mainTitle: {
-    color: '#000000', // Black for readability
+    color: '#000000',
     fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 20, // Space above and below title
+    marginVertical: 20,
   },
   categorySection: {
-    marginBottom: 40, // Space between category sections
+    marginBottom: 40,
   },
   categoryTitle: {
-    color: '#8B4513', // Muted beige or tan color for title
+    color: '#8B4513',
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 15, // Space below each category title
+    marginBottom: 15,
   },
   dateSpotCard: {
-    backgroundColor: '#FFF8DC', // Light cream for each card
-    borderRadius: 14, // Soft rounded corners
-    flexDirection: 'row', // Horizontal layout for card content
+    backgroundColor: '#FFF8DC',
+    borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 14, // Padding inside each card
-    marginBottom: 18, // Space between cards
-    shadowColor: '#000', // iOS shadow color
+    padding: 14,
+    marginBottom: 18,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2, // Android shadow effect
+    elevation: 2,
   },
   cardHeartIcon: {
-    marginRight: 16, // Space between heart icon and text content
+    marginRight: 16,
   },
   cardTextContainer: {
-    flex: 1, // Allows text container to use available space
+    flex: 1,
   },
   dateSpotName: {
-    color: '#000000', // Black for high contrast
+    color: '#000000',
     fontSize: 22,
     fontWeight: 'bold',
   },
   addressText: {
-    color: '#696969', // Medium gray for address text
+    color: '#696969',
     fontSize: 16,
-    marginTop: 4, // Space below the spot name
+    marginTop: 4,
   },
   cardArrowIcon: {
-    marginLeft: 16, // Space between text and arrow icon
+    marginLeft: 16,
   },
 });

@@ -196,7 +196,7 @@ export default function SignUpScreen() {
       >
         <Text style={styles.loginText}>
           Already have an account?{' '}
-          <Text style={styles.loginLinkText}>Login</Text>
+          <Text style={styles.loginLinkText}>Log In</Text>
         </Text>
       </TouchableOpacity>
     </View>
@@ -213,29 +213,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30, // Padding for inner content
   },
   logoText: {
-    fontSize: 32, // Large font for logo
+    fontSize: 50, // Large font size for logo
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#323232',
     marginBottom: 8,
     textAlign: 'center',
   },
   taglineText: {
     fontSize: 16,
-    color: '#4F4F4F', // Grey for contrast
+    color: '#323232', 
     marginBottom: 40, // Space below tagline
     textAlign: 'center',
+    fontWeight: 'bold',
   },
   input: {
     width: '100%', // Full width input
-    backgroundColor: '#FFFFFF',
-    borderColor: '#000000',
+    backgroundColor: '#323232',
+    borderColor: '#323232', 
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingHorizontal: 30,
+    paddingVertical: 20,
     fontSize: 16,
-    color: '#000000', // Black text for readability
-    marginBottom: 20,
+    color: '#FFFFFF', // Black text for readability
+    marginBottom: 10,
   },
   errorText: {
     width: '100%',
@@ -245,11 +246,13 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: '#000000', // Black button for contrast
-    paddingVertical: 12,
+    backgroundColor: '#FF9FD2', // Black button for contrast
+    paddingVertical: 20,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 30,
+
+
   },
   buttonText: {
     color: '#FFFFFF', // White text for button
@@ -257,15 +260,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   loginContainer: {
-    marginTop: 20,
+    marginTop: 30,
   },
   loginText: {
+    fontWeight: 'bold',
     fontSize: 14,
-    color: '#000000',
+    color: '#323232',
     textAlign: 'center',
   },
   loginLinkText: {
-    color: '#FFC0CB', // Pink for emphasis
+    fontWeight: 'bold',
+    color: '#FF9FD2', // Pink for emphasis
     textDecorationLine: 'underline',
   },
 });

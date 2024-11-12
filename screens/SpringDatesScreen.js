@@ -1,5 +1,6 @@
-// screens/SpringDatesScreen.js
 
+
+// screens/SpringDatesScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -62,37 +63,28 @@ export default function SpringDatesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Navigation bar at the top with logo and icons */}
+      {/* Top navigation bar copied from HomeScreen */}
       <View style={styles.navigationBar}>
-        {/* App logo text, returns user to Home when pressed */}
+        {/* Logo that links back to Home */}
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Text style={styles.logoText}>SznLuv</Text>
         </TouchableOpacity>
         <View style={styles.navigationIcons}>
-          {/* Heart icon that links to the Favorites screen */}
+          {/* Heart icon for Favorites screen */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Icon name="favorite-border" size={24} color="#FFB6C1" style={styles.navIcon} />
+            <Icon name="favorite-border" size={24} color="#FFD700" style={styles.navIcon} />
           </TouchableOpacity>
-          {/* Profile icon that links to the Profile screen */}
+          {/* Profile icon for Profile screen */}
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <Icon name="person-outline" size={24} color="#FFB6C1" style={styles.navIcon} />
+            <Icon name="person-outline" size={24} color="#FFD700" style={styles.navIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Warning banner for out-of-season Spring dates */}
-      <TouchableOpacity
-        style={styles.disclaimerBanner}
-        onPress={() =>
-          Alert.alert(
-            'Spring Dates Not in Season',
-            'Currently, spring dates are not in season. Please check back later for updates.',
-            [{ text: 'OK' }]
-          )
-        }
-      >
-        <Text style={styles.disclaimerText}>⚠️ Spring Dates are not in season.</Text>
-      </TouchableOpacity>
+      <View style={styles.warningBanner}>
+        <Text style={styles.warningText}>⚠️ Spring Dates are not in season.</Text>
+      </View>
 
       {/* Scrollable section for content with all date categories and spots */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -102,44 +94,34 @@ export default function SpringDatesScreen({ navigation }) {
         {/* Loop through each category to display spots */}
         {categories.map((category, index) => (
           <View key={index} style={styles.categorySection}>
-            {/* Display category title (e.g., Botanical Gardens) */}
             <Text style={styles.categoryTitle}>{category.title}</Text>
             
-            {/* Loop through each spot within the category */}
             {category.spots.map((spot, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={styles.dateSpotCard}
                 onPress={() => navigation.navigate('DateSpotDetail', { spot })}
-                accessibilityLabel={`View details for ${spot.name}`}
-                accessibilityRole="button"
               >
-                {/* Favorite icon to toggle favorite status */}
+                {/* Favorite icon that toggles favorite status */}
                 <TouchableOpacity
                   style={styles.cardHeartIcon}
                   onPress={() => toggleFavorite(spot.name)}
-                  accessibilityLabel={`Favorite ${spot.name}`}
-                  accessibilityRole="button"
                 >
                   <Icon
                     name={favorites[spot.name] ? 'favorite' : 'favorite-border'}
                     size={20}
-                    color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'} // Red if favorited, gray if not
+                    color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'}
                   />
                 </TouchableOpacity>
 
-                {/* Display the name and address of the spot */}
                 <View style={styles.cardTextContainer}>
                   <Text style={styles.dateSpotName}>{spot.name}</Text>
                   <Text style={styles.addressText}>{spot.address}</Text>
                 </View>
 
-                {/* Arrow icon to indicate navigation to spot details */}
                 <TouchableOpacity
                   style={styles.cardArrowIcon}
                   onPress={() => navigation.navigate('DateSpotDetail', { spot })}
-                  accessibilityLabel={`View details for ${spot.name}`}
-                  accessibilityRole="button"
                 >
                   <Icon name="chevron-right" size={18} color="#000" />
                 </TouchableOpacity>
@@ -152,92 +134,92 @@ export default function SpringDatesScreen({ navigation }) {
   );
 }
 
-// Styles for the components in SpringDatesScreen
+// Styles for SpringDatesScreen components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFB6C1', // Light pink background for a Spring theme
+    backgroundColor: '#FFB6C1', // Light pink for a spring vibe
   },
   navigationBar: {
     height: 60,
-    backgroundColor: '#333333', // Dark bar for contrast
+    backgroundColor: '#333333',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15, // Padding for sides of navigation bar
+    paddingHorizontal: 15,
   },
   logoText: {
-    color: '#FFB6C1', // Match logo color to pink theme
+    color: '#FFB6C1',
     fontSize: 22,
     fontWeight: 'bold',
   },
   navigationIcons: {
-    flexDirection: 'row', // Layout icons horizontally
+    flexDirection: 'row',
   },
   navIcon: {
-    marginLeft: 15, // Space between navigation icons
+    marginLeft: 15,
   },
-  disclaimerBanner: {
-    backgroundColor: '#FF6347', // Coral red banner to catch attention
+  warningBanner: {
+    backgroundColor: '#FF6347',
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  disclaimerText: {
-    color: '#FFFFFF', // White text for visibility on red banner
+  warningText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
   contentContainer: {
-    paddingHorizontal: 20, // Padding for main content on the sides
-    paddingBottom: 20, // Space at bottom to prevent cutoff
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   mainTitle: {
-    color: '#FFF8F0', // Soft cream color for the main title
+    color: '#FFF8F0',
     fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 20, // Space around main title
+    marginVertical: 20,
   },
   categorySection: {
-    marginBottom: 40, // Separate each category with space
+    marginBottom: 40,
   },
   categoryTitle: {
-    color: '#F5F5F5', // Light color for category titles
+    color: '#F5F5F5',
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 15, // Space below each category title
+    marginBottom: 15,
   },
   dateSpotCard: {
-    backgroundColor: '#FFF8F0', // Soft cream for card background
-    borderRadius: 14, // Rounded corners for a softer look
-    flexDirection: 'row', // Layout card items in a row
+    backgroundColor: '#FFF8F0',
+    borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    marginBottom: 18, // Space between each card
-    shadowColor: '#000', // iOS shadow color
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2, // Shadow effect for Android
+    elevation: 2,
   },
   cardHeartIcon: {
-    marginRight: 16, // Space between heart icon and text
+    marginRight: 16,
   },
   cardTextContainer: {
-    flex: 1, // Fill available space with text container
+    flex: 1,
   },
   dateSpotName: {
-    color: '#000', // Black for readability
+    color: '#000',
     fontSize: 22,
     fontWeight: 'bold',
   },
   addressText: {
-    color: '#696969', // Medium gray for subtle address text
+    color: '#696969',
     fontSize: 16,
-    marginTop: 4, // Space below spot name
+    marginTop: 4,
   },
   cardArrowIcon: {
-    marginLeft: 16, // Space between text and arrow icon
+    marginLeft: 16,
   },
 });

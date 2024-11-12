@@ -107,7 +107,7 @@ export default function LoginScreen() {
         disabled={loading} // Disable button while loading
         accessibilityLabel="Login"
       >
-        {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Login</Text>}
+        {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log In</Text>}
       </TouchableOpacity>
 
       {/* Link to navigate to Sign-Up screen */}
@@ -135,53 +135,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30, // Horizontal padding for content
   },
   logoText: {
-    fontSize: 32, // Large font size for logo
+    fontSize: 50, // Large font size for logo
     fontWeight: 'bold',
-    color: '#000000', // Black for contrast
+    color: '#323232', // Black for contrast
     marginBottom: 8,
     textAlign: 'center',
+    fontWeight: 'bold',
+
   },
   taglineText: {
     fontSize: 16,
-    color: '#4F4F4F', // Grey for subtle contrast
+    color: '#323232', 
     marginBottom: 40, // Space below tagline
     textAlign: 'center',
+    fontWeight: 'bold',
   },
   input: {
-    width: '100%', // Full width of the screen
-    backgroundColor: '#FFFFFF', // White background for input fields
-    borderColor: '#000000', // Black border for visibility
+    width: '100%', // Full width input
+    backgroundColor: '#323232',
+    borderColor: '#323232', 
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 15, // Padding inside text inputs
-    paddingVertical: 12,
+    paddingHorizontal: 30,
+    paddingVertical: 20,
     fontSize: 16,
-    color: '#000000', // Black text for readability
-    marginBottom: 20, // Space between input fields
+    color: '#FFFFFF', // Black text for readability
+    marginBottom: 10,
   },
   button: {
     width: '100%',
-    backgroundColor: '#000000', // Black button for high contrast
-    paddingVertical: 12, // Vertical padding for button text
+    backgroundColor: '#FF9FD2', // Black button for high contrast
+    paddingVertical: 20, // Vertical padding for button text
     borderRadius: 10, // Rounded corners for button
     alignItems: 'center',
-    marginTop: 10, // Space above button
+    marginTop: 30, // Space above button
   },
+
   buttonText: {
     color: '#FFFFFF', // White text for contrast
     fontSize: 18,
     fontWeight: 'bold',
   },
+
   signupContainer: {
-    marginTop: 20, // Space above the sign-up link
+    marginTop: 30, // Space above the sign-up link
   },
+
   signupText: {
     fontSize: 14,
-    color: '#000000',
+    color: '#323232',
     textAlign: 'center',
+    fontFamily: "Gramatika-Black",
+    fontWeight: 'bold',
+
   },
   signupLinkText: {
-    color: '#FFC0CB', // Pink for emphasis on link text
+    color: '#FF9FD2', // Pink for emphasis on link text
     textDecorationLine: 'underline', // Underline to indicate link
+    fontFamily: "Gramatika-Black",
+    fontWeight: 'bold',
   },
 });
