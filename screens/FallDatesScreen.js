@@ -1,5 +1,4 @@
 // screens/FallDatesScreen.js
-// IN PROGRESS
 
 import React, { useState } from 'react';
 import {
@@ -10,8 +9,6 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-
-// Make sure to install react-native-vector-icons and link it properly
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function FallDatesScreen({ navigation }) {
@@ -84,7 +81,7 @@ export default function FallDatesScreen({ navigation }) {
   // Function to handle navigation based on spot name
   const handleSpotPress = (spot) => {
     if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarmScreen');
+      navigation.navigate('AldorFamilyFarm');
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }

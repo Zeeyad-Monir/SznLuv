@@ -132,7 +132,7 @@ export default AldorFamilyFarmScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FF8657',
+    backgroundColor: '#f5f5f5',
   },
 
   // Top Header Styles
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
 
   // Weather Report Styles
   weatherContainer: {
-    backgroundColor: '#B9CCEC',
+    backgroundColor: '#ff8c00',
     padding: 15,
     alignItems: 'center',
     borderRadius: 10,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FAF4E4',
+    color: '#ff8c00',
     textAlign: 'center',
     marginTop: 10,
     textTransform: 'uppercase',
