@@ -1,5 +1,3 @@
-// AldorFamilyFarmScreen.js
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,7 +16,8 @@ const AldorFamilyFarmScreen = () => {
   const [loading, setLoading] = useState(true); // Indicates if location is being fetched
 
   useEffect(() => {
-    (async () => {
+    let locationSubscription;
+    const startLocationTracking = async () => {
       // Request location permissions
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -28,15 +27,42 @@ const AldorFamilyFarmScreen = () => {
       }
 
       try {
-        // Fetch current location
-        let currentLocation = await Location.getCurrentPositionAsync({});
-        setLocation(currentLocation);
+        // Start watching the user's location with continuous updates
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000, // 1 second interval for testing
+            distanceInterval: 1, // 1 meter interval for testing
+          },
+          (newLocation) => {
+            setLocation(newLocation);
+          }
+        );
       } catch (error) {
         setErrorMsg('Error fetching location.');
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    // Start location tracking on component mount
+    startLocationTracking();
+
+    // Fallback with periodic location fetching every 5 seconds
+    const intervalId = setInterval(async () => {
+      try {
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation(currentLocation);
+      } catch (error) {
+        console.log('Error with periodic location fetch:', error);
+      }
+    }, 5000);
+
+    // Clean up subscriptions on unmount
+    return () => {
+      if (locationSubscription) locationSubscription.remove();
+      clearInterval(intervalId);
+    };
   }, []);
 
   // Determine what to display based on the state
@@ -128,6 +154,7 @@ const AldorFamilyFarmScreen = () => {
 };
 
 export default AldorFamilyFarmScreen;
+
 
 const styles = StyleSheet.create({
   container: {
