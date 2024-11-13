@@ -11,16 +11,15 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
-  
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login } from '../firebaseConfig';
-import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
-  
+
   // States for email, password, and loading
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -80,27 +79,44 @@ export default function LoginScreen() {
       <Text style={styles.taglineText}>The right date, every season</Text>
 
       {/* Email input field */}
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#AAAAAA"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        accessibilityLabel="Email"
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#AAAAAA"
+          value={email}
+          onChangeText={(text) => setEmail(text)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => {
+            // Focus on password field when email is submitted
+            passwordRef.current?.focus();
+          }}
+          blurOnSubmit={false}
+          accessibilityLabel="Email"
+        />
+      </View>
 
       {/* Password input field */}
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#AAAAAA"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        accessibilityLabel="Password"
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#AAAAAA"
+          secureTextEntry
+          value={password}
+          onChangeText={(text) => setPassword(text)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="password"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+          accessibilityLabel="Password"
+        />
+      </View>
 
       {/* Login button */}
       <TouchableOpacity
@@ -109,7 +125,11 @@ export default function LoginScreen() {
         disabled={loading} // Disable button while loading
         accessibilityLabel="Login"
       >
-        {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Log In</Text>}
+        {loading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.buttonText}>Log In</Text>
+        )}
       </TouchableOpacity>
 
       {/* Link to navigate to Sign-Up screen */}
@@ -142,59 +162,54 @@ const styles = StyleSheet.create({
     color: '#323232', // Black for contrast
     marginBottom: 8,
     textAlign: 'center',
-    fontWeight: 'bold',
-
   },
   taglineText: {
     fontSize: 16,
-    color: '#323232', 
+    color: '#323232',
     marginBottom: 40, // Space below tagline
     textAlign: 'center',
     fontWeight: 'bold',
   },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 15,
+  },
   input: {
-    width: '100%', // Full width input
+    width: '100%',
     backgroundColor: '#323232',
-    borderColor: '#323232', 
+    borderColor: '#323232',
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 30,
-    paddingVertical: 20,
+    paddingHorizontal: 15,
+    paddingVertical: Platform.OS === 'ios' ? 15 : 10, // Adjust padding based on platform
     fontSize: 16,
-    color: '#FFFFFF', // Black text for readability
-    marginBottom: 10,
+    color: '#FFFFFF', // White text for readability
   },
   button: {
     width: '100%',
-    backgroundColor: '#FF9FD2', // Black button for high contrast
-    paddingVertical: 20, // Vertical padding for button text
+    backgroundColor: '#FF9FD2', // Pink button for high contrast
+    paddingVertical: 15, // Vertical padding for button text
     borderRadius: 10, // Rounded corners for button
     alignItems: 'center',
-    marginTop: 30, // Space above button
+    marginTop: 20, // Space above button
   },
-
   buttonText: {
     color: '#FFFFFF', // White text for contrast
     fontSize: 18,
     fontWeight: 'bold',
   },
-
   signupContainer: {
-    marginTop: 30, // Space above the sign-up link
+    marginTop: 25, // Space above the sign-up link
   },
-
   signupText: {
     fontSize: 14,
     color: '#323232',
     textAlign: 'center',
-    fontFamily: "Gramatika-Black",
     fontWeight: 'bold',
-
   },
   signupLinkText: {
     color: '#FF9FD2', // Pink for emphasis on link text
     textDecorationLine: 'underline', // Underline to indicate link
-    fontFamily: "Gramatika-Black",
     fontWeight: 'bold',
   },
 });
