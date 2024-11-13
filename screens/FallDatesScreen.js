@@ -81,7 +81,7 @@ export default function FallDatesScreen({ navigation }) {
   // Function to handle navigation based on spot name
   const handleSpotPress = (spot) => {
     if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarm');
+      navigation.navigate('AldorFamilyFarmScreen'); // Ensure this matches the screen name in App.js
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }

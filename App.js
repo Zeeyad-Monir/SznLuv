@@ -48,26 +48,25 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, setUser }}>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
-            // Screens for logged-in users
-            <>
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
-              <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} /> {/* New Screen */}
-              <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
-              <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
-              <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
-              {/* Other screens like Favorites, Profile, etc., can be added as needed */}
-            </>
-          ) : (
-            // Screens for users not logged in (authentication)
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="SignUp" component={SignUpScreen} />
-            </>
-          )}
-        </Stack.Navigator>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+  {user ? (
+    <>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
+      <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
+      <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
+      <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
+      <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
+    </>
+  ) : (
+    <>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+    </>
+  )}
+</Stack.Navigator>
+
+
       </NavigationContainer>
     </AuthContext.Provider>
   );
