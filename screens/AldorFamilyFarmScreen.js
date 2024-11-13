@@ -159,7 +159,7 @@ export default AldorFamilyFarmScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FF8657',
   },
 
   // Top Header Styles
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
 
   // Weather Report Styles
   weatherContainer: {
-    backgroundColor: '#ff8c00',
+    backgroundColor: '#B9CCEC',
     padding: 15,
     alignItems: 'center',
     borderRadius: 10,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ff8c00',
+    color: '#FAF4E4',
     textAlign: 'center',
     marginTop: 10,
     textTransform: 'uppercase',
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   activityBox: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FAF4E4',
     padding: 10,
     borderRadius: 10,
     alignSelf: 'center',
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
 
   // About the Farm Styles
   aboutContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FAF4E4',
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
 
   // User's Current Location Styles
   currentLocationBox: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FAF4E4',
     padding: 15,
     borderRadius: 10,
     alignSelf: 'center',
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
 
   // Map Placeholder Styles
   mapContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FAF4E4',
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
