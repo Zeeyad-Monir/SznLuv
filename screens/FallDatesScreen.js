@@ -9,8 +9,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Image,
-  
 } from 'react-native';
 
 // Make sure to install react-native-vector-icons and link it properly
@@ -23,7 +21,7 @@ export default function FallDatesScreen({ navigation }) {
       spots: [
         {
           name: 'Aldor Family Farm',
-          address: ' 24990 84 Ave, Langley',
+          address: '24990 84 Ave, Langley',
         },
         {
           name: 'Autumn Acres',
@@ -68,13 +66,28 @@ export default function FallDatesScreen({ navigation }) {
       const updatedFavorites = { ...prevFavorites };
       if (updatedFavorites[spotName]) {
         delete updatedFavorites[spotName];
-        Alert.alert('Removed from Favorites', `${spotName} has been removed from your favorites.`);
+        Alert.alert(
+          'Removed from Favorites',
+          `${spotName} has been removed from your favorites.`
+        );
       } else {
         updatedFavorites[spotName] = true;
-        Alert.alert('Added to Favorites', `${spotName} has been added to your favorites.`);
+        Alert.alert(
+          'Added to Favorites',
+          `${spotName} has been added to your favorites.`
+        );
       }
       return updatedFavorites;
     });
+  };
+
+  // Function to handle navigation based on spot name
+  const handleSpotPress = (spot) => {
+    if (spot.name === 'Aldor Family Farm') {
+      navigation.navigate('AldorFamilyFarmScreen');
+    } else {
+      Alert.alert('Coming Soon', 'This feature is coming soon.');
+    }
   };
 
   return (
@@ -88,11 +101,21 @@ export default function FallDatesScreen({ navigation }) {
         <View style={styles.navigationIcons}>
           {/* Heart Icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Icon name="favorite-border" size={24} color="#FFA07A" style={styles.navIcon} />
+            <Icon
+              name="favorite-border"
+              size={24}
+              color="#FFA07A"
+              style={styles.navIcon}
+            />
           </TouchableOpacity>
           {/* Profile Icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <Icon name="person-outline" size={24} color="#FFA07A" style={styles.navIcon} />
+            <Icon
+              name="person-outline"
+              size={24}
+              color="#FFA07A"
+              style={styles.navIcon}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -109,7 +132,7 @@ export default function FallDatesScreen({ navigation }) {
               <TouchableOpacity
                 key={idx}
                 style={styles.dateSpotCard}
-                onPress={() => navigation.navigate('DateSpotDetail', { spot })}
+                onPress={() => handleSpotPress(spot)}
                 accessibilityLabel={`View details for ${spot.name}`}
                 accessibilityRole="button"
               >
@@ -136,7 +159,7 @@ export default function FallDatesScreen({ navigation }) {
                 {/* Arrow Icon */}
                 <TouchableOpacity
                   style={styles.cardArrowIcon}
-                  onPress={() => navigation.navigate('DateSpotDetail', { spot })}
+                  onPress={() => handleSpotPress(spot)}
                   accessibilityLabel={`View details for ${spot.name}`}
                   accessibilityRole="button"
                 >

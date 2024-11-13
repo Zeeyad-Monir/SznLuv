@@ -15,6 +15,8 @@ import FallDatesScreen from './screens/FallDatesScreen';
 import WinterDatesScreen from './screens/WinterDatesScreen';
 import SpringDatesScreen from './screens/SpringDatesScreen';
 import SummerDatesScreen from './screens/SummerDatesScreen';
+import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen'; // New Import
+
 // Note: FavoritesScreen, ProfileScreen, and DateSpotDetailScreen are currently excluded here
 
 // Create context to provide user authentication state throughout the app
@@ -51,20 +53,21 @@ export default function App() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
             // Screens for logged-in users
-            <>
+            <React.Fragment>
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
+              <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} /> {/* New Screen */}
               <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
               <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
               <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
               {/* Other screens like Favorites, Profile, etc., can be added as needed */}
-            </>
+            </React.Fragment>
           ) : (
             // Screens for users not logged in (authentication)
-            <>
+            <React.Fragment>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="SignUp" component={SignUpScreen} />
-            </>
+            </React.Fragment>
           )}
         </Stack.Navigator>
       </NavigationContainer>
