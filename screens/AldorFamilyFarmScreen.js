@@ -11,14 +11,13 @@ import * as Location from 'expo-location';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 
 const AldorFamilyFarmScreen = () => {
-  const [location, setLocation] = useState(null); // Holds the location object
-  const [errorMsg, setErrorMsg] = useState(null); // Holds any error messages
-  const [loading, setLoading] = useState(true); // Indicates if location is being fetched
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let locationSubscription;
     const startLocationTracking = async () => {
-      // Request location permissions
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied.');
@@ -27,12 +26,11 @@ const AldorFamilyFarmScreen = () => {
       }
 
       try {
-        // Start watching the user's location with continuous updates
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 1000, // 1 second interval for testing
-            distanceInterval: 1, // 1 meter interval for testing
+            timeInterval: 1000,
+            distanceInterval: 1,
           },
           (newLocation) => {
             setLocation(newLocation);
@@ -45,10 +43,8 @@ const AldorFamilyFarmScreen = () => {
       }
     };
 
-    // Start location tracking on component mount
     startLocationTracking();
 
-    // Fallback with periodic location fetching every 5 seconds
     const intervalId = setInterval(async () => {
       try {
         const currentLocation = await Location.getCurrentPositionAsync({});
@@ -58,14 +54,12 @@ const AldorFamilyFarmScreen = () => {
       }
     }, 5000);
 
-    // Clean up subscriptions on unmount
     return () => {
       if (locationSubscription) locationSubscription.remove();
       clearInterval(intervalId);
     };
   }, []);
 
-  // Determine what to display based on the state
   let content;
 
   if (loading) {
@@ -85,7 +79,7 @@ const AldorFamilyFarmScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Top Header */}
+      {/* Header Section */}
       <View style={styles.header}>
         <Text style={styles.logoText}>SznLuv</Text>
         <View style={styles.iconContainer}>
@@ -101,9 +95,9 @@ const AldorFamilyFarmScreen = () => {
         </View>
       </View>
 
-      {/* Scrollable Content */}
+      {/* Main Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Weather Report Placeholder */}
+        {/* Weather Report Section */}
         <View style={styles.weatherContainer}>
           <Text style={styles.weatherHeader}>7 DAY WEATHER REPORT</Text>
           <View style={styles.weatherPlaceholders}>
@@ -113,20 +107,20 @@ const AldorFamilyFarmScreen = () => {
           </View>
         </View>
 
-        {/* Date Spot Information */}
+        {/* Farm Information Section */}
         <Text style={styles.title}>Aldor Acres Family Farm</Text>
         <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
         <View style={styles.activityBox}>
           <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
         </View>
 
-        {/* Main Image Placeholder */}
+        {/* Image Placeholder Section */}
         <View style={styles.imagePlaceholder}>
           <Ionicons name="image" size={50} color="#ccc" />
           <Text style={styles.placeholderText}>Image Placeholder</Text>
         </View>
 
-        {/* About the Farm */}
+        {/* About the Farm Section */}
         <View style={styles.aboutContainer}>
           <Text style={styles.aboutText}>
             Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin patch, and more! Enjoy a day filled with family-friendly activities in the heart of Langley.
@@ -138,11 +132,10 @@ const AldorFamilyFarmScreen = () => {
           {content}
         </View>
 
-        {/* How to Get There? (Map Placeholder) */}
+        {/* Map Placeholder Section */}
         <View style={styles.mapContainer}>
           <Text style={styles.mapHeader}>How to get there?</Text>
           <View style={styles.mapPlaceholder}>
-            {/* Placeholder for the map */}
             <View style={styles.mapMarkerDestination} />
             <View style={styles.mapMarkerUser} />
             <Text style={styles.mapPlaceholderText}>Map Placeholder</Text>
@@ -155,14 +148,13 @@ const AldorFamilyFarmScreen = () => {
 
 export default AldorFamilyFarmScreen;
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FF8657',
   },
 
-  // Top Header Styles
+  /* Header Styles */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -183,12 +175,12 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
 
-  // Scrollable Content Styles
+  /* Scrollable Content Styles */
   scrollContent: {
     paddingBottom: 20,
   },
 
-  // Weather Report Styles
+  /* Weather Report Styles */
   weatherContainer: {
     backgroundColor: '#B9CCEC',
     padding: 15,
@@ -218,7 +210,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
 
-  // Date Spot Information Styles
+  /* Farm Information Styles */
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -254,7 +246,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // Image Placeholder Styles
+  /* Image Placeholder Styles */
   imagePlaceholder: {
     width: '90%',
     height: 200,
@@ -272,7 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // About the Farm Styles
+  /* About the Farm Styles */
   aboutContainer: {
     backgroundColor: '#FAF4E4',
     padding: 15,
@@ -290,7 +282,7 @@ const styles = StyleSheet.create({
     textAlign: 'justify',
   },
 
-  // User's Current Location Styles
+  /* User's Current Location Styles */
   currentLocationBox: {
     backgroundColor: '#FAF4E4',
     padding: 15,
@@ -319,7 +311,7 @@ const styles = StyleSheet.create({
     color: '#555',
   },
 
-  // Map Placeholder Styles
+  /* Map Placeholder Styles */
   mapContainer: {
     backgroundColor: '#FAF4E4',
     padding: 15,
@@ -373,7 +365,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Error Text Styles
+  /* Error Text Styles */
   errorText: {
     color: 'red',
     fontSize: 16,

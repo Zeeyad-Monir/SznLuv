@@ -1,5 +1,3 @@
-// screens/FallDatesScreen.js
-
 import React, { useState } from 'react';
 import {
   View,
@@ -54,10 +52,8 @@ export default function FallDatesScreen({ navigation }) {
     },
   ];
 
-  // State to manage favorite spots
   const [favorites, setFavorites] = useState({});
 
-  // Handler to toggle favorite status
   const toggleFavorite = (spotName) => {
     setFavorites((prevFavorites) => {
       const updatedFavorites = { ...prevFavorites };
@@ -78,10 +74,9 @@ export default function FallDatesScreen({ navigation }) {
     });
   };
 
-  // Function to handle navigation based on spot name
   const handleSpotPress = (spot) => {
     if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarmScreen'); // Ensure this matches the screen name in App.js
+      navigation.navigate('AldorFamilyFarmScreen');
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
@@ -91,12 +86,10 @@ export default function FallDatesScreen({ navigation }) {
     <View style={styles.container}>
       {/* Navigation Bar */}
       <View style={styles.navigationBar}>
-        {/* Logo Text Wrapped in TouchableOpacity */}
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Text style={styles.logoText}>SznLuv</Text>
         </TouchableOpacity>
         <View style={styles.navigationIcons}>
-          {/* Heart Icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
             <Icon
               name="favorite-border"
@@ -105,7 +98,6 @@ export default function FallDatesScreen({ navigation }) {
               style={styles.navIcon}
             />
           </TouchableOpacity>
-          {/* Profile Icon */}
           <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
             <Icon
               name="person-outline"
@@ -117,11 +109,12 @@ export default function FallDatesScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Content */}
+      {/* Main Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Main Title */}
+        {/* Screen Title */}
         <Text style={styles.mainTitle}>Fall Dates</Text>
-        {/* Categories */}
+        
+        {/* Categories and Their Spots */}
         {categories.map((category, index) => (
           <View key={index} style={styles.categorySection}>
             <Text style={styles.categoryTitle}>{category.title}</Text>
@@ -133,7 +126,7 @@ export default function FallDatesScreen({ navigation }) {
                 accessibilityLabel={`View details for ${spot.name}`}
                 accessibilityRole="button"
               >
-                {/* Favorite Heart Icon */}
+                {/* Favorite Icon */}
                 <TouchableOpacity
                   style={styles.cardHeartIcon}
                   onPress={() => toggleFavorite(spot.name)}
@@ -147,13 +140,13 @@ export default function FallDatesScreen({ navigation }) {
                   />
                 </TouchableOpacity>
 
-                {/* Text Container */}
+                {/* Spot Information */}
                 <View style={styles.cardTextContainer}>
                   <Text style={styles.dateSpotName}>{spot.name}</Text>
                   <Text style={styles.addressText}>{spot.address}</Text>
                 </View>
 
-                {/* Arrow Icon */}
+                {/* Navigation Arrow Icon */}
                 <TouchableOpacity
                   style={styles.cardArrowIcon}
                   onPress={() => handleSpotPress(spot)}
@@ -174,18 +167,20 @@ export default function FallDatesScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4A460', // Warm muted orange background
+    backgroundColor: '#F4A460',
   },
+  
+  /* Navigation Bar Styles */
   navigationBar: {
     height: 60,
-    backgroundColor: '#333333', // Dark charcoal
+    backgroundColor: '#333333',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 15,
   },
   logoText: {
-    color: '#FFA07A', // Light orange
+    color: '#FFA07A',
     fontSize: 22,
     fontWeight: 'bold',
   },
@@ -195,39 +190,43 @@ const styles = StyleSheet.create({
   navIcon: {
     marginLeft: 15,
   },
+
+  /* Main Content Styles */
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
   mainTitle: {
-    color: '#F5F5DC', // Cream color
+    color: '#F5F5DC',
     fontSize: 34,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,
   },
+
+  /* Category Section Styles */
   categorySection: {
     marginBottom: 40,
   },
   categoryTitle: {
-    color: '#F5F5DC', // Light beige
+    color: '#F5F5DC',
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 15,
   },
+
+  /* Date Spot Card Styles */
   dateSpotCard: {
-    backgroundColor: '#FFF8DC', // Light cream
+    backgroundColor: '#FFF8DC',
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     marginBottom: 18,
-    // Shadow for iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    // Elevation for Android
     elevation: 2,
   },
   cardHeartIcon: {
@@ -237,12 +236,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateSpotName: {
-    color: '#000', // Black
+    color: '#000',
     fontSize: 22,
     fontWeight: 'bold',
   },
   addressText: {
-    color: '#696969', // Medium gray
+    color: '#696969',
     fontSize: 16,
     marginTop: 4,
   },
