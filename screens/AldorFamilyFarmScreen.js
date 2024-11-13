@@ -40,7 +40,7 @@ const AldorFamilyFarmScreen = () => {
           {
             accuracy: Location.Accuracy.High, // High accuracy for precise location
             timeInterval: 1000, // Update location every 1000 milliseconds (1 second)
-            distanceInterval: 1, // Update location if the user moves by 1 meter
+            distanceInterval: 1600, // Update location if the user moves by 1600 meter
           },
           (newLocation) => {
             // LOCATION: Callback function to handle new location data
