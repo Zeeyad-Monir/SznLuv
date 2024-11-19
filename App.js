@@ -59,6 +59,7 @@ export default function App() {
       <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
       <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
       <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
+      <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
     </>
   ) : (
     <>
