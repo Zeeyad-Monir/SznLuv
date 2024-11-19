@@ -12,6 +12,7 @@ import {
 import * as Location from 'expo-location'; // Importing Expo's Location API for GPS functionality
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps'; // Import MapView and Marker
+import MapViewDirections from 'react-native-maps-directions'; // Import MapViewDirections
 
 const AldorFamilyFarmScreen = () => {
   // State to hold the user's current location
@@ -24,6 +25,9 @@ const AldorFamilyFarmScreen = () => {
   // Coordinates for Aldor Acres Family Farm
   const farmLatitude = 49.1706;
   const farmLongitude = -122.6076;
+
+  // Google Maps API Key (Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your actual API key)
+  const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
 
   useEffect(() => {
     let locationSubscription; // To hold the subscription for location updates
@@ -50,13 +54,12 @@ const AldorFamilyFarmScreen = () => {
           (newLocation) => {
             // LOCATION: Callback function to handle new location data
             setLocation(newLocation);
+            setLoading(false); // Stop loading when location is received
           }
         );
       } catch (error) {
         // LOCATION: If there's an error while fetching the location, set an error message
         setErrorMsg('Error fetching location.');
-      } finally {
-        // LOCATION: Regardless of success or error, stop the loading indicator
         setLoading(false);
       }
     };
@@ -64,21 +67,9 @@ const AldorFamilyFarmScreen = () => {
     // LOCATION: Start location tracking when the component mounts
     startLocationTracking();
 
-    // LOCATION: Set up a periodic location fetch every 5 seconds as a fallback
-    const intervalId = setInterval(async () => {
-      try {
-        // LOCATION: Get the current position once
-        const currentLocation = await Location.getCurrentPositionAsync({});
-        setLocation(currentLocation);
-      } catch (error) {
-        console.log('Error with periodic location fetch:', error);
-      }
-    }, 5000); // 5000 milliseconds = 5 seconds
-
-    // LOCATION: Clean up the location subscription and interval when the component unmounts
+    // LOCATION: Clean up the location subscription when the component unmounts
     return () => {
       if (locationSubscription) locationSubscription.remove();
-      clearInterval(intervalId);
     };
   }, []);
 
@@ -169,7 +160,9 @@ const AldorFamilyFarmScreen = () => {
         {/* About the Farm Section */}
         <View style={styles.aboutContainer}>
           <Text style={styles.aboutText}>
-            Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin patch, and more! Enjoy a day filled with family-friendly activities in the heart of Langley.
+            Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin
+            patch, and more! Enjoy a day filled with family-friendly activities in the heart of
+            Langley.
           </Text>
         </View>
 
@@ -186,9 +179,10 @@ const AldorFamilyFarmScreen = () => {
               initialRegion={{
                 latitude: farmLatitude,
                 longitude: farmLongitude,
-                latitudeDelta: 0.5,
-                longitudeDelta: 0.5,
+                latitudeDelta: 0.1,
+                longitudeDelta: 0.1,
               }}
+              showsUserLocation={true} // Show user's current location on the map
             >
               {/* Farm Marker */}
               <Marker
@@ -196,16 +190,17 @@ const AldorFamilyFarmScreen = () => {
                 title="Aldor Acres Family Farm"
                 description="Farm location"
               />
-              {/* User Location Marker */}
+              {/* Directions from User Location to Farm */}
               {location && (
-                <Marker
-                  coordinate={{
+                <MapViewDirections
+                  origin={{
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,
                   }}
-                  title="Your Location"
-                  description="You are here"
-                  pinColor="blue"
+                  destination={{ latitude: farmLatitude, longitude: farmLongitude }}
+                  apikey={GOOGLE_MAPS_APIKEY}
+                  strokeWidth={4}
+                  strokeColor="hotpink"
                 />
               )}
             </MapView>
