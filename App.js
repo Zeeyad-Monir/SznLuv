@@ -16,6 +16,8 @@ import WinterDatesScreen from './screens/WinterDatesScreen';
 import SpringDatesScreen from './screens/SpringDatesScreen';
 import SummerDatesScreen from './screens/SummerDatesScreen';
 import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
+import SpinTheWheel from './screens/SpinTheWheel';
+
 
 // Create context to provide user authentication state throughout the app
 export const AuthContext = createContext();
