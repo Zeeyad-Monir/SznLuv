@@ -1,6 +1,5 @@
 // AldorFamilyFarmScreen.js
 
-// LOCATION
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -16,6 +15,11 @@ import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions'; // MAPS
 
+import Constants from 'expo-constants';
+
+const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
+console.log('Weather API Key:', WEATHER_API_KEY);
+
 // GOOGLE API KEY (For directions, geolocation services, and places)
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
@@ -28,12 +32,16 @@ const AldorFamilyFarmScreen = () => {
   // State to manage the loading indicator
   const [loading, setLoading] = useState(true);
 
+  // WEATHER
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherError, setWeatherError] = useState(null);
+
   // Coordinates for Aldor Acres Family Farm
   const farmLatitude = 49.1706;
   const farmLongitude = -122.6076;
 
   useEffect(() => {
-    let locationSubscription; // Reference to the location subscription
+    let locationSubscription;
 
     // Function to initiate location tracking
     const startLocationTracking = async () => {
@@ -77,6 +85,31 @@ const AldorFamilyFarmScreen = () => {
       if (locationSubscription) locationSubscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    // Fetch weather data
+    const fetchWeatherData = async () => {
+      if (location) {
+        const { latitude, longitude } = location.coords;
+        try {
+          const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
+          );
+          const data = await response.json();
+
+          if (response.ok) {
+            setWeatherData(data);
+          } else {
+            setWeatherError(data.message || 'Unable to fetch weather data.');
+          }
+        } catch (error) {
+          setWeatherError(error.message || 'An error occurred while fetching weather data.');
+        }
+      }
+    };
+
+    fetchWeatherData();
+  }, [location]);
 
   let content; // Variable to determine what content to display based on state
 
@@ -133,15 +166,24 @@ const AldorFamilyFarmScreen = () => {
         <View style={styles.weatherContainer}>
           {/* Header for Weather Section */}
           <Text style={styles.weatherHeader}>7 DAY WEATHER REPORT</Text>
-          <View style={styles.weatherPlaceholders}>
-            {/* 
-              Placeholder boxes representing weather data/icons for each day.
-              These can be replaced with actual weather components or icons in the future.
-            */}
-            {Array.from({ length: 7 }).map((_, index) => (
-              <View key={index} style={styles.weatherPlaceholderBox} />
-            ))}
-          </View>
+          {weatherData ? (
+            <ScrollView horizontal>
+              {weatherData.list.slice(0, 7).map((forecast, index) => (
+                <View key={index} style={styles.weatherPlaceholderBox}>
+                  <Text style={styles.weatherDay}>
+                    {new Date(forecast.dt * 1000).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                    })}
+                  </Text>
+                  <Text style={styles.weatherTemp}>{forecast.main.temp.toFixed(1)}°C</Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : weatherError ? (
+            <Text style={styles.errorText}>{weatherError}</Text>
+          ) : (
+            <ActivityIndicator size="large" color="#0000ff" />
+          )}
         </View>
 
         {/* Farm Information Section */}
@@ -277,17 +319,26 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0.5, height: 0.5 }, // Slight offset for the shadow
     textShadowRadius: 1, // Blur radius for the shadow
   },
-  weatherPlaceholders: {
-    flexDirection: 'row', // Arrange weather boxes horizontally
-    justifyContent: 'space-between', // Evenly space them out
-    width: '100%', // Take up full width of the container
-  },
   weatherPlaceholderBox: {
-    width: 40, // Width of each weather box
-    height: 40, // Height of each weather box
+    width: 80, // Width of each weather box
+    height: 100, // Height of each weather box
     backgroundColor: '#6ca0dc', // Blue color to represent weather icons
     borderRadius: 5, // Slightly rounded corners
-    marginHorizontal: 2, // Small horizontal margin between boxes
+    marginHorizontal: 5, // Small horizontal margin between boxes
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
+  },
+  weatherDay: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  weatherTemp: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 5,
   },
 
   /* Farm Information Styles */

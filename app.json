@@ -30,6 +30,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "WEATHER_API_KEY": "92be9d8cdbac2f4865e8666ae541f316"
     }
   }
 }
