@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location'; // Importing Expo's Location API for GPS functionality
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps'; // Import MapView and Marker
 
 const AldorFamilyFarmScreen = () => {
   // State to hold the user's current location
@@ -19,6 +20,10 @@ const AldorFamilyFarmScreen = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   // State to manage the loading indicator
   const [loading, setLoading] = useState(true);
+
+  // Coordinates for Aldor Acres Family Farm
+  const farmLatitude = 49.1706;
+  const farmLongitude = -122.6076;
 
   useEffect(() => {
     let locationSubscription; // To hold the subscription for location updates
@@ -40,7 +45,7 @@ const AldorFamilyFarmScreen = () => {
           {
             accuracy: Location.Accuracy.High, // High accuracy for precise location
             timeInterval: 1000, // Update location every 1000 milliseconds (1 second)
-            distanceInterval: 1600, // Update location if the user moves by 1600 meter
+            distanceInterval: 1600, // Update location if the user moves by 1600 meters
           },
           (newLocation) => {
             // LOCATION: Callback function to handle new location data
@@ -169,23 +174,41 @@ const AldorFamilyFarmScreen = () => {
         </View>
 
         {/* User's Current Location Display */}
-        <View style={styles.currentLocationBox}>
-          {content}
-        </View>
+        <View style={styles.currentLocationBox}>{content}</View>
 
-        {/* Map Placeholder Section */}
+        {/* Map Section */}
         <View style={styles.mapContainer}>
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
-          <View style={styles.mapPlaceholder}>
-            {/* 
-              Red dot representing the farm's destination on the map.
-              Blue dot representing the user's current location.
-              These are just placeholders and can be replaced with an actual map component like react-native-maps.
-            */}
-            <View style={styles.mapMarkerDestination} />
-            <View style={styles.mapMarkerUser} />
-            <Text style={styles.mapPlaceholderText}>Map Placeholder</Text>
+          <View style={styles.mapWrapper}>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: farmLatitude,
+                longitude: farmLongitude,
+                latitudeDelta: 0.5,
+                longitudeDelta: 0.5,
+              }}
+            >
+              {/* Farm Marker */}
+              <Marker
+                coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
+                title="Aldor Acres Family Farm"
+                description="Farm location"
+              />
+              {/* User Location Marker */}
+              {location && (
+                <Marker
+                  coordinate={{
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  }}
+                  title="Your Location"
+                  description="You are here"
+                  pinColor="blue"
+                />
+              )}
+            </MapView>
           </View>
         </View>
       </ScrollView>
@@ -359,7 +382,7 @@ const styles = StyleSheet.create({
     color: '#555', // Medium grey text color
   },
 
-  /* Map Placeholder Styles */
+  /* Map Styles */
   mapContainer: {
     backgroundColor: '#FAF4E4', // Light background to highlight the map section
     padding: 15, // Padding inside the container
@@ -379,38 +402,14 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Center the text
     marginBottom: 10, // Space below the header
   },
-  mapPlaceholder: {
-    width: '100%', // Full width of the container
-    height: 200, // Fixed height for the map placeholder
-    backgroundColor: '#d0e6a5', // Light green background to represent greenery or map area
-    borderRadius: 10, // Rounded corners for a smooth look
-    position: 'relative', // Position relative to allow absolute positioning of markers and text
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
+  mapWrapper: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  mapMarkerDestination: {
-    width: 20, // Width of the destination marker
-    height: 20, // Height of the destination marker
-    backgroundColor: 'red', // Red color for visibility
-    borderRadius: 10, // Make it a perfect circle
-    position: 'absolute', // Position it absolutely within the map placeholder
-    top: '40%', // Position from the top
-    left: '50%', // Position from the left
-    transform: [{ translateX: -10 }, { translateY: -10 }], // Center the marker exactly at the point
-  },
-  mapMarkerUser: {
-    width: 10, // Width of the user's current location marker
-    height: 10, // Height of the user's current location marker
-    backgroundColor: 'blue', // Blue color to differentiate from the destination
-    borderRadius: 5, // Make it a smaller circle
-    position: 'absolute', // Position it absolutely within the map placeholder
-    top: '60%', // Position from the top
-    left: '30%', // Position from the left
-  },
-  mapPlaceholderText: {
-    position: 'absolute', // Position text absolutely within the map
-    color: '#666', // Grey text color
-    fontSize: 16, // Font size for the placeholder text
+  map: {
+    flex: 1,
   },
 
   /* Error Text Styles */
