@@ -1,5 +1,6 @@
 // AldorFamilyFarmScreen.js
 
+// LOCATION
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,12 +10,17 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import * as Location from 'expo-location'; // Importing Expo's Location API for GPS functionality
+import * as Location from 'expo-location'; // LOCATION
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
-import MapView, { Marker } from 'react-native-maps'; // Import MapView and Marker
-import MapViewDirections from 'react-native-maps-directions'; // Import MapViewDirections
+// MAPS
+import MapView, { Marker } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions'; // MAPS
+
+// GOOGLE API KEY (For directions, geolocation services, and places)
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
 const AldorFamilyFarmScreen = () => {
+  // LOCATION
   // State to hold the user's current location
   const [location, setLocation] = useState(null);
   // State to hold any error messages related to location fetching
@@ -26,63 +32,62 @@ const AldorFamilyFarmScreen = () => {
   const farmLatitude = 49.1706;
   const farmLongitude = -122.6076;
 
-  // Google Maps API Key (Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your actual API key)
-  const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
-
   useEffect(() => {
-    let locationSubscription; // To hold the subscription for location updates
+    let locationSubscription; // Reference to the location subscription
 
-    // LOCATION: Function to start tracking the user's location
+    // Function to initiate location tracking
     const startLocationTracking = async () => {
-      // LOCATION: Request permission to access the device's location
+      // LOCATION
+      // Request permission to access the device's location
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        // LOCATION: If permission is denied, set an error message and stop loading
+        // If permission is denied, update the error message and stop loading
         setErrorMsg('Permission to access location was denied.');
         setLoading(false);
         return;
       }
 
       try {
-        // LOCATION: Start watching the user's position with high accuracy
+        // LOCATION
+        // Start watching the user's position with specified accuracy and intervals
         locationSubscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.High, // High accuracy for precise location
+            accuracy: Location.Accuracy.High, // High accuracy for precise location data
             timeInterval: 1000, // Update location every 1000 milliseconds (1 second)
-            distanceInterval: 1600, // Update location if the user moves by 1600 meters
+            distanceInterval: 1600, // Update if the user moves by 1600 meters
           },
           (newLocation) => {
-            // LOCATION: Callback function to handle new location data
+            // Update the location state with the new location data
             setLocation(newLocation);
-            setLoading(false); // Stop loading when location is received
+            setLoading(false); // Stop the loading indicator once location is received
           }
         );
       } catch (error) {
-        // LOCATION: If there's an error while fetching the location, set an error message
+        // Handle any errors that occur while fetching the location
         setErrorMsg('Error fetching location.');
         setLoading(false);
       }
     };
 
-    // LOCATION: Start location tracking when the component mounts
+    // Start location tracking when the component mounts
     startLocationTracking();
 
-    // LOCATION: Clean up the location subscription when the component unmounts
+    // Clean up the location subscription when the component unmounts
     return () => {
       if (locationSubscription) locationSubscription.remove();
     };
   }, []);
 
-  let content; // Variable to hold what will be displayed based on the state
+  let content; // Variable to determine what content to display based on state
 
   if (loading) {
-    // If the app is still loading the location, show a loading spinner
+    // Display a loading indicator while fetching location
     content = <ActivityIndicator size="large" color="#0000ff" />;
   } else if (errorMsg) {
-    // If there's an error message, display it to the user
+    // Display an error message if there's an issue fetching location
     content = <Text style={styles.errorText}>{errorMsg}</Text>;
   } else if (location) {
-    // If the location is successfully fetched, display the coordinates
+    // Display the user's current latitude and longitude
     const { latitude, longitude } = location.coords;
     content = (
       <View style={styles.locationContainer}>
@@ -166,10 +171,16 @@ const AldorFamilyFarmScreen = () => {
           </Text>
         </View>
 
-        {/* User's Current Location Display */}
+        {/* 
+          LOCATION
+          User's Current Location Display 
+        */}
         <View style={styles.currentLocationBox}>{content}</View>
 
-        {/* Map Section */}
+        {/* 
+          MAPS
+          Map Section 
+        */}
         <View style={styles.mapContainer}>
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
@@ -179,18 +190,21 @@ const AldorFamilyFarmScreen = () => {
               initialRegion={{
                 latitude: farmLatitude,
                 longitude: farmLongitude,
-                latitudeDelta: 0.1,
-                longitudeDelta: 0.1,
+                latitudeDelta: 0.25,
+                longitudeDelta: 0.25,
               }}
-              showsUserLocation={true} // Show user's current location on the map
+              showsUserLocation={true} // Enables the display of the user's current location on the map
             >
-              {/* Farm Marker */}
+              {/* Marker indicating the location of Aldor Acres Family Farm */}
               <Marker
                 coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
                 title="Aldor Acres Family Farm"
                 description="Farm location"
               />
-              {/* Directions from User Location to Farm */}
+              {/* 
+                If the user's location is available, display directions from their current location to the farm.
+                Utilizes the Google Maps Directions API to plot the route.
+              */}
               {location && (
                 <MapViewDirections
                   origin={{
@@ -198,7 +212,7 @@ const AldorFamilyFarmScreen = () => {
                     longitude: location.coords.longitude,
                   }}
                   destination={{ latitude: farmLatitude, longitude: farmLongitude }}
-                  apikey={GOOGLE_MAPS_APIKEY}
+                  apikey={GOOGLE_MAPS_APIKEY} // GOOGLE
                   strokeWidth={4}
                   strokeColor="hotpink"
                 />
@@ -348,7 +362,10 @@ const styles = StyleSheet.create({
     textAlign: 'justify', // Justify the text for neat alignment
   },
 
-  /* User's Current Location Styles */
+  /* 
+    LOCATION
+    User's Current Location Styles 
+  */
   currentLocationBox: {
     backgroundColor: '#FAF4E4', // Light background to highlight the location section
     padding: 15, // Padding inside the container
@@ -377,7 +394,10 @@ const styles = StyleSheet.create({
     color: '#555', // Medium grey text color
   },
 
-  /* Map Styles */
+  /* 
+    MAPS
+    Map Styles 
+  */
   mapContainer: {
     backgroundColor: '#FAF4E4', // Light background to highlight the map section
     padding: 15, // Padding inside the container
