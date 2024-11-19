@@ -1,53 +1,82 @@
-// AldorFamilyFarmScreen.js
+//AldorFamilyFarmScreen.js
+//Used chatgpt.com to add comments, so me and my teammate understand what we each did and remember for the future
 
+
+// Import React and necessary hooks for managing state and side effects
 import React, { useState, useEffect } from 'react';
+
+// Import components from React Native for building the UI
 import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-  TouchableOpacity,
+  View, // Container component for layout
+  Text, // Component for displaying text
+  StyleSheet, // For creating styles
+  ActivityIndicator, // For showing a loading spinner
+  ScrollView, // For creating scrollable content
+  TouchableOpacity, // For touchable elements like buttons
 } from 'react-native';
+
+// Import Expo's Location module to access the device's location
 import * as Location from 'expo-location'; // LOCATION
+
+// Import icon components from Expo's vector icons library
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
-// MAPS
+
+// Import MapView components for displaying maps and markers
 import MapView, { Marker } from 'react-native-maps';
+
+// Import MapViewDirections for displaying route directions on the map
 import MapViewDirections from 'react-native-maps-directions'; // MAPS
 
+// Import Constants from Expo (not used directly in this code)
 import Constants from 'expo-constants';
 
+// API key for OpenWeatherMap to fetch weather data
 const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 console.log('Weather API Key:', WEATHER_API_KEY);
 
-// GOOGLE API KEY (For directions, geolocation services, and places)
+// Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
+// Main functional component representing the screen for Aldor Acres Family Farm
 const AldorFamilyFarmScreen = () => {
-  // LOCATION
-  // State to hold the user's current location
+  // ------------------ LOCATION STATE VARIABLES ------------------
+
+  // State to hold the user's current location data
   const [location, setLocation] = useState(null);
+
   // State to hold any error messages related to location fetching
   const [errorMsg, setErrorMsg] = useState(null);
-  // State to manage the loading indicator
+
+  // State to manage the loading indicator while fetching location
   const [loading, setLoading] = useState(true);
 
-  // WEATHER
+  // ------------------ WEATHER STATE VARIABLES ------------------
+
+  // State to hold the weather data fetched from the API
   const [weatherData, setWeatherData] = useState(null);
+
+  // State to hold any errors that occur during weather data fetching
   const [weatherError, setWeatherError] = useState(null);
 
-  // Coordinates for Aldor Acres Family Farm
+  // ------------------ FARM COORDINATES ------------------
+
+  // Latitude and longitude for Aldor Acres Family Farm
   const farmLatitude = 49.1706;
   const farmLongitude = -122.6076;
 
+  // ------------------ LOCATION EFFECT HOOK ------------------
+
+  // useEffect hook to handle side effects related to location tracking
   useEffect(() => {
-    let locationSubscription;
+    let locationSubscription; // Variable to hold the subscription to location updates
 
     // Function to initiate location tracking
     const startLocationTracking = async () => {
-      // LOCATION
-      // Request permission to access the device's location
+      // ------------------ REQUEST PERMISSION ------------------
+
+      // Request permission to access the device's location in the foreground
       let { status } = await Location.requestForegroundPermissionsAsync();
+
       if (status !== 'granted') {
         // If permission is denied, update the error message and stop loading
         setErrorMsg('Permission to access location was denied.');
@@ -55,19 +84,24 @@ const AldorFamilyFarmScreen = () => {
         return;
       }
 
+      // ------------------ START WATCHING LOCATION ------------------
+
       try {
-        // LOCATION
         // Start watching the user's position with specified accuracy and intervals
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High, // High accuracy for precise location data
-            timeInterval: 1000, // Update location every 1000 milliseconds (1 second)
-            distanceInterval: 1600, // Update if the user moves by 1600 meters
+            timeInterval: 1000, // Minimum time interval between location updates (in milliseconds)
+            distanceInterval: 1600, // Minimum distance (in meters) to travel before receiving updates
           },
           (newLocation) => {
+            // Callback function executed when new location data is available
+
             // Update the location state with the new location data
             setLocation(newLocation);
-            setLoading(false); // Stop the loading indicator once location is received
+
+            // Stop the loading indicator once location is received
+            setLoading(false);
           }
         );
       } catch (error) {
@@ -80,36 +114,47 @@ const AldorFamilyFarmScreen = () => {
     // Start location tracking when the component mounts
     startLocationTracking();
 
-    // Clean up the location subscription when the component unmounts
+    // Clean up the location subscription when the component unmounts to prevent memory leaks
     return () => {
       if (locationSubscription) locationSubscription.remove();
     };
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
+  // ------------------ WEATHER DATA EFFECT HOOK ------------------
+
+  // useEffect hook to fetch weather data whenever the location changes
   useEffect(() => {
-    // Fetch weather data
+    // Function to fetch weather data from OpenWeatherMap API
     const fetchWeatherData = async () => {
       if (location) {
         const { latitude, longitude } = location.coords;
+
         try {
+          // Fetch the 5-day weather forecast data in 3-hour intervals
           const response = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
           );
           const data = await response.json();
 
           if (response.ok) {
+            // If the response is successful, update the weatherData state
             setWeatherData(data);
           } else {
+            // If the response has an error, update the weatherError state
             setWeatherError(data.message || 'Unable to fetch weather data.');
           }
         } catch (error) {
+          // Handle any network or other errors during the fetch
           setWeatherError(error.message || 'An error occurred while fetching weather data.');
         }
       }
     };
 
+    // Invoke the function to fetch weather data when location is available
     fetchWeatherData();
-  }, [location]);
+  }, [location]); // Dependency on location ensures this runs whenever location changes
+
+  // ------------------ CONDITIONAL CONTENT RENDERING ------------------
 
   let content; // Variable to determine what content to display based on state
 
@@ -131,13 +176,11 @@ const AldorFamilyFarmScreen = () => {
     );
   }
 
+  // ------------------ MAIN COMPONENT RENDERING ------------------
+
   return (
     <View style={styles.container}>
-      {/* 
-        Header Section:
-        - Displays the app logo
-        - Contains icon buttons for additional actions
-      */}
+      {/* ------------------ HEADER SECTION ------------------ */}
       <View style={styles.header}>
         {/* Logo Text */}
         <Text style={styles.logoText}>SznLuv</Text>
@@ -157,36 +200,38 @@ const AldorFamilyFarmScreen = () => {
         </View>
       </View>
 
-      {/* 
-        Main Scrollable Content:
-        - Contains various sections like weather, farm info, images, location, and map
-      */}
+      {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Weather Report Section */}
+        {/* ------------------ WEATHER REPORT SECTION ------------------ */}
         <View style={styles.weatherContainer}>
           {/* Header for Weather Section */}
           <Text style={styles.weatherHeader}>7 DAY WEATHER REPORT</Text>
           {weatherData ? (
             <ScrollView horizontal>
+              {/* Display the first 7 forecasts from the data */}
               {weatherData.list.slice(0, 7).map((forecast, index) => (
                 <View key={index} style={styles.weatherPlaceholderBox}>
+                  {/* Day of the week */}
                   <Text style={styles.weatherDay}>
                     {new Date(forecast.dt * 1000).toLocaleDateString('en-US', {
                       weekday: 'short',
                     })}
                   </Text>
+                  {/* Temperature */}
                   <Text style={styles.weatherTemp}>{forecast.main.temp.toFixed(1)}°C</Text>
                 </View>
               ))}
             </ScrollView>
           ) : weatherError ? (
+            // Display an error message if there's an issue fetching weather data
             <Text style={styles.errorText}>{weatherError}</Text>
           ) : (
+            // Display a loading indicator while fetching weather data
             <ActivityIndicator size="large" color="#0000ff" />
           )}
         </View>
 
-        {/* Farm Information Section */}
+        {/* ------------------ FARM INFORMATION SECTION ------------------ */}
         <Text style={styles.title}>Aldor Acres Family Farm</Text>
         <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
         <View style={styles.activityBox}>
@@ -194,7 +239,7 @@ const AldorFamilyFarmScreen = () => {
           <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
         </View>
 
-        {/* Image Placeholder Section */}
+        {/* ------------------ IMAGE PLACEHOLDER SECTION ------------------ */}
         <View style={styles.imagePlaceholder}>
           {/* 
             Icon indicating where an image would go.
@@ -204,7 +249,7 @@ const AldorFamilyFarmScreen = () => {
           <Text style={styles.placeholderText}>Image Placeholder</Text>
         </View>
 
-        {/* About the Farm Section */}
+        {/* ------------------ ABOUT THE FARM SECTION ------------------ */}
         <View style={styles.aboutContainer}>
           <Text style={styles.aboutText}>
             Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin
@@ -213,16 +258,10 @@ const AldorFamilyFarmScreen = () => {
           </Text>
         </View>
 
-        {/* 
-          LOCATION
-          User's Current Location Display 
-        */}
+        {/* ------------------ USER'S CURRENT LOCATION SECTION ------------------ */}
         <View style={styles.currentLocationBox}>{content}</View>
 
-        {/* 
-          MAPS
-          Map Section 
-        */}
+        {/* ------------------ MAP SECTION ------------------ */}
         <View style={styles.mapContainer}>
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
@@ -232,7 +271,7 @@ const AldorFamilyFarmScreen = () => {
               initialRegion={{
                 latitude: farmLatitude,
                 longitude: farmLongitude,
-                latitudeDelta: 0.25,
+                latitudeDelta: 0.25, // Zoom level (smaller value zooms in)
                 longitudeDelta: 0.25,
               }}
               showsUserLocation={true} // Enables the display of the user's current location on the map
@@ -243,11 +282,8 @@ const AldorFamilyFarmScreen = () => {
                 title="Aldor Acres Family Farm"
                 description="Farm location"
               />
-              {/* 
-                If the user's location is available, display directions from their current location to the farm.
-                Utilizes the Google Maps Directions API to plot the route.
-              */}
               {location && (
+                // If the user's location is available, display directions from their current location to the farm
                 <MapViewDirections
                   origin={{
                     latitude: location.coords.latitude,
@@ -267,7 +303,10 @@ const AldorFamilyFarmScreen = () => {
   );
 };
 
+// Export the component so it can be used in other parts of the app
 export default AldorFamilyFarmScreen;
+
+// ------------------ STYLESHEET FOR THE COMPONENT ------------------
 
 const styles = StyleSheet.create({
   // Container for the entire screen
@@ -276,7 +315,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF8657', // Bright orange background to make the app lively
   },
 
-  /* Header Styles */
+  /* ------------------ HEADER STYLES ------------------ */
+
   header: {
     flexDirection: 'row', // Arrange items horizontally
     alignItems: 'center', // Vertically center the items
@@ -297,12 +337,14 @@ const styles = StyleSheet.create({
     marginLeft: 15, // Space between each icon
   },
 
-  /* Scrollable Content Styles */
+  /* ------------------ SCROLLABLE CONTENT STYLES ------------------ */
+
   scrollContent: {
     paddingBottom: 20, // Space at the bottom to ensure content isn't cut off
   },
 
-  /* Weather Report Styles */
+  /* ------------------ WEATHER REPORT STYLES ------------------ */
+
   weatherContainer: {
     backgroundColor: '#B9CCEC', // Light blue background representing the sky
     padding: 15, // Padding inside the container
@@ -329,144 +371,143 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Center content horizontally
   },
   weatherDay: {
-    color: '#fff',
+    color: '#fff', // White text color
     fontSize: 14,
     textAlign: 'center',
   },
   weatherTemp: {
-    color: '#fff',
+    color: '#fff', // White text color
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
     marginTop: 5,
   },
 
-  /* Farm Information Styles */
+  /* ------------------ FARM INFORMATION STYLES ------------------ */
+
   title: {
     fontSize: 24, // Large font size for the farm name
     fontWeight: 'bold', // Bold text for emphasis
     color: '#FAF4E4', // Light color for contrast against the background
-    textAlign: 'center', // Center the text
-    marginTop: 10, // Space above the title
+    textAlign: 'center',
+    marginTop: 10,
     textTransform: 'uppercase', // Uppercase letters for a formal look
   },
   address: {
-    fontSize: 14, // Smaller font size for the address
+    fontSize: 14,
     color: '#666', // Grey color for less emphasis
-    textAlign: 'center', // Center the text
-    textTransform: 'uppercase', // Uppercase letters for consistency
-    marginVertical: 5, // Vertical margin above and below the address
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    marginVertical: 5,
   },
   activityBox: {
     backgroundColor: '#FAF4E4', // Light background to highlight activities
-    padding: 10, // Padding inside the box
-    borderRadius: 10, // Rounded corners for a smooth appearance
-    alignSelf: 'center', // Center the box horizontally
-    marginVertical: 10, // Vertical margin above and below the box
-    width: '90%', // Width relative to the parent container
+    padding: 10,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 10,
+    width: '90%',
     shadowColor: '#000', // Shadow color for depth
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
-    shadowRadius: 2, // Shadow blur radius
-    elevation: 2, // Elevation for Android shadow
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   activityText: {
-    fontSize: 14, // Font size for the activity text
+    fontSize: 14,
     color: '#000', // Black text color for readability
-    textAlign: 'center', // Center the text
-    textTransform: 'capitalize', // Capitalize each word
+    textAlign: 'center',
+    textTransform: 'capitalize',
   },
 
-  /* Image Placeholder Styles */
+  /* ------------------ IMAGE PLACEHOLDER STYLES ------------------ */
+
   imagePlaceholder: {
-    width: '90%', // Width relative to the parent container
-    height: 200, // Fixed height for the placeholder
+    width: '90%',
+    height: 200,
     backgroundColor: '#e0e0e0', // Light grey background to indicate a placeholder
-    borderRadius: 10, // Rounded corners for a smooth look
-    alignSelf: 'center', // Center the placeholder horizontally
-    marginVertical: 15, // Vertical margin above and below the placeholder
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
-    position: 'relative', // Position relative to allow absolute positioning of text
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
   placeholderText: {
-    position: 'absolute', // Position text absolutely within the placeholder
+    position: 'absolute',
     color: '#666', // Grey text color
-    fontSize: 16, // Font size for the placeholder text
+    fontSize: 16,
   },
 
-  /* About the Farm Styles */
+  /* ------------------ ABOUT THE FARM STYLES ------------------ */
+
   aboutContainer: {
-    backgroundColor: '#FAF4E4', // Light background to highlight the about section
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners for a smooth appearance
-    marginHorizontal: 15, // Horizontal margin on both sides
-    shadowColor: '#000', // Shadow color for depth
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
-    shadowRadius: 2, // Shadow blur radius
-    elevation: 2, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   aboutText: {
-    fontSize: 16, // Font size for the about text
+    fontSize: 16,
     color: '#000', // Black text color for readability
     textAlign: 'justify', // Justify the text for neat alignment
   },
 
-  /* 
-    LOCATION
-    User's Current Location Styles 
-  */
+  /* ------------------ USER'S CURRENT LOCATION STYLES ------------------ */
+
   currentLocationBox: {
-    backgroundColor: '#FAF4E4', // Light background to highlight the location section
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners for a smooth look
-    alignSelf: 'center', // Center the container horizontally
-    marginVertical: 10, // Vertical margin above and below the container
-    width: '90%', // Width relative to the parent container
-    shadowColor: '#000', // Shadow color for depth
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.05, // Shadow opacity
-    shadowRadius: 1, // Shadow blur radius
-    elevation: 1, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 10,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   locationContainer: {
     alignItems: 'center', // Center items horizontally
   },
   locationText: {
-    fontSize: 18, // Font size for the location header
-    fontWeight: 'bold', // Bold text for emphasis
-    marginBottom: 10, // Space below the header
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
     color: '#333', // Dark grey text color
   },
   coordsText: {
-    fontSize: 16, // Font size for the coordinates
-    marginVertical: 2, // Small vertical margin above and below
+    fontSize: 16,
+    marginVertical: 2,
     color: '#555', // Medium grey text color
   },
 
-  /* 
-    MAPS
-    Map Styles 
-  */
+  /* ------------------ MAP STYLES ------------------ */
+
   mapContainer: {
-    backgroundColor: '#FAF4E4', // Light background to highlight the map section
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners for a smooth look
-    marginHorizontal: 15, // Horizontal margin on both sides
-    marginTop: 10, // Space above the container
-    shadowColor: '#000', // Shadow color for depth
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
-    shadowRadius: 2, // Shadow blur radius
-    elevation: 2, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   mapHeader: {
-    fontSize: 18, // Font size for the map header
-    fontWeight: 'bold', // Bold text for emphasis
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#000', // Black text color for readability
-    textAlign: 'center', // Center the text
-    marginBottom: 10, // Space below the header
+    textAlign: 'center',
+    marginBottom: 10,
   },
   mapWrapper: {
     width: '100%',
@@ -478,11 +519,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* Error Text Styles */
+  /* ------------------ ERROR TEXT STYLES ------------------ */
+
   errorText: {
     color: 'red', // Red color to indicate an error
-    fontSize: 16, // Font size for the error message
-    textAlign: 'center', // Center the text
-    marginVertical: 10, // Space above and below the text
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 10,
   },
 });
