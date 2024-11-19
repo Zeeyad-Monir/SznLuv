@@ -1,5 +1,5 @@
 //AldorFamilyFarmScreen.js
-//Used chatgpt.com to add comments, so me and my teammate understand what we each did and remember for the future
+//Used chatgpt.com to add detaileed comments, so me and my teammate understand what we each did and remember for the future
 
 
 // Import React and necessary hooks for managing state and side effects
