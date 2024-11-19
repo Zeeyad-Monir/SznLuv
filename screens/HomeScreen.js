@@ -127,8 +127,8 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Custom icon link */}
-          <View style={styles.iconCircle}>
+           {/* Custom icon link */}
+           <View style={styles.iconCircle}>
             <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
               <Image
                 source={require('../assets/SPINTHEWHEEL.png')}
