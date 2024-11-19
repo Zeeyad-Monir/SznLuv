@@ -10,7 +10,8 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Svg, { Path, G, Text as SvgText } from "react-native-svg";
+import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
+import ConfettiCannon from "react-native-confetti-cannon";
 
 const dateOptions = [
   "Aldor Acres Family Farm",
@@ -40,6 +41,7 @@ const SpinTheWheel = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const rotation = useRef(new Animated.Value(0)).current;
+  const confettiRef = useRef(null);
 
   useEffect(() => {
     const loadDateIdea = async () => {
@@ -132,12 +134,25 @@ const SpinTheWheel = () => {
 
       // Calculate text position
       const textAngle = startAngle + angle / 2;
-      const textX =
-        radius +
-        (radius * 0.6) * Math.cos((Math.PI * textAngle) / 180); // Adjusted for better positioning
-      const textY =
-        radius +
-        (radius * 0.6) * Math.sin((Math.PI * textAngle) / 180); // Adjusted for better positioning
+      const textRadius = radius * 0.7; // Adjusted radius for text
+      const textX = radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
+      const textY = radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
+
+      // Split long text into multiple lines
+      const words = option.split(" ");
+      const lines = [];
+      let line = "";
+
+      words.forEach((word) => {
+        const testLine = line + word + " ";
+        if (testLine.length > 12) {
+          lines.push(line.trim());
+          line = word + " ";
+        } else {
+          line = testLine;
+        }
+      });
+      lines.push(line.trim());
 
       return (
         <G key={`section-${index}`}>
@@ -149,16 +164,23 @@ const SpinTheWheel = () => {
           />
           <SvgText
             x={textX}
-            y={textY}
+            y={textY - (lines.length - 1) * 6} // Adjusted Y position based on number of lines
             fill="#000"
-            fontSize="10" // Reduced font size
+            fontSize="12"
             fontWeight="bold"
             textAnchor="middle"
             alignmentBaseline="middle"
             transform={`rotate(${textAngle + 90}, ${textX}, ${textY})`} // Rotated text for better readability
-            width={radius * 0.6}
           >
-            {option}
+            {lines.map((lineText, idx) => (
+              <TSpan
+                x={textX}
+                dy={idx === 0 ? 0 : 14} // Adjusted line spacing
+                key={`line-${idx}`}
+              >
+                {lineText}
+              </TSpan>
+            ))}
           </SvgText>
         </G>
       );
@@ -170,6 +192,7 @@ const SpinTheWheel = () => {
       <View style={styles.topNav}>
         <Text style={styles.sznluv}>SznLuv</Text>
         <View style={styles.iconsContainer}>
+          {/* Replace with actual icons */}
           <Image style={styles.icon} source={{ uri: "path/to/icon1.png" }} />
           <Image style={styles.icon} source={{ uri: "path/to/icon2.png" }} />
           <Image style={styles.icon} source={{ uri: "path/to/icon3.png" }} />
@@ -218,12 +241,20 @@ const SpinTheWheel = () => {
           <Text style={styles.subtitle}>You’ve spun:</Text>
           <View style={styles.resultBox}>
             <Text style={styles.resultText}>{selectedDate}</Text>
-            {/* You may want to dynamically set the address based on the selectedDate */}
+            {/* Dynamically set the address based on the selectedDate */}
             <Text style={styles.resultSubtitle}>
-              24900 84 Ave, Langley, BC
+              {/* Placeholder address */}
+              123 Date Avenue, Vancouver, BC
             </Text>
+            {/* Confetti Animation */}
+            <ConfettiCannon
+              count={200}
+              origin={{ x: -10, y: 0 }}
+              fadeOut={true}
+              ref={confettiRef}
+            />
           </View>
-          <Text style={styles.enjoyText}>Enjoy!</Text>
+          <Text style={styles.enjoyText}>Enjoy your date!</Text>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedDate(null)}
@@ -253,7 +284,7 @@ const styles = StyleSheet.create({
   },
   sznluv: {
     fontFamily: "Gramatika-Black",
-    fontSize: 20,
+    fontSize: 24,
     color: "#faf4e4",
   },
   iconsContainer: {
@@ -273,7 +304,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 18,
+    fontSize: 20,
     color: "#a59f90",
     textAlign: "center",
     marginBottom: -5,
@@ -330,25 +361,29 @@ const styles = StyleSheet.create({
   },
   resultBox: {
     backgroundColor: "#F47B5E",
-    padding: 15,
+    padding: 20,
     borderRadius: 10,
     marginTop: 20,
     alignItems: "center",
+    elevation: 5,
   },
   resultText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#FFF",
+    textAlign: "center",
   },
   resultSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#FFF",
+    marginTop: 10,
   },
   enjoyText: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#a59f90",
-    marginTop: 60,
+    color: "#F47B5E",
+    marginTop: 40,
+    textAlign: "center",
   },
   backButton: {
     marginTop: 20,
