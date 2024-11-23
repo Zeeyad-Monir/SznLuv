@@ -1,5 +1,5 @@
-//AldorFamilyFarmScreen.js
-//Used chatgpt.com to add detailed comments, so me and my teammate understand what we each did and remember for the future
+// AldorFamilyFarmScreen.js
+// Used chatgpt.com to add detailed comments, so me and my teammate understand what we each did and remember for the future
 
 // Import React and necessary hooks for managing state and side effects
 import React, { useState, useEffect } from 'react';
@@ -29,6 +29,9 @@ import MapViewDirections from 'react-native-maps-directions'; // MAPS
 
 // Import Constants from Expo (not used directly in this code)
 import Constants from 'expo-constants';
+
+// Import the external NavBar component
+import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
 
 // API key for OpenWeatherMap to fetch weather data
 const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
@@ -180,25 +183,8 @@ const AldorFamilyFarmScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* ------------------ HEADER SECTION ------------------ */}
-      <View style={styles.header}>
-        {/* Logo Text */}
-        <Text style={styles.logoText}>SznLuv</Text>
-        <View style={styles.iconContainer}>
-          {/* Sun Icon Button */}
-          <TouchableOpacity style={styles.iconButton}>
-            <Feather name="sun" size={24} color="#fff" />
-          </TouchableOpacity>
-          {/* Favorite Icon Button */}
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="favorite-border" size={24} color="#fff" />
-          </TouchableOpacity>
-          {/* Person Icon Button */}
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="person-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* ------------------ NAVIGATION BAR ------------------ */}
+      <NavBar />
 
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -312,28 +298,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FF8657', // Bright orange background to make the app lively
-  },
-
-  /* ------------------ HEADER STYLES ------------------ */
-
-  header: {
-    flexDirection: 'row', // Arrange items horizontally
-    alignItems: 'center', // Vertically center the items
-    backgroundColor: '#333', // Dark background for contrast
-    paddingVertical: 15, // Vertical padding for the header
-    paddingHorizontal: 10, // Horizontal padding for the header
-  },
-  logoText: {
-    flex: 1, // Take up remaining space
-    color: '#ff8c00', // Orange color to match the theme
-    fontSize: 24, // Larger font size for visibility
-    fontWeight: 'bold', // Bold text for prominence
-  },
-  iconContainer: {
-    flexDirection: 'row', // Arrange icons horizontally
-  },
-  iconButton: {
-    marginLeft: 15, // Space between each icon
   },
 
   /* ------------------ SCROLLABLE CONTENT STYLES ------------------ */

@@ -1,4 +1,3 @@
-
 // screens/HomeScreen.js
 // IN PROGRESS
 
@@ -11,13 +10,12 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
-} 
-
-from 'react-native';
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../App';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import NavBar from '../components/NavBar'; // Import the NavBar component
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -97,52 +95,9 @@ export default function HomeScreen() {
   }
 
   return (
-    
     <View style={styles.container}>
-      {/* Header with logo and icons */}
-
-
-      <View style={styles.header}>
-        {/* App logo */}
-        <Text style={styles.logoText}>SznLuv</Text>
-        <View style={styles.iconContainer}>
-          
-          {/* Favorites screen link */}
-          <View style={styles.iconCircle}>
-            <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-              <Image
-                source={require('../assets/FAVOURITES.png')}
-                style={styles.iconImage} // Make sure to style the image
-              />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Profile screen link */}
-          <View style={styles.iconCircle}>
-            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-              <Image
-                source={require('../assets/PROFILE.png')}
-                style={styles.iconImage} // Make sure to style the image
-              />
-            </TouchableOpacity>
-          </View>
-
-           {/* Custom icon link */}
-          <View style={styles.iconCircle}>
-            <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
-              <Image
-                source={require('../assets/SPINTHEWHEEL.png')}
-                style={styles.iconImage} // Make sure to style the image
-              />
-            </TouchableOpacity>
-          </View>
-          
-
-      </View>
-    </View>
-
-
-
+      {/* Add the NavBar component */}
+      <NavBar />
 
       {/* Main scrollable content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -214,57 +169,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5E4', // Light cream background color
   },
-  
-  header: {
-    height: 130, // Adjust the height of the header to fit all elements
-    backgroundColor: '#333333', // Dark background for contrast
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20, // Spacing inside header
-  },
-
-  logoContainer: {
-    marginTop: 45,
-    flexDirection: 'column',
-  },
-
-  logoText: {
-    marginTop: 45,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // White logo text
-  },
-
-  logoUnderline: {
-    height: 2, // Thin underline under logo
-    backgroundColor: '#C1A9E5', // Lavender color underline
-    marginTop: 4, // Space between text and underline
-  },
-
-
-  iconContainer: {
-    marginTop: 45,
-    flexDirection: 'row', // Align the icons horizontally
-    alignItems: 'center',
-  },
-  
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF', // Icon background
-    borderWidth: 1,
-    borderColor: '#A9A9A9', // Dark border
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10, // Space between icons
-  },
-  
-  iconPlaceholderText: {
-    fontSize: 20,
-    color: '#333333', // Icon text color
-  },
   scrollContent: {
     paddingBottom: 20, // Prevent content cutoff
   },
@@ -311,11 +215,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  iconImage: {
-    width: 43,
-    height: 43,
-    resizeMode: 'contain',
-  },
-
 });

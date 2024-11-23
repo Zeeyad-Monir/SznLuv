@@ -1,3 +1,4 @@
+// screens/FallDatesScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -8,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import NavBar from '../components/NavBar'; // Adjust the path if necessary
 
 export default function FallDatesScreen({ navigation }) {
   const categories = [
@@ -84,36 +86,14 @@ export default function FallDatesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Bar */}
-      <View style={styles.navigationBar}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-          <Text style={styles.logoText}>SznLuv</Text>
-        </TouchableOpacity>
-        <View style={styles.navigationIcons}>
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Icon
-              name="favorite-border"
-              size={24}
-              color="#FFA07A"
-              style={styles.navIcon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <Icon
-              name="person-outline"
-              size={24}
-              color="#FFA07A"
-              style={styles.navIcon}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Integrated Navigation Bar */}
+      <NavBar />
 
       {/* Main Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
         {/* Screen Title */}
         <Text style={styles.mainTitle}>Fall Dates</Text>
-        
+
         {/* Categories and Their Spots */}
         {categories.map((category, index) => (
           <View key={index} style={styles.categorySection}>
@@ -168,27 +148,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4A460',
-  },
-  
-  /* Navigation Bar Styles */
-  navigationBar: {
-    height: 60,
-    backgroundColor: '#333333',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-  },
-  logoText: {
-    color: '#FFA07A',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  navigationIcons: {
-    flexDirection: 'row',
-  },
-  navIcon: {
-    marginLeft: 15,
   },
 
   /* Main Content Styles */
