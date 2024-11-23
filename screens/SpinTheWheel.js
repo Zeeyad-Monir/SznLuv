@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   wheelPointer: {
     position: "absolute", // Position absolutely within the wheel container
-    top: -15, // Position the pointer slightly above the wheel
+    bottom: 275, // Position the pointer slightly below the wheel (flipped)
     width: 0, // No width as it's a triangle
     height: 0, // No height as it's a triangle
     zIndex: 1, // Ensure the pointer is above the wheel
@@ -485,10 +485,10 @@ const styles = StyleSheet.create({
     borderStyle: "solid", // Solid borders to create the triangle
     borderLeftWidth: 15, // Left border width
     borderRightWidth: 15, // Right border width
-    borderBottomWidth: 30, // Bottom border width to form the triangle
+    borderTopWidth: 30, // Top border width to form the triangle
     borderLeftColor: "transparent", // Transparent left border
     borderRightColor: "transparent", // Transparent right border
-    borderBottomColor: "#FF0000", // Red color for the triangle pointer
+    borderTopColor: "#FF0000", // Red color for the triangle pointer
   },
   wheelShadow: {
     shadowColor: "#000", // Shadow color
