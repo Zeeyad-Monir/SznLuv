@@ -1,6 +1,5 @@
 //AldorFamilyFarmScreen.js
-//Used chatgpt.com to add detaileed comments, so me and my teammate understand what we each did and remember for the future
-
+//Used chatgpt.com to add detailed comments, so me and my teammate understand what we each did and remember for the future
 
 // Import React and necessary hooks for managing state and side effects
 import React, { useState, useEffect } from 'react';
@@ -13,6 +12,7 @@ import {
   ActivityIndicator, // For showing a loading spinner
   ScrollView, // For creating scrollable content
   TouchableOpacity, // For touchable elements like buttons
+  Image, // For displaying images
 } from 'react-native';
 
 // Import Expo's Location module to access the device's location
@@ -239,14 +239,13 @@ const AldorFamilyFarmScreen = () => {
           <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
         </View>
 
-        {/* ------------------ IMAGE PLACEHOLDER SECTION ------------------ */}
+        {/* ------------------ IMAGE SECTION ------------------ */}
         <View style={styles.imagePlaceholder}>
-          {/* 
-            Icon indicating where an image would go.
-            You can replace this with an actual Image component when you have images.
-          */}
-          <Ionicons name="image" size={50} color="#ccc" />
-          <Text style={styles.placeholderText}>Image Placeholder</Text>
+          <Image
+            source={require('../assets/FamilyFarm.jpg')} // Adjust the path if necessary
+            style={styles.image}
+            resizeMode="cover" // Ensures the image fits the container
+          />
         </View>
 
         {/* ------------------ ABOUT THE FARM SECTION ------------------ */}
@@ -420,7 +419,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  /* ------------------ IMAGE PLACEHOLDER STYLES ------------------ */
+  /* ------------------ IMAGE SECTION STYLES ------------------ */
 
   imagePlaceholder: {
     width: '90%',
@@ -433,10 +432,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  placeholderText: {
-    position: 'absolute',
-    color: '#666', // Grey text color
-    fontSize: 16,
+  image: {
+    width: '100%', // Full width of the container
+    height: '100%', // Full height of the container
+    borderRadius: 10, // Matches the rounded corners of the placeholder
   },
 
   /* ------------------ ABOUT THE FARM STYLES ------------------ */
