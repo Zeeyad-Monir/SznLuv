@@ -30,10 +30,10 @@ import MapViewDirections from 'react-native-maps-directions'; // MAPS
 import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
 
 // API key for OpenWeatherMap to fetch weather data
-const WEATHER_API_KEY = 'YOUR_WEATHER_API_KEY'; // Replace with your actual Weather API Key
+const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
-const GOOGLE_MAPS_APIKEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your actual Google Maps API Key
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
 // Main functional component representing the screen for Aldor Acres Family Farm
 const AldorFamilyFarmScreen = () => {
