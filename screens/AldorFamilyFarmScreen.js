@@ -13,13 +13,12 @@ import {
   ScrollView, // For creating scrollable content
   TouchableOpacity, // For touchable elements like buttons
   Image, // For displaying images
+  Switch, // Toggle switch for temperature units
+  FlatList, // For rendering lists
 } from 'react-native';
 
 // Import Expo's Location module to access the device's location
 import * as Location from 'expo-location'; // LOCATION
-
-// Import icon components from Expo's vector icons library
-import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 
 // Import MapView components for displaying maps and markers
 import MapView, { Marker } from 'react-native-maps';
@@ -27,22 +26,18 @@ import MapView, { Marker } from 'react-native-maps';
 // Import MapViewDirections for displaying route directions on the map
 import MapViewDirections from 'react-native-maps-directions'; // MAPS
 
-// Import Constants from Expo (not used directly in this code)
-import Constants from 'expo-constants';
-
 // Import the external NavBar component
 import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
 
 // API key for OpenWeatherMap to fetch weather data
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
-console.log('Weather API Key:', WEATHER_API_KEY);
+const WEATHER_API_KEY = 'YOUR_WEATHER_API_KEY'; // Replace with your actual Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
-const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
+const GOOGLE_MAPS_APIKEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your actual Google Maps API Key
 
 // Main functional component representing the screen for Aldor Acres Family Farm
 const AldorFamilyFarmScreen = () => {
-  // ------------------ LOCATION STATE VARIABLES ------------------
+  // ------------------ STATE VARIABLES ------------------
 
   // State to hold the user's current location data
   const [location, setLocation] = useState(null);
@@ -53,13 +48,20 @@ const AldorFamilyFarmScreen = () => {
   // State to manage the loading indicator while fetching location
   const [loading, setLoading] = useState(true);
 
-  // ------------------ WEATHER STATE VARIABLES ------------------
-
   // State to hold the weather data fetched from the API
   const [weatherData, setWeatherData] = useState(null);
 
   // State to hold any errors that occur during weather data fetching
   const [weatherError, setWeatherError] = useState(null);
+
+  // State for temperature unit toggle (true for Celsius, false for Fahrenheit)
+  const [isMetric, setIsMetric] = useState(true);
+
+  // State to manage which day's details are shown
+  const [selectedDayIndex, setSelectedDayIndex] = useState(null);
+
+  // State to hold daily forecast data
+  const [dailyData, setDailyData] = useState([]);
 
   // ------------------ FARM COORDINATES ------------------
 
@@ -77,19 +79,19 @@ const AldorFamilyFarmScreen = () => {
     const startLocationTracking = async () => {
       // ------------------ REQUEST PERMISSION ------------------
 
-      // Request permission to access the device's location in the foreground
-      let { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        // If permission is denied, update the error message and stop loading
-        setErrorMsg('Permission to access location was denied.');
-        setLoading(false);
-        return;
-      }
-
-      // ------------------ START WATCHING LOCATION ------------------
-
       try {
+        // Request permission to access the device's location in the foreground
+        let { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+          // If permission is denied, update the error message and stop loading
+          setErrorMsg('Permission to access location was denied.');
+          setLoading(false);
+          return;
+        }
+
+        // ------------------ START WATCHING LOCATION ------------------
+
         // Start watching the user's position with specified accuracy and intervals
         locationSubscription = await Location.watchPositionAsync(
           {
@@ -133,15 +135,18 @@ const AldorFamilyFarmScreen = () => {
         const { latitude, longitude } = location.coords;
 
         try {
-          // Fetch the 5-day weather forecast data in 3-hour intervals
+          // Fetch the 5-day forecast data in 3-hour intervals
           const response = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
           );
+
           const data = await response.json();
 
           if (response.ok) {
-            // If the response is successful, update the weatherData state
+            // Process data to get daily forecasts
+            const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
+            setDailyData(dailyForecasts);
           } else {
             // If the response has an error, update the weatherError state
             setWeatherError(data.message || 'Unable to fetch weather data.');
@@ -153,9 +158,48 @@ const AldorFamilyFarmScreen = () => {
       }
     };
 
+    // Function to process 3-hour interval data into daily data
+    const processDailyData = (list) => {
+      const days = {};
+      list.forEach((item) => {
+        const date = new Date(item.dt * 1000);
+        const day = date.toISOString().split('T')[0];
+        if (!days[day]) {
+          days[day] = [];
+        }
+        days[day].push(item);
+      });
+
+      // Get daily data by selecting data points at 12:00 PM
+      const dailyData = Object.keys(days).map((day) => {
+        const dayData = days[day];
+        const noonData =
+          dayData.find((item) => {
+            const date = new Date(item.dt * 1000);
+            return date.getHours() === 12;
+          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback if 12:00 PM data is not available
+
+        return noonData;
+      });
+
+      return dailyData;
+    };
+
     // Invoke the function to fetch weather data when location is available
     fetchWeatherData();
   }, [location]); // Dependency on location ensures this runs whenever location changes
+
+  // ------------------ HELPER FUNCTIONS ------------------
+
+  // Function to convert temperature based on unit toggle
+  const convertTemp = (temp) => {
+    return isMetric ? temp.toFixed(1) : ((temp * 9) / 5 + 32).toFixed(1);
+  };
+
+  // Function to get temperature unit symbol
+  const getUnit = () => {
+    return isMetric ? '°C' : '°F';
+  };
 
   // ------------------ CONDITIONAL CONTENT RENDERING ------------------
 
@@ -189,33 +233,85 @@ const AldorFamilyFarmScreen = () => {
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
-        <View style={styles.weatherContainer}>
-          {/* Header for Weather Section */}
-          <Text style={styles.weatherHeader}>7 DAY WEATHER REPORT</Text>
-          {weatherData ? (
-            <ScrollView horizontal>
-              {/* Display the first 7 forecasts from the data */}
-              {weatherData.list.slice(0, 7).map((forecast, index) => (
-                <View key={index} style={styles.weatherPlaceholderBox}>
-                  {/* Day of the week */}
-                  <Text style={styles.weatherDay}>
-                    {new Date(forecast.dt * 1000).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                    })}
-                  </Text>
-                  {/* Temperature */}
-                  <Text style={styles.weatherTemp}>{forecast.main.temp.toFixed(1)}°C</Text>
-                </View>
-              ))}
-            </ScrollView>
-          ) : weatherError ? (
-            // Display an error message if there's an issue fetching weather data
-            <Text style={styles.errorText}>{weatherError}</Text>
-          ) : (
-            // Display a loading indicator while fetching weather data
-            <ActivityIndicator size="large" color="#0000ff" />
-          )}
-        </View>
+        {weatherData ? (
+          <View style={styles.weatherContainer}>
+            {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
+            <View style={styles.unitToggle}>
+              <Text style={styles.unitText}>°C</Text>
+              <Switch
+                value={!isMetric}
+                onValueChange={() => setIsMetric((prev) => !prev)}
+              />
+              <Text style={styles.unitText}>°F</Text>
+            </View>
+
+            {/* ------------------ LOCATION NAME ------------------ */}
+            <View style={styles.locationNameContainer}>
+              <Text style={styles.locationName}>
+                {weatherData.city.name}, {weatherData.city.country}
+              </Text>
+            </View>
+
+            {/* ------------------ 5-DAY FORECAST (Horizontal Scroll) ------------------ */}
+            <View style={styles.dailyContainer}>
+              <FlatList
+                data={dailyData.slice(0, 5)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity
+                    onPress={() =>
+                      setSelectedDayIndex(selectedDayIndex === index ? null : index)
+                    }
+                  >
+                    <View style={styles.dailyItem}>
+                      <View style={styles.dailyHeader}>
+                        <Text style={styles.dailyDay}>
+                          {new Date(item.dt * 1000).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                          })}
+                        </Text>
+                        <Image
+                          source={{
+                            uri: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`,
+                          }}
+                          style={styles.dailyIcon}
+                        />
+                        {selectedDayIndex === index ? (
+                          // Show details when selected
+                          <View style={styles.detailContainer}>
+                            <Text style={styles.detailText}>
+                              Wind: {item.wind.speed} m/s
+                            </Text>
+                            <Text style={styles.detailText}>
+                              Humidity: {item.main.humidity}%
+                            </Text>
+                            <Text style={styles.detailText}>
+                              {item.weather[0].description}
+                            </Text>
+                          </View>
+                        ) : (
+                          // Show temperature when not selected
+                          <Text style={styles.dailyTemp}>
+                            {convertTemp(item.main.temp)}
+                            {getUnit()}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          </View>
+        ) : weatherError ? (
+          // Display an error message if there's an issue fetching weather data
+          <Text style={styles.errorText}>{weatherError}</Text>
+        ) : (
+          // Display a loading indicator while fetching weather data
+          <ActivityIndicator size="large" color="#0000ff" />
+        )}
 
         {/* ------------------ FARM INFORMATION SECTION ------------------ */}
         <Text style={styles.title}>Aldor Acres Family Farm</Text>
@@ -309,68 +405,91 @@ const styles = StyleSheet.create({
   /* ------------------ WEATHER REPORT STYLES ------------------ */
 
   weatherContainer: {
-    backgroundColor: '#B9CCEC', // Light blue background representing the sky
-    padding: 15, // Padding inside the container
-    alignItems: 'center', // Center items horizontally
+    backgroundColor: '#BBCDEC', // Background color as specified
     borderRadius: 10, // Rounded corners for a smooth look
     margin: 15, // Margin around the container to separate it from other sections
+    padding: 10, // Reduced padding inside the container
   },
-  weatherHeader: {
-    color: '#fff', // White text for readability against the blue background
-    fontWeight: 'bold', // Bold text to emphasize the header
-    fontSize: 16, // Font size for the header
-    marginBottom: 10, // Space below the header
-    textShadowColor: '#000', // Black shadow to make the text pop
-    textShadowOffset: { width: 0.5, height: 0.5 }, // Slight offset for the shadow
-    textShadowRadius: 1, // Blur radius for the shadow
+  unitToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5, // Reduced margin
   },
-  weatherPlaceholderBox: {
-    width: 80, // Width of each weather box
-    height: 100, // Height of each weather box
-    backgroundColor: '#6ca0dc', // Blue color to represent weather icons
-    borderRadius: 5, // Slightly rounded corners
-    marginHorizontal: 5, // Small horizontal margin between boxes
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
-  },
-  weatherDay: {
-    color: '#fff', // White text color
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  weatherTemp: {
-    color: '#fff', // White text color
+  unitText: {
     fontSize: 16,
+    color: '#000', // Black text for contrast
+    marginHorizontal: 5,
+  },
+  locationNameContainer: {
+    alignItems: 'center',
+    marginBottom: 5, // Reduced margin
+  },
+  locationName: {
+    fontSize: 16,
+    color: '#000', // Black text for contrast
     fontWeight: 'bold',
+  },
+  dailyContainer: {
+    marginBottom: 10, // Reduced to make it more concise
+  },
+  dailyItem: {
+    width: 80, // Adjust the width to fit more items
+    marginRight: 10,
+  },
+  dailyHeader: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', // Semi-transparent background
+    borderRadius: 5,
+    padding: 5, // Reduced padding
+    alignItems: 'center',
+  },
+  dailyDay: {
+    color: '#000', // Black text for contrast
+    fontSize: 14, // Reduced font size
+  },
+  dailyIcon: {
+    width: 30, // Reduced size
+    height: 30,
+    marginVertical: 2, // Reduced margin
+  },
+  dailyTemp: {
+    color: '#000', // Black text for contrast
+    fontSize: 14, // Reduced font size
+  },
+  detailContainer: {
+    alignItems: 'center',
+  },
+  detailText: {
+    color: '#000', // Black text for contrast
+    fontSize: 12, // Reduced font size
     textAlign: 'center',
-    marginTop: 5,
   },
 
   /* ------------------ FARM INFORMATION STYLES ------------------ */
 
   title: {
     fontSize: 24, // Large font size for the farm name
-    fontWeight: 'bold', // Bold text for emphasis
-    color: '#FAF4E4', // Light color for contrast against the background
+    fontWeight: 'bold',
+    color: '#FAF4E4',
     textAlign: 'center',
     marginTop: 10,
-    textTransform: 'uppercase', // Uppercase letters for a formal look
+    textTransform: 'uppercase',
   },
   address: {
     fontSize: 14,
-    color: '#666', // Grey color for less emphasis
+    color: '#666',
     textAlign: 'center',
     textTransform: 'uppercase',
     marginVertical: 5,
   },
   activityBox: {
-    backgroundColor: '#FAF4E4', // Light background to highlight activities
+    backgroundColor: '#FAF4E4',
     padding: 10,
     borderRadius: 10,
     alignSelf: 'center',
     marginVertical: 10,
     width: '90%',
-    shadowColor: '#000', // Shadow color for depth
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -378,7 +497,7 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: 14,
-    color: '#000', // Black text color for readability
+    color: '#000',
     textAlign: 'center',
     textTransform: 'capitalize',
   },
@@ -388,7 +507,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '90%',
     height: 200,
-    backgroundColor: '#e0e0e0', // Light grey background to indicate a placeholder
+    backgroundColor: '#e0e0e0',
     borderRadius: 10,
     alignSelf: 'center',
     marginVertical: 15,
@@ -397,9 +516,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   image: {
-    width: '100%', // Full width of the container
-    height: '100%', // Full height of the container
-    borderRadius: 10, // Matches the rounded corners of the placeholder
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
 
   /* ------------------ ABOUT THE FARM STYLES ------------------ */
@@ -417,8 +536,8 @@ const styles = StyleSheet.create({
   },
   aboutText: {
     fontSize: 16,
-    color: '#000', // Black text color for readability
-    textAlign: 'justify', // Justify the text for neat alignment
+    color: '#000',
+    textAlign: 'justify',
   },
 
   /* ------------------ USER'S CURRENT LOCATION STYLES ------------------ */
@@ -437,18 +556,18 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   locationContainer: {
-    alignItems: 'center', // Center items horizontally
+    alignItems: 'center',
   },
   locationText: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333', // Dark grey text color
+    color: '#333',
   },
   coordsText: {
     fontSize: 16,
     marginVertical: 2,
-    color: '#555', // Medium grey text color
+    color: '#555',
   },
 
   /* ------------------ MAP STYLES ------------------ */
@@ -468,7 +587,7 @@ const styles = StyleSheet.create({
   mapHeader: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000', // Black text color for readability
+    color: '#000',
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -485,7 +604,7 @@ const styles = StyleSheet.create({
   /* ------------------ ERROR TEXT STYLES ------------------ */
 
   errorText: {
-    color: 'red', // Red color to indicate an error
+    color: 'red',
     fontSize: 16,
     textAlign: 'center',
     marginVertical: 10,
