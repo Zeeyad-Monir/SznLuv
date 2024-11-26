@@ -4,6 +4,8 @@ import React, { useState, useEffect, createContext } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+
+// Firebase imports
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -17,7 +19,7 @@ import SpringDatesScreen from './screens/SpringDatesScreen';
 import SummerDatesScreen from './screens/SummerDatesScreen';
 import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
 import SpinTheWheel from './screens/SpinTheWheel';
-
+//import ProfileScreen from './screens/ProfileScreen'; // Import the new ProfileScreen
 
 // Create context to provide user authentication state throughout the app
 export const AuthContext = createContext();
@@ -50,26 +52,37 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, setUser }}>
       <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-  {user ? (
-    <>
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
-      <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
-      <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
-      <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
-      <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
-      <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
-    </>
-  ) : (
-    <>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
-    </>
-  )}
-</Stack.Navigator>
-
-
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {user ? (
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
+              <Stack.Screen
+                name="AldorFamilyFarmScreen"
+                component={AldorFamilyFarmScreen}
+              />
+              <Stack.Screen
+                name="WinterDatesScreen"
+                component={WinterDatesScreen}
+              />
+              <Stack.Screen
+                name="SpringDatesScreen"
+                component={SpringDatesScreen}
+              />
+              <Stack.Screen
+                name="SummerDatesScreen"
+                component={SummerDatesScreen}
+              />
+              <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
+              {/*<Stack.Screen name="ProfileScreen" component={ProfileScreen} />  Add this line */}
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+            </>
+          )}
+        </Stack.Navigator>
       </NavigationContainer>
     </AuthContext.Provider>
   );
