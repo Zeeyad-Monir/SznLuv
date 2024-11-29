@@ -188,15 +188,9 @@ export default function WinterDatesScreen({ navigation }) {
 
   const handleSpotPress = (spot) => {
     // Navigate based on spot name
-    if (spot.name === 'Glacier Rink') {
-      navigation.navigate('GlacierRinkScreen');
-    } else if (spot.name === 'Frosty Pond') {
-      navigation.navigate('FrostyPondScreen');
-    } else if (spot.name === 'Evergreen Acres') {
-      navigation.navigate('EvergreenAcresScreen');
-    } else if (spot.name === 'Snowy Pines') {
-      navigation.navigate('SnowyPinesScreen');
-    } else {
+    if (spot.name === 'Aldor Family Farm') {
+      navigation.navigate('AldorFamilyFarm');
+    }  else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
   };

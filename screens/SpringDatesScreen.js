@@ -171,8 +171,12 @@ export default function SpringDatesScreen({ navigation }) {
   };
 
   const handleSpotPress = (spot) => {
-    // Navigate based on spot name or general detail screen
-    navigation.navigate('DateSpotDetail', { spot });
+    // Navigate based on spot name
+    if (spot.name === 'Aldor Family Farm') {
+      navigation.navigate('AldorFamilyFarm');
+    }  else {
+      Alert.alert('Coming Soon', 'This feature is coming soon.');
+    }
   };
 
   return (

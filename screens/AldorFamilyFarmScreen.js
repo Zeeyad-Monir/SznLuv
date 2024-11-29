@@ -2,7 +2,7 @@
 // Detailed comments added for better understanding and future reference
 
 // Import React and necessary hooks for managing state, side effects, and context
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 
 // Import components from React Native for building the UI
 import {
@@ -16,6 +16,8 @@ import {
   Switch, // Toggle switch for temperature units
   FlatList, // For rendering lists
   Alert, // For displaying alert messages
+  Animated, // For animations
+  Easing, // For easing functions in animations
 } from 'react-native';
 
 // Import Expo's Location module to access the device's location
@@ -38,7 +40,6 @@ const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
-
 
 // Main functional component representing the screen for Aldor Acres Family Farm
 const AldorFamilyFarmScreen = () => {
@@ -78,6 +79,25 @@ const AldorFamilyFarmScreen = () => {
   // Latitude and longitude for Aldor Acres Family Farm
   const farmLatitude = 49.1706;
   const farmLongitude = -122.6076;
+
+  // ------------------ ANIMATION SETUP ------------------
+
+  // Animated values for different sections
+  const weatherOpacity = useRef(new Animated.Value(0)).current;
+  const weatherTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+
+  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
+  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current; // Slide in from left
+
+  const imageOpacity = useRef(new Animated.Value(0)).current;
+  const imageScale = useRef(new Animated.Value(0.95)).current;
+
+  const mapOpacity = useRef(new Animated.Value(0)).current;
+  const mapTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+
+  // **New Animated Values for Description Text**
+  const descriptionOpacity = useRef(new Animated.Value(0)).current; // Opacity for fade-in
+  const descriptionTranslateY = useRef(new Animated.Value(30)).current; // Slide in from bottom
 
   // ------------------ LOCATION EFFECT HOOK ------------------
 
@@ -213,6 +233,111 @@ const AldorFamilyFarmScreen = () => {
     fetchWeatherData();
   }, [location, isLocationEnabled]); // Dependencies on location and isLocationEnabled
 
+  // ------------------ ANIMATION EFFECT HOOK ------------------
+
+  // Trigger animations after loading is complete and data is fetched
+  useEffect(() => {
+    if (!loading) {
+      // Animate Weather Report Section
+      Animated.parallel([
+        Animated.timing(weatherOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(weatherTranslateX, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Farm Information Section
+      Animated.parallel([
+        Animated.timing(farmInfoOpacity, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(farmInfoTranslateX, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Image Section with a slight delay
+      Animated.parallel([
+        Animated.timing(imageOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          delay: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(imageScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          delay: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Map Section with a further delay
+      Animated.parallel([
+        Animated.timing(mapOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          delay: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mapTranslateX, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          delay: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // **Trigger Animation for Description Text with Additional Delay**
+      Animated.parallel([
+        Animated.timing(descriptionOpacity, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          delay: 700, // Delay after map animation to stagger
+          useNativeDriver: true,
+        }),
+        Animated.timing(descriptionTranslateY, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          delay:700,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [
+    loading,
+    weatherOpacity,
+    weatherTranslateX,
+    farmInfoOpacity,
+    farmInfoTranslateX,
+    imageOpacity,
+    imageScale,
+    mapOpacity,
+    mapTranslateX,
+    descriptionOpacity, // Include descriptionOpacity in dependencies
+    descriptionTranslateY, // Include descriptionTranslateY in dependencies
+  ]);
+
   // ------------------ HELPER FUNCTIONS ------------------
 
   // Function to convert temperature based on unit toggle
@@ -267,7 +392,15 @@ const AldorFamilyFarmScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
         {isLocationEnabled && weatherData ? (
-          <View style={styles.weatherContainer}>
+          <Animated.View
+            style={[
+              styles.weatherContainer,
+              {
+                opacity: weatherOpacity,
+                transform: [{ translateX: weatherTranslateX }],
+              },
+            ]}
+          >
             {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
             <View style={styles.unitToggle}>
               <Text style={styles.unitText}>°C</Text>
@@ -337,7 +470,7 @@ const AldorFamilyFarmScreen = () => {
                 )}
               />
             </View>
-          </View>
+          </Animated.View>
         ) : !isLocationEnabled ? (
           // Inform the user that weather data is unavailable due to disabled location services
           <View style={styles.weatherDisabledContainer}>
@@ -354,36 +487,71 @@ const AldorFamilyFarmScreen = () => {
         )}
 
         {/* ------------------ FARM INFORMATION SECTION ------------------ */}
-        <Text style={styles.title}>Aldor Acres Family Farm</Text>
-        <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
-        <View style={styles.activityBox}>
-          {/* Highlighting activities available at the farm */}
-          <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
-        </View>
+        <Animated.View
+          style={[
+            styles.farmInfoContainer,
+            {
+              opacity: farmInfoOpacity,
+              transform: [{ translateX: farmInfoTranslateX }],
+            },
+          ]}
+        >
+          <Text style={styles.title}>Aldor Acres Family Farm</Text>
+          <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
+          <View style={styles.activityBox}>
+            {/* Highlighting activities available at the farm */}
+            <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
+          </View>
+        </Animated.View>
 
         {/* ------------------ IMAGE SECTION ------------------ */}
-        <View style={styles.imagePlaceholder}>
+        <Animated.View
+          style={[
+            styles.imagePlaceholder,
+            {
+              opacity: imageOpacity,
+              transform: [{ scale: imageScale }],
+            },
+          ]}
+        >
           <Image
             source={require('../assets/FamilyFarm.jpg')} // Ensure this path is correct
             style={styles.image}
             resizeMode="cover" // Ensures the image fits the container
           />
-        </View>
+        </Animated.View>
 
         {/* ------------------ ABOUT THE FARM SECTION ------------------ */}
-        <View style={styles.aboutContainer}>
+        {/* **Animated Description Text with Combined Opacity and Translation** */}
+        <Animated.View
+          style={[
+            styles.aboutContainer,
+            {
+              opacity: descriptionOpacity, // Apply animated opacity
+              transform: [{ translateY: descriptionTranslateY }], // Apply animated translation
+            },
+          ]}
+        >
           <Text style={styles.aboutText}>
             Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin
             patch, and more! Enjoy a day filled with family-friendly activities in the heart of
             Langley.
           </Text>
-        </View>
+        </Animated.View>
 
         {/* ------------------ USER'S CURRENT LOCATION SECTION ------------------ */}
         <View style={styles.currentLocationBox}>{content}</View>
 
         {/* ------------------ MAP SECTION ------------------ */}
-        <View style={styles.mapContainer}>
+        <Animated.View
+          style={[
+            styles.mapContainer,
+            {
+              opacity: mapOpacity,
+              transform: [{ translateX: mapTranslateX }],
+            },
+          ]}
+        >
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
           <View style={styles.mapWrapper}>
@@ -426,7 +594,7 @@ const AldorFamilyFarmScreen = () => {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -530,6 +698,10 @@ const styles = StyleSheet.create({
 
   /* ------------------ FARM INFORMATION STYLES ------------------ */
 
+  farmInfoContainer: {
+    // New style for animated farm information section
+    // Moved from title and address to a container for animation
+  },
   title: {
     fontSize: 24, // Large font size for the farm name
     fontWeight: 'bold',
@@ -577,6 +749,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden', // Ensure the image stays within bounds
   },
   image: {
     width: '100%',
@@ -596,6 +769,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    marginBottom: 15, // Added margin for spacing
   },
   aboutText: {
     fontSize: 16,

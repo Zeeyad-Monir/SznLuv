@@ -170,13 +170,9 @@ export default function SummerDatesScreen({ navigation }) {
 
   const handleSpotPress = (spot) => {
     // Navigate based on spot name
-    if (spot.name === 'Sunset Beach') {
-      navigation.navigate('SunsetBeachScreen');
-    } else if (spot.name === 'Golden Sands') {
-      navigation.navigate('GoldenSandsScreen');
-    } else if (spot.name === 'Coral Cove') {
-      navigation.navigate('CoralCoveScreen');
-    } else {
+    if (spot.name === 'Aldor Family Farm') {
+      navigation.navigate('AldorFamilyFarm');
+    }  else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
   };

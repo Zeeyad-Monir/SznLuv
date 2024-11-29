@@ -113,12 +113,12 @@ export default function FallDatesScreen({ navigation }) {
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 1,
-        duration: 1000,
+        duration: 900,
         useNativeDriver: true,
       }),
       Animated.timing(titleTranslateY, {
         toValue: 0,
-        duration: 1000,
+        duration: 900,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
@@ -126,18 +126,18 @@ export default function FallDatesScreen({ navigation }) {
 
     // Animate categories and cards
     categories.forEach((category, index) => {
-      const delay = 1000 + index * 500;
+      const delay = 800 + index * 500;
       Animated.parallel([
         Animated.timing(categoryAnimations[index].translateX, {
           toValue: 0,
-          duration: 800,
+          duration: 450,
           delay: delay,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(categoryAnimations[index].opacity, {
           toValue: 1,
-          duration: 800,
+          duration: 450,
           delay: delay,
           useNativeDriver: true,
         }),
@@ -148,14 +148,14 @@ export default function FallDatesScreen({ navigation }) {
         Animated.parallel([
           Animated.timing(cardAnimations[index][idx].translateY, {
             toValue: 0,
-            duration: 800,
+            duration: 450,
             delay: cardDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(cardAnimations[index][idx].opacity, {
             toValue: 1,
-            duration: 800,
+            duration: 450,
             delay: cardDelay,
             useNativeDriver: true,
           }),
@@ -206,14 +206,6 @@ export default function FallDatesScreen({ navigation }) {
       navigation.navigate('EagleAcresDairy');
     } else if (spot.name === 'Laity Pumpkin Patch') {
       navigation.navigate('LaityPumpkinPatch');
-    } else if (spot.name === 'Sunset Summit') {
-      navigation.navigate('SunsetSummitScreen');
-    } else if (spot.name === 'Leaf Trail') {
-      navigation.navigate('LeafTrailScreen');
-    } else if (spot.name === 'Maple Park') {
-      navigation.navigate('MapleParkScreen');
-    } else if (spot.name === 'Riverfront Meadows') {
-      navigation.navigate('RiverfrontMeadowsScreen');
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
@@ -338,7 +330,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   headerContainer: {
-    
+    // Optional: Adjust margin or padding if needed
   },
   mainTitle: {
     color: '#F5F5DC',
