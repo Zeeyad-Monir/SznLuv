@@ -22,6 +22,9 @@ import SpinTheWheel from './screens/SpinTheWheel';
 import Favourites from './screens/Favourites';
 import ProfileSettings from './screens/ProfileSettings'; // Import the new ProfileSettings
 
+// Import SettingsProvider
+import { SettingsProvider } from './screens/SettingsContext';
+
 // Create context to provide user authentication state throughout the app
 export const AuthContext = createContext();
 
@@ -37,7 +40,7 @@ export default function App() {
       setUser(currentUser);
       if (initializing) setInitializing(false);
     });
-    return subscriber;
+    return subscriber; // unsubscribe on unmount
   }, [initializing]);
 
   // Show loading spinner if app is initializing
@@ -52,46 +55,30 @@ export default function App() {
   // Main app navigator with conditional rendering based on auth state
   return (
     <AuthContext.Provider value={{ user, setUser }}>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
-            <>
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
-              <Stack.Screen
-                name="AldorFamilyFarmScreen"
-                component={AldorFamilyFarmScreen}
-              />
-              <Stack.Screen
-                name="WinterDatesScreen"
-                component={WinterDatesScreen}
-              />
-              <Stack.Screen
-                name="SpringDatesScreen"
-                component={SpringDatesScreen}
-              />
-              <Stack.Screen
-                name="SummerDatesScreen"
-                component={SummerDatesScreen}
-              />
-              <Stack.Screen
-                name="Favourites"
-                component={Favourites}
-              />
-              <Stack.Screen
-                name="ProfileSettings"
-                component={ProfileSettings}
-              />
-              <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="SignUp" component={SignUpScreen} />
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
+      <SettingsProvider> {/* Wrap with SettingsProvider */}
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {user ? (
+              <>
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
+                <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
+                <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
+                <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
+                <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
+                <Stack.Screen name="Favourites" component={Favourites} />
+                <Stack.Screen name="ProfileSettings" component={ProfileSettings} />
+                <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="SignUp" component={SignUpScreen} />
+              </>
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SettingsProvider>
     </AuthContext.Provider>
   );
 }

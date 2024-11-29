@@ -1,5 +1,6 @@
 // ProfileSettings.js
-import React, { useState } from 'react';
+
+import React, { useContext, useState } from 'react'; // Import useContext and useState
 import {
   View,
   Text,
@@ -10,40 +11,30 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import * as Location from 'expo-location'; // Import location services
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import NavBar from '../components/NavBar'; // Adjust the path as needed
+import { SettingsContext } from './SettingsContext'; // Adjust the path as needed
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const ProfileSettings = () => {
-  // State for toggle switches
-  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const { isLocationEnabled, toggleLocationServices } = useContext(SettingsContext);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
-  // Handlers for toggle switches
-  const toggleLocation = async () => {
-    if (!isLocationEnabled) {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          console.log('User Location:', location);
-          setIsLocationEnabled(true);
-          Alert.alert('Location Enabled', 'Location services have been enabled.');
-        } else {
-          Alert.alert('Permission Denied', 'Location permission was not granted.');
-        }
-      } catch (error) {
-        console.error('Error enabling location:', error);
-        Alert.alert('Error', 'An error occurred while enabling location services.');
-      }
-    } else {
-      setIsLocationEnabled(false);
-      Alert.alert('Location Disabled', 'Location services have been disabled.');
+  const toggleNotifications = () => setIsNotificationsEnabled(previousState => !previousState);
+
+  const handleToggleLocation = async () => {
+    try {
+      await toggleLocationServices();
+      const message = isLocationEnabled
+        ? 'Location services have been disabled.'
+        : 'Location services have been enabled.';
+      Alert.alert('Location Services', message);
+    } catch (error) {
+      console.error('Error toggling location services:', error);
+      Alert.alert('Error', 'Failed to toggle location services.');
     }
   };
-
-  const toggleNotifications = () => setIsNotificationsEnabled(previousState => !previousState);
 
   return (
     <View style={styles.mainContainer}>
@@ -63,7 +54,11 @@ const ProfileSettings = () => {
           <Text style={styles.userName}>Zeeyad Monir</Text>
 
           {/* Edit Profile Text */}
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            // Implement navigation to Edit Profile screen
+            // For example:
+            // navigation.navigate('EditProfile');
+          }}>
             <Text style={styles.editProfileText}>Edit profile</Text>
           </TouchableOpacity>
         </View>
@@ -71,15 +66,21 @@ const ProfileSettings = () => {
         {/* Settings Section */}
         <View style={styles.settingsSection}>
           {/* Change Password */}
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => {
+            // Implement navigation to Change Password screen
+            // navigation.navigate('ChangePassword');
+          }}>
             <Text style={styles.settingText}>Change Password</Text>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Account Settings */}
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => {
+            // Implement navigation to Account Settings screen
+            // navigation.navigate('AccountSettings');
+          }}>
             <Text style={styles.settingText}>Account Settings</Text>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Allow Location Services */}
@@ -89,7 +90,7 @@ const ProfileSettings = () => {
               trackColor={{ false: '#A9A9A9', true: '#D9E5B6' }}
               thumbColor="#FFFFFF"
               ios_backgroundColor="#A9A9A9"
-              onValueChange={toggleLocation}
+              onValueChange={handleToggleLocation}
               value={isLocationEnabled}
               style={styles.switch}
             />
@@ -169,11 +170,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   settingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  chevron: {
     fontSize: 16,
     fontWeight: '500',
     color: '#FFFFFF',

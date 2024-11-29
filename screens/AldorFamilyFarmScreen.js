@@ -1,8 +1,8 @@
 // AldorFamilyFarmScreen.js
-// Used chatgpt.com to add detailed comments, so me and my teammate understand what we each did and remember for the future
+// Detailed comments added for better understanding and future reference
 
-// Import React and necessary hooks for managing state and side effects
-import React, { useState, useEffect } from 'react';
+// Import React and necessary hooks for managing state, side effects, and context
+import React, { useState, useEffect, useContext } from 'react';
 
 // Import components from React Native for building the UI
 import {
@@ -15,6 +15,7 @@ import {
   Image, // For displaying images
   Switch, // Toggle switch for temperature units
   FlatList, // For rendering lists
+  Alert, // For displaying alert messages
 } from 'react-native';
 
 // Import Expo's Location module to access the device's location
@@ -29,14 +30,23 @@ import MapViewDirections from 'react-native-maps-directions'; // MAPS
 // Import the external NavBar component
 import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
 
+// Import SettingsContext to access location services settings
+import { SettingsContext } from './SettingsContext'; // Adjust the path based on your project structure
+
 // API key for OpenWeatherMap to fetch weather data
 const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
+
 // Main functional component representing the screen for Aldor Acres Family Farm
 const AldorFamilyFarmScreen = () => {
+  // ------------------ CONTEXT ACCESS ------------------
+
+  // Access isLocationEnabled from SettingsContext to determine if location services are enabled
+  const { isLocationEnabled } = useContext(SettingsContext);
+
   // ------------------ STATE VARIABLES ------------------
 
   // State to hold the user's current location data
@@ -77,6 +87,13 @@ const AldorFamilyFarmScreen = () => {
 
     // Function to initiate location tracking
     const startLocationTracking = async () => {
+      // Check if location services are enabled
+      if (!isLocationEnabled) {
+        // If location services are disabled, skip requesting permissions and fetching location
+        setLoading(false); // Stop loading indicator
+        return;
+      }
+
       // ------------------ REQUEST PERMISSION ------------------
 
       try {
@@ -116,21 +133,28 @@ const AldorFamilyFarmScreen = () => {
       }
     };
 
-    // Start location tracking when the component mounts
+    // Start location tracking when the component mounts or when isLocationEnabled changes
     startLocationTracking();
 
     // Clean up the location subscription when the component unmounts to prevent memory leaks
     return () => {
       if (locationSubscription) locationSubscription.remove();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [isLocationEnabled]); // Dependency on isLocationEnabled ensures this runs whenever the setting changes
 
   // ------------------ WEATHER DATA EFFECT HOOK ------------------
 
-  // useEffect hook to fetch weather data whenever the location changes
+  // useEffect hook to fetch weather data whenever the location or location settings change
   useEffect(() => {
     // Function to fetch weather data from OpenWeatherMap API
     const fetchWeatherData = async () => {
+      // Check if location services are enabled and location data is available
+      if (!isLocationEnabled) {
+        // If location services are disabled, skip fetching weather data
+        setWeatherError('Location services are disabled.');
+        return;
+      }
+
       if (location) {
         const { latitude, longitude } = location.coords;
 
@@ -185,9 +209,9 @@ const AldorFamilyFarmScreen = () => {
       return dailyData;
     };
 
-    // Invoke the function to fetch weather data when location is available
+    // Invoke the function to fetch weather data when location or settings change
     fetchWeatherData();
-  }, [location]); // Dependency on location ensures this runs whenever location changes
+  }, [location, isLocationEnabled]); // Dependencies on location and isLocationEnabled
 
   // ------------------ HELPER FUNCTIONS ------------------
 
@@ -221,6 +245,15 @@ const AldorFamilyFarmScreen = () => {
         <Text style={styles.coordsText}>Longitude: {longitude.toFixed(6)}</Text>
       </View>
     );
+  } else if (!isLocationEnabled) {
+    // Display a message if location services are disabled
+    content = (
+      <View style={styles.locationDisabledContainer}>
+        <Text style={styles.locationDisabledText}>
+          Location services are disabled. Enable them in settings to see your current location and directions.
+        </Text>
+      </View>
+    );
   }
 
   // ------------------ MAIN COMPONENT RENDERING ------------------
@@ -233,7 +266,7 @@ const AldorFamilyFarmScreen = () => {
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
-        {weatherData ? (
+        {isLocationEnabled && weatherData ? (
           <View style={styles.weatherContainer}>
             {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
             <View style={styles.unitToggle}>
@@ -255,7 +288,7 @@ const AldorFamilyFarmScreen = () => {
             {/* ------------------ 5-DAY FORECAST (Horizontal Scroll) ------------------ */}
             <View style={styles.dailyContainer}>
               <FlatList
-                data={dailyData.slice(0, 5)}
+                data={dailyData.slice(0, 5)} // Display only the first 5 days
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(item, index) => index.toString()}
@@ -305,6 +338,13 @@ const AldorFamilyFarmScreen = () => {
               />
             </View>
           </View>
+        ) : !isLocationEnabled ? (
+          // Inform the user that weather data is unavailable due to disabled location services
+          <View style={styles.weatherDisabledContainer}>
+            <Text style={styles.weatherDisabledText}>
+              Weather information is unavailable because location services are disabled.
+            </Text>
+          </View>
         ) : weatherError ? (
           // Display an error message if there's an issue fetching weather data
           <Text style={styles.errorText}>{weatherError}</Text>
@@ -324,7 +364,7 @@ const AldorFamilyFarmScreen = () => {
         {/* ------------------ IMAGE SECTION ------------------ */}
         <View style={styles.imagePlaceholder}>
           <Image
-            source={require('../assets/FamilyFarm.jpg')} // Adjust the path if necessary
+            source={require('../assets/FamilyFarm.jpg')} // Ensure this path is correct
             style={styles.image}
             resizeMode="cover" // Ensures the image fits the container
           />
@@ -355,7 +395,7 @@ const AldorFamilyFarmScreen = () => {
                 latitudeDelta: 0.25, // Zoom level (smaller value zooms in)
                 longitudeDelta: 0.25,
               }}
-              showsUserLocation={true} // Enables the display of the user's current location on the map
+              showsUserLocation={isLocationEnabled} // Only show user location if enabled
             >
               {/* Marker indicating the location of Aldor Acres Family Farm */}
               <Marker
@@ -363,20 +403,28 @@ const AldorFamilyFarmScreen = () => {
                 title="Aldor Acres Family Farm"
                 description="Farm location"
               />
-              {location && (
-                // If the user's location is available, display directions from their current location to the farm
+              {isLocationEnabled && location && (
+                // If the user's location is available and enabled, display directions from their current location to the farm
                 <MapViewDirections
                   origin={{
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,
                   }}
                   destination={{ latitude: farmLatitude, longitude: farmLongitude }}
-                  apikey={GOOGLE_MAPS_APIKEY} // GOOGLE
+                  apikey={GOOGLE_MAPS_APIKEY} // Replace with your actual Google Maps API Key
                   strokeWidth={4}
                   strokeColor="hotpink"
                 />
               )}
             </MapView>
+            {!isLocationEnabled && (
+              // Overlay message informing the user that location services are disabled
+              <View style={styles.mapDisabledOverlay}>
+                <Text style={styles.mapDisabledText}>
+                  Location services are disabled. Enable them to see your route on the map.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -465,31 +513,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  /* ------------------ WEATHER DISABLED STYLES ------------------ */
+
+  weatherDisabledContainer: {
+    backgroundColor: '#FAF4E4', // Light background to indicate disabled state
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    alignItems: 'center',
+  },
+  weatherDisabledText: {
+    fontSize: 16,
+    color: '#555', // Grey text to indicate informational message
+    textAlign: 'center',
+  },
+
   /* ------------------ FARM INFORMATION STYLES ------------------ */
 
   title: {
     fontSize: 24, // Large font size for the farm name
     fontWeight: 'bold',
-    color: '#FAF4E4',
+    color: '#FAF4E4', // Light color for contrast against the orange background
     textAlign: 'center',
     marginTop: 10,
     textTransform: 'uppercase',
   },
   address: {
     fontSize: 14,
-    color: '#666',
+    color: '#666', // Dark grey color for better readability
     textAlign: 'center',
     textTransform: 'uppercase',
     marginVertical: 5,
   },
   activityBox: {
-    backgroundColor: '#FAF4E4',
+    backgroundColor: '#FAF4E4', // Light background to highlight activities
     padding: 10,
     borderRadius: 10,
     alignSelf: 'center',
     marginVertical: 10,
     width: '90%',
-    shadowColor: '#000',
+    shadowColor: '#000', // Shadow for depth
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -497,7 +560,7 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: 14,
-    color: '#000',
+    color: '#000', // Black text for contrast
     textAlign: 'center',
     textTransform: 'capitalize',
   },
@@ -507,7 +570,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '90%',
     height: 200,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#e0e0e0', // Placeholder color while image loads
     borderRadius: 10,
     alignSelf: 'center',
     marginVertical: 15,
@@ -524,11 +587,11 @@ const styles = StyleSheet.create({
   /* ------------------ ABOUT THE FARM STYLES ------------------ */
 
   aboutContainer: {
-    backgroundColor: '#FAF4E4',
+    backgroundColor: '#FAF4E4', // Light background for readability
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
-    shadowColor: '#000',
+    shadowColor: '#000', // Shadow for depth
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -536,20 +599,20 @@ const styles = StyleSheet.create({
   },
   aboutText: {
     fontSize: 16,
-    color: '#000',
-    textAlign: 'justify',
+    color: '#000', // Black text for contrast
+    textAlign: 'justify', // Justify text for a clean look
   },
 
   /* ------------------ USER'S CURRENT LOCATION STYLES ------------------ */
 
   currentLocationBox: {
-    backgroundColor: '#FAF4E4',
+    backgroundColor: '#FAF4E4', // Light background to indicate information section
     padding: 15,
     borderRadius: 10,
     alignSelf: 'center',
     marginVertical: 10,
     width: '90%',
-    shadowColor: '#000',
+    shadowColor: '#000', // Shadow for depth
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 1,
@@ -562,23 +625,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#333', // Dark grey text for readability
   },
   coordsText: {
     fontSize: 16,
     marginVertical: 2,
-    color: '#555',
+    color: '#555', // Grey text for contrast
+  },
+  locationDisabledContainer: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  locationDisabledText: {
+    fontSize: 16,
+    color: '#555', // Grey text to indicate informational message
+    textAlign: 'center',
   },
 
-  /* ------------------ MAP STYLES ------------------ */
+  /* ------------------ MAP SECTION STYLES ------------------ */
 
   mapContainer: {
-    backgroundColor: '#FAF4E4',
+    backgroundColor: '#FAF4E4', // Light background for map section
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
     marginTop: 10,
-    shadowColor: '#000',
+    shadowColor: '#000', // Shadow for depth
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -587,7 +659,7 @@ const styles = StyleSheet.create({
   mapHeader: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000', // Black text for contrast
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -600,11 +672,27 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  mapDisabledOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(250, 244, 228, 0.8)', // Semi-transparent overlay
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapDisabledText: {
+    fontSize: 16,
+    color: '#555', // Grey text for contrast
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 
   /* ------------------ ERROR TEXT STYLES ------------------ */
 
   errorText: {
-    color: 'red',
+    color: 'red', // Red color to indicate errors
     fontSize: 16,
     textAlign: 'center',
     marginVertical: 10,
