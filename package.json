@@ -13,6 +13,7 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-firebase/app": "^21.3.0",
     "@react-native-firebase/firestore": "^21.3.0",
+    "@react-native-picker/picker": "^2.10.1",
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
     "@react-navigation/stack": "^7.0.0",
