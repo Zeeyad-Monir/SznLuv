@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  Image,
   Alert,
   Dimensions,
-  ScrollView, // ScrollView is still imported
+  ScrollView,
+  Platform, // Import Platform for platform-specific code
 } from "react-native";
 
 // Import your external NavBar component
@@ -25,21 +25,43 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 // CONFETTI
 import ConfettiCannon from "react-native-confetti-cannon";
 
+// Import the Picker component for the dropdown menu
+import { Picker } from "@react-native-picker/picker"; // Ensure this package is installed
+
 // Get the width of the device screen for positioning elements
 const { width: screenWidth } = Dimensions.get("window");
 
-// DATA
-const dateOptions = [
-  "Aldor Acres Family Farm",
-  "Eagle Acres Dairy & Pumpkin Patch",
-  "Laity Pumpkin Patch",
-  "Quarry Rock",
-  "Lighthouse Park",
-  "Lynn Canyon Park",
-  "Dog Mountain Trail",
-  "Queen Elizabeth Park",
-  "Stanley Park",
-];
+// DATA: Season-specific date ideas
+const seasonDateOptions = {
+  Fall: [
+    "Aldor Acres Family Farm",
+    "Eagle Acres Dairy & Pumpkin Patch",
+    "Laity Pumpkin Patch",
+    "Quarry Rock",
+    "Lighthouse Park",
+  ],
+  Winter: [
+    "Grouse Mountain Skiing",
+    "Robson Square Ice Skating",
+    "VanDusen Festival of Lights",
+    "Bright Nights in Stanley Park",
+    "Science World",
+  ],
+  Spring: [
+    "Queen Elizabeth Park",
+    "VanDusen Botanical Garden",
+    "Bloedel Conservatory",
+    "Capilano Suspension Bridge",
+    "Granville Island",
+  ],
+  Summer: [
+    "Kitsilano Beach",
+    "English Bay",
+    "Stanley Park Seawall",
+    "Grouse Grind",
+    "Deep Cove Kayaking",
+  ],
+};
 
 // COLORS
 const sectionColors = [
@@ -59,6 +81,8 @@ const SpinTheWheel = () => {
   // STATE
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSeason, setSelectedSeason] = useState(""); // New state for selected season
+  const [dateOptions, setDateOptions] = useState([]); // Date options based on selected season
 
   // REFS
   const rotation = useRef(new Animated.Value(0)).current;
@@ -79,6 +103,15 @@ const SpinTheWheel = () => {
 
     loadDateIdea();
   }, []);
+
+  // Update date options when the selected season changes
+  useEffect(() => {
+    if (selectedSeason && seasonDateOptions[selectedSeason]) {
+      setDateOptions(seasonDateOptions[selectedSeason]);
+    } else {
+      setDateOptions([]);
+    }
+  }, [selectedSeason]);
 
   // FUNCTIONS
 
@@ -106,6 +139,24 @@ const SpinTheWheel = () => {
   };
 
   const startSpin = () => {
+    // Handle case where no season is selected
+    if (!selectedSeason) {
+      Alert.alert(
+        "No Season Selected",
+        "Please select a season before spinning the wheel."
+      );
+      return;
+    }
+
+    // Handle case where no date options are available
+    if (dateOptions.length === 0) {
+      Alert.alert(
+        "No Date Ideas",
+        "No date ideas are available for the selected season."
+      );
+      return;
+    }
+
     setIsSpinning(true);
     setSelectedDate(null);
 
@@ -124,7 +175,8 @@ const SpinTheWheel = () => {
       const index =
         dateOptions.length -
         1 -
-        (Math.floor(normalizedRotation / degreesPerSegment) % dateOptions.length);
+        (Math.floor(normalizedRotation / degreesPerSegment) %
+          dateOptions.length);
       const newDate = dateOptions[index];
       setSelectedDate(newDate);
       saveDateIdea(newDate);
@@ -156,8 +208,10 @@ const SpinTheWheel = () => {
 
       const textAngle = startAngle + angle / 2;
       const textRadius = radius * 0.7;
-      const textX = radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
-      const textY = radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
+      const textX =
+        radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
+      const textY =
+        radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
 
       const words = option.split(" ");
       const lines = [];
@@ -193,11 +247,7 @@ const SpinTheWheel = () => {
             transform={`rotate(${textAngle + 90}, ${textX}, ${textY})`}
           >
             {lines.map((lineText, idx) => (
-              <TSpan
-                x={textX}
-                dy={idx === 0 ? 0 : 14}
-                key={`line-${idx}`}
-              >
+              <TSpan x={textX} dy={idx === 0 ? 0 : 14} key={`line-${idx}`}>
                 {lineText}
               </TSpan>
             ))}
@@ -221,6 +271,25 @@ const SpinTheWheel = () => {
         {/* CONDITIONAL RENDERING */}
         {!selectedDate ? (
           <>
+            {/* SEASON SELECTION DROPDOWN */}
+            <View style={styles.dropdownContainer}>
+              <Picker
+                selectedValue={selectedSeason}
+                onValueChange={(itemValue, itemIndex) => {
+                  setSelectedSeason(itemValue);
+                  console.log("Selected Season:", itemValue);
+                }}
+                style={styles.picker}
+                mode="dropdown"
+              >
+                <Picker.Item label="Select Season" value="" />
+                <Picker.Item label="Fall" value="Fall" />
+                <Picker.Item label="Winter" value="Winter" />
+                <Picker.Item label="Spring" value="Spring" />
+                <Picker.Item label="Summer" value="Summer" />
+              </Picker>
+            </View>
+
             {/* SUBTITLE */}
             <Text style={styles.subtitle}>
               Let’s spin to find the perfect date!
@@ -240,16 +309,37 @@ const SpinTheWheel = () => {
                 {/* SVG element representing the wheel */}
                 <Svg width={300} height={300}>
                   {/* Render each section of the wheel */}
-                  {renderWheelSections()}
+                  {dateOptions.length > 0 ? (
+                    renderWheelSections()
+                  ) : (
+                    <SvgText
+                      x="150"
+                      y="150"
+                      fill="#000"
+                      fontSize="16"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                    >
+                      Please select a season
+                    </SvgText>
+                  )}
                 </Svg>
               </Animated.View>
             </View>
 
             {/* BUTTONS */}
             <TouchableOpacity
-              style={[styles.spinButton, isSpinning && styles.disabledButton]}
+              style={[
+                styles.spinButton,
+                isSpinning && styles.disabledButton,
+                (!selectedSeason || dateOptions.length === 0) &&
+                  styles.disabledButton,
+              ]}
               onPress={startSpin}
-              disabled={isSpinning}
+              disabled={
+                isSpinning || !selectedSeason || dateOptions.length === 0
+              }
             >
               <Text style={styles.spinButtonText}>SPIN THE WHEEL</Text>
             </TouchableOpacity>
@@ -268,10 +358,7 @@ const SpinTheWheel = () => {
             {/* RESULT */}
             <View style={styles.resultBox}>
               <Text style={styles.resultText}>{selectedDate}</Text>
-              <Text style={styles.resultSubtitle}>
-                {/* This should ideally be dynamically set based on the selectedDate */}
-                123 Date Avenue, Vancouver, BC
-              </Text>
+              {/* You can dynamically set additional info based on the selectedDate */}
             </View>
             {/* CONFETTI */}
             <ConfettiCannon
@@ -307,12 +394,9 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     alignItems: "center",
-    paddingVertical: 20, // Apply padding only to scrollable content
-    paddingHorizontal: 10, // Optional: Add horizontal padding if needed
+    paddingVertical: 20,
+    paddingHorizontal: 10,
   },
-  // Removed navbar-related styles:
-  // topNav, sznluv, iconsContainer, icon
-
   helloText: {
     fontSize: 36,
     fontWeight: "bold",
@@ -327,6 +411,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: -5,
     fontWeight: "bold",
+  },
+  dropdownContainer: {
+    width: "80%",
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  picker: {
+    height: Platform.OS === "ios" ? 200 : 50,
+    width: "100%",
   },
   wheelContainer: {
     position: "relative",
@@ -390,11 +487,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFF",
     textAlign: "center",
-  },
-  resultSubtitle: {
-    fontSize: 16,
-    color: "#FFF",
-    marginTop: 10,
   },
   enjoyText: {
     fontSize: 30,
