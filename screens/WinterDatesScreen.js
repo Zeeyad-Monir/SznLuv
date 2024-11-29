@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     color: '#FFFFFF',
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,

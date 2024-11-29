@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     color: '#FFF8F0', // Soft white for contrast against summer background
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,

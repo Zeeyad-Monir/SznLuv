@@ -338,11 +338,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   headerContainer: {
-    // Optional: Adjust margin or padding if needed
+    
   },
   mainTitle: {
     color: '#F5F5DC',
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,

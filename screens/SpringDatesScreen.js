@@ -18,7 +18,7 @@ import { auth, db } from '../firebaseConfig'; // Import Firebase config
 import { AuthContext } from '../App'; // Import AuthContext
 import NavBar from '../components/NavBar'; // Import NavBar
 import LottieView from 'lottie-react-native';
-import flowersFalling from '../assets/flowersFalling.json'; // Ensure this file exists
+import flowerFalling2 from '../assets/flowerFalling2.json'; // Ensure this file exists
 
 export default function SpringDatesScreen({ navigation }) {
   const { user } = useContext(AuthContext); // Access user context
@@ -179,7 +179,7 @@ export default function SpringDatesScreen({ navigation }) {
     <View style={styles.container}>
       {/* Flowers Falling Animation */}
       <LottieView
-        source={flowersFalling}
+        source={flowerFalling2}
         autoPlay
         loop
         style={styles.leavesAnimation} // Reuse the same style or adjust if needed
@@ -289,15 +289,15 @@ const styles = StyleSheet.create({
     height: Dimensions.get('window').height * 1.5,
     top: -Dimensions.get('window').height * 0.2,
     left: -Dimensions.get('window').width * 0.25,
-    transform: [{ scale: 2.4 }],
-    opacity: 0.5,
+    transform: [{ scale: 2.8 }],
+    opacity: 0.3,
   },
   headerContainer: {
     // Optional: Adjust margin or padding if needed
   },
   mainTitle: {
     color: '#FFFFFF',
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,
