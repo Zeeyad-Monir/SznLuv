@@ -20,7 +20,7 @@ import SummerDatesScreen from './screens/SummerDatesScreen';
 import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
 import SpinTheWheel from './screens/SpinTheWheel';
 import Favourites from './screens/Favourites';
-//import ProfileScreen from './screens/ProfileScreen'; // Import the new ProfileScreen
+import ProfileSettings from './screens/ProfileSettings'; // Import the new ProfileSettings
 
 // Create context to provide user authentication state throughout the app
 export const AuthContext = createContext();
@@ -78,8 +78,11 @@ export default function App() {
                 name="Favourites"
                 component={Favourites}
               />
+              <Stack.Screen
+                name="ProfileSettings"
+                component={ProfileSettings}
+              />
               <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
-              {/*<Stack.Screen name="ProfileScreen" component={ProfileScreen} />  Add this line */}
             </>
           ) : (
             <>

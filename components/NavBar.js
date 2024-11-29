@@ -24,7 +24,7 @@ export default function NavBar() {
         </TouchableOpacity>
 
         {/* Profile Screen Link */}
-        <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+        <TouchableOpacity onPress={() => navigation.navigate('ProfileSettings')}>
           <Image
             source={require('../assets/PROFILE.png')}
             style={styles.iconImage}
