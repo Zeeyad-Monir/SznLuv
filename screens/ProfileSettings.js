@@ -8,8 +8,9 @@ import {
   Switch,
   Dimensions,
   ScrollView,
+  Alert,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import * as Location from 'expo-location'; // Import location services
 import NavBar from '../components/NavBar'; // Adjust the path as needed
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -20,7 +21,28 @@ const ProfileSettings = () => {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
   // Handlers for toggle switches
-  const toggleLocation = () => setIsLocationEnabled(previousState => !previousState);
+  const toggleLocation = async () => {
+    if (!isLocationEnabled) {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({});
+          console.log('User Location:', location);
+          setIsLocationEnabled(true);
+          Alert.alert('Location Enabled', 'Location services have been enabled.');
+        } else {
+          Alert.alert('Permission Denied', 'Location permission was not granted.');
+        }
+      } catch (error) {
+        console.error('Error enabling location:', error);
+        Alert.alert('Error', 'An error occurred while enabling location services.');
+      }
+    } else {
+      setIsLocationEnabled(false);
+      Alert.alert('Location Disabled', 'Location services have been disabled.');
+    }
+  };
+
   const toggleNotifications = () => setIsNotificationsEnabled(previousState => !previousState);
 
   return (
@@ -34,8 +56,8 @@ const ProfileSettings = () => {
         <View style={styles.profileSection}>
           {/* Profile Image with Gradient Background */}
           <View style={[styles.profileImage, { backgroundColor: '#D24B3A' }]}>
-  <Text style={styles.profileImageText}>Z</Text>
-</View>
+            <Text style={styles.profileImageText}>Z</Text>
+          </View>
 
           {/* User Name */}
           <Text style={styles.userName}>Zeeyad Monir</Text>
