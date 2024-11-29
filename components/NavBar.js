@@ -51,17 +51,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10, // Reduced padding to avoid excessive indentation
+   
+    paddingHorizontal: 20, 
+    // Reduced padding to avoid excessive indentation
   },
   title: {
     color: '#FFFFFF',
     fontSize: 26, // Increased size by 10% from 24 to 26
     fontWeight: 'bold',
+    marginTop: 45,
+    
   },
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15, // Adds spacing between icons
+    gap: 15,
+    marginTop: 45,
+    // Adds spacing between icons
     // If 'gap' is not supported in your React Native version, use marginLeft on the icons instead
     // Example for React Native < 0.71:
     // flexDirection: 'row',
@@ -71,6 +77,8 @@ const styles = StyleSheet.create({
     width: 43, // Increased size by another 15%
     height: 43,
     resizeMode: 'contain',
+    
+   
     // If not using 'gap', add marginLeft to create spacing
     // For example:
     // marginLeft: 15,

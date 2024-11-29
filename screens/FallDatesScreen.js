@@ -1,5 +1,5 @@
 // screens/FallDatesScreen.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,15 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { doc, getDoc, setDoc } from 'firebase/firestore'; // Import Firestore functions
+import { auth, db } from '../firebaseConfig'; // Import Firebase config
+import { AuthContext } from '../App'; // Import AuthContext
 import NavBar from '../components/NavBar'; // Adjust the path if necessary
 
 export default function FallDatesScreen({ navigation }) {
+  const { user } = useContext(AuthContext); // Access user context
+  const [favorites, setFavorites] = useState({}); // Local state for favorites
+
   const categories = [
     {
       title: 'Aldor Family Farm',
@@ -54,26 +60,56 @@ export default function FallDatesScreen({ navigation }) {
     },
   ];
 
-  const [favorites, setFavorites] = useState({});
+  // Fetch and synchronize user's favorites from Firestore on component mount
+  React.useEffect(() => {
+    if (user) {
+      const fetchFavorites = async () => {
+        const userFavoritesRef = doc(db, 'favourites', user.uid);
+        try {
+          const docSnap = await getDoc(userFavoritesRef);
+          if (docSnap.exists()) {
+            setFavorites(docSnap.data());
+          }
+        } catch (error) {
+          console.error('Error fetching favorites:', error);
+        }
+      };
 
-  const toggleFavorite = (spotName) => {
-    setFavorites((prevFavorites) => {
-      const updatedFavorites = { ...prevFavorites };
-      if (updatedFavorites[spotName]) {
-        delete updatedFavorites[spotName];
-        Alert.alert(
-          'Removed from Favorites',
-          `${spotName} has been removed from your favorites.`
-        );
+      fetchFavorites();
+    }
+  }, [user]);
+
+  const toggleFavorite = async (spotName) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to add favorites.');
+      return;
+    }
+
+    const userFavoritesRef = doc(db, 'favourites', user.uid);
+
+    try {
+      // Fetch existing favorites from Firestore
+      const docSnap = await getDoc(userFavoritesRef);
+      let userFavorites = docSnap.exists() ? docSnap.data() : {};
+
+      // Add or remove favorite
+      if (userFavorites[spotName]) {
+        delete userFavorites[spotName];
+        Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        updatedFavorites[spotName] = true;
-        Alert.alert(
-          'Added to Favorites',
-          `${spotName} has been added to your favorites.`
-        );
+        userFavorites[spotName] = true;
+        Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
-      return updatedFavorites;
-    });
+
+      // Update Firestore
+      await setDoc(userFavoritesRef, userFavorites);
+
+      // Update local state
+      setFavorites(userFavorites);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      Alert.alert('Error', 'Could not update favorites. Please try again.');
+    }
   };
 
   const handleSpotPress = (spot) => {

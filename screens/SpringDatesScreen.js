@@ -1,8 +1,6 @@
-
 // screens/SpringDatesScreen.js
-// IN PROGRESS- not much changed
 
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,15 +8,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Image
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebaseConfig'; // Import Firebase config
+import { AuthContext } from '../App'; // Import AuthContext
+import NavBar from '../components/NavBar'; // Import NavBar
 
-export default function SpringDatesScreen() {
-  const navigation = useNavigation();
+export default function SpringDatesScreen({ navigation }) {
+  const { user } = useContext(AuthContext); // Access user context
+  const [favorites, setFavorites] = useState({}); // Local state for favorites
 
-  // Categories of date spots for Spring
   const categories = [
     {
       title: 'Botanical Gardens',
@@ -36,56 +36,64 @@ export default function SpringDatesScreen() {
     },
   ];
 
-  const [favorites, setFavorites] = useState({});
+  // Fetch and synchronize user's favorites from Firestore on component mount
+  useEffect(() => {
+    if (user) {
+      const fetchFavorites = async () => {
+        const userFavoritesRef = doc(db, 'favourites', user.uid);
+        try {
+          const docSnap = await getDoc(userFavoritesRef);
+          if (docSnap.exists()) {
+            setFavorites(docSnap.data());
+          }
+        } catch (error) {
+          console.error('Error fetching favorites:', error);
+        }
+      };
 
-  const toggleFavorite = (spotName) => {
-    setFavorites((prevFavorites) => {
-      const updatedFavorites = { ...prevFavorites };
-      if (updatedFavorites[spotName]) {
-        delete updatedFavorites[spotName];
-        Alert.alert('Removed from Favorites', `${spotName} has been removed from your favorites.`);
+      fetchFavorites();
+    }
+  }, [user]);
+
+  const toggleFavorite = async (spotName) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to add favorites.');
+      return;
+    }
+
+    const userFavoritesRef = doc(db, 'favourites', user.uid);
+
+    try {
+      const docSnap = await getDoc(userFavoritesRef);
+      let userFavorites = docSnap.exists() ? docSnap.data() : {};
+
+      if (userFavorites[spotName]) {
+        delete userFavorites[spotName];
+        Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        updatedFavorites[spotName] = true;
-        Alert.alert('Added to Favorites', `${spotName} has been added to your favorites.`);
+        userFavorites[spotName] = true;
+        Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
-      return updatedFavorites;
-    });
+
+      await setDoc(userFavoritesRef, userFavorites);
+      setFavorites(userFavorites);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      Alert.alert('Error', 'Could not update favorites. Please try again.');
+    }
   };
 
   return (
     <View style={styles.container}>
-      
-      {/* Header with navigation icons copied from HomeScreen */}
-      <View style={styles.header}>
-        <Text style={styles.logoText}>SznLuv</Text>
-        <View style={styles.iconContainer}>
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <View style={styles.iconCircle}>
-              <Image source={require('../assets/FAVOURITES.png')} style={styles.iconImage} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-            <View style={styles.iconCircle}>
-              <Image source={require('../assets/PROFILE.png')} style={styles.iconImage} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
-            <View style={styles.iconCircle}>
-              <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.iconImage} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <NavBar />
 
-      {/* Warning banner */}
       <View style={styles.warningBanner}>
         <Text style={styles.warningText}>⚠️ Spring Dates are not in season.</Text>
       </View>
 
-      {/* Scrollable section for content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.mainTitle}>Spring Dates</Text>
-        
+
         {categories.map((category, index) => (
           <View key={index} style={styles.categorySection}>
             <Text style={styles.categoryTitle}>{category.title}</Text>
@@ -94,10 +102,14 @@ export default function SpringDatesScreen() {
                 key={idx}
                 style={styles.dateSpotCard}
                 onPress={() => navigation.navigate('DateSpotDetail', { spot })}
+                accessibilityLabel={`View details for ${spot.name}`}
+                accessibilityRole="button"
               >
                 <TouchableOpacity
                   style={styles.cardHeartIcon}
                   onPress={() => toggleFavorite(spot.name)}
+                  accessibilityLabel={`Favorite ${spot.name}`}
+                  accessibilityRole="button"
                 >
                   <Icon
                     name={favorites[spot.name] ? 'favorite' : 'favorite-border'}
@@ -110,10 +122,12 @@ export default function SpringDatesScreen() {
                   <Text style={styles.dateSpotName}>{spot.name}</Text>
                   <Text style={styles.addressText}>{spot.address}</Text>
                 </View>
-                
+
                 <TouchableOpacity
                   style={styles.cardArrowIcon}
                   onPress={() => navigation.navigate('DateSpotDetail', { spot })}
+                  accessibilityLabel={`View details for ${spot.name}`}
+                  accessibilityRole="button"
                 >
                   <Icon name="chevron-right" size={18} color="#000" />
                 </TouchableOpacity>
@@ -127,45 +141,10 @@ export default function SpringDatesScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Existing styles in SpringDatesScreen plus copied navigation styles
   container: {
     flex: 1,
     backgroundColor: '#FFB6C1',
   },
-  header: {
-    height: 130,
-    backgroundColor: '#333333',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  logoText: {
-    marginTop: 45,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  iconContainer: {
-    marginTop: 45,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  iconImage: {
-    width: 43,
-    height: 43,
-    resizeMode: 'contain',
-  },
-  // Existing styles
   warningBanner: {
     backgroundColor: '#FF6347',
     paddingVertical: 10,

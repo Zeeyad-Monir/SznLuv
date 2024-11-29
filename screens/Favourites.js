@@ -1,112 +1,244 @@
-// screens/Favourites.js
-
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import NavBar from '../components/NavBar'; // Import NavBar
+// Favourites.js
+import React, { useEffect, useState, useContext } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import NavBar from '../components/NavBar';
+import { AuthContext } from '../App';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 const Favourites = () => {
+  const { user } = useContext(AuthContext);
+  const [favourites, setFavourites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notificationMessage, setNotificationMessage] = useState('');
+
+  const navigation = useNavigation(); // Initialize navigation
+
+  useEffect(() => {
+    const fetchFavourites = async () => {
+      try {
+        if (user) {
+          const favouritesDoc = doc(db, "favourites", user.uid);
+          const docSnap = await getDoc(favouritesDoc);
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setFavourites(Object.keys(data).filter((key) => data[key]));
+          } else {
+            console.log("No favourites found for user.");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching favourites:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFavourites();
+  }, [user]);
+
+  const removeFavourite = async (spotName) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to remove favourites.');
+      return;
+    }
+
+    const userFavoritesRef = doc(db, 'favourites', user.uid);
+
+    try {
+      // Fetch existing favourites from Firestore
+      const docSnap = await getDoc(userFavoritesRef);
+      let userFavorites = docSnap.exists() ? docSnap.data() : {};
+
+      // Remove favourite
+      if (userFavorites[spotName]) {
+        delete userFavorites[spotName];
+
+        // Update Firestore
+        await setDoc(userFavoritesRef, userFavorites);
+
+        // Update local state
+        setFavourites((prevFavourites) => prevFavourites.filter((fav) => fav !== spotName));
+
+        // Show notification
+        setNotificationMessage(`"${spotName}" removed from favourites.`);
+        setTimeout(() => {
+          setNotificationMessage('');
+        }, 3000);
+      } else {
+        console.log('Favourite not found.');
+      }
+    } catch (error) {
+      console.error('Error removing favourite:', error);
+      Alert.alert('Error', 'Failed to remove favourite. Please try again.');
+    }
+  };
+
+  // Handler for when a favourite is pressed
+  const handleFavouritePress = (name) => {
+    if (name === 'Aldor Family Farm') {
+      // Navigate to AldorFamilyFarmScreen
+      navigation.navigate('AldorFamilyFarmScreen');
+    } else {
+      // Show alert for features coming soon
+      Alert.alert('Coming Soon', 'Feature coming soon.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Integrate NavBar */}
       <NavBar />
 
-      {/* Header Text */}
-      <View style={styles.header}>
+      {/* Notification Message */}
+      {notificationMessage !== '' && (
+        <View style={styles.notificationContainer}>
+          <Text style={styles.notificationText}>{notificationMessage}</Text>
+        </View>
+      )}
+
+      <View style={styles.headerTextContainer}>
         <Text style={styles.title}>Favourites</Text>
         <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
       </View>
-
-      {/* Favourites List */}
-      <View style={styles.favouritesList}>
-        <FavouriteItem
-          name="Aldor Acres Family Farm"
-          address="24990 84 Ave, Langley, BC"
-        />
-        <FavouriteItem
-          name="Eagle Acres Dairy & Pumpkin Patch"
-          address="8796 240 St, Langley, BC"
-        />
-        <FavouriteItem
-          name="Laity Pumpkin Patch"
-          address="2725 Laity St, Maple Ridge, BC"
-        />
-      </View>
+      <ScrollView style={styles.favouritesList}>
+        {favourites.length > 0 ? (
+          favourites.map((favourite, index) => (
+            <FavouriteItem
+              key={index}
+              name={favourite}
+              removeFavourite={removeFavourite}
+              onPress={() => handleFavouritePress(favourite)} // Pass onPress handler
+            />
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No favourites yet! Add some dates to get started.</Text>
+        )}
+      </ScrollView>
     </View>
   );
 };
 
-// Component for each favourite item
-const FavouriteItem = ({ name, address }) => (
+// Updated FavouriteItem to handle navigation press
+const FavouriteItem = ({ name, removeFavourite, onPress }) => (
   <View style={styles.itemContainer}>
-    <Image
-      style={styles.heartIcon}
-      source={{ uri: 'https://via.placeholder.com/20/FF0000/FFFFFF?text=♥' }}
-    />
-    <View>
+    {/* Touchable area for navigating to the date's screen */}
+    <TouchableOpacity
+      style={styles.itemContent}
+      onPress={onPress}
+      accessibilityLabel={`View details for ${name}`}
+      accessibilityRole="button"
+    >
       <Text style={styles.itemTitle}>{name}</Text>
-      <Text style={styles.itemAddress}>{address}</Text>
-    </View>
-    <Image
-      style={styles.arrowIcon}
-      source={{ uri: 'https://via.placeholder.com/10/000000/FFFFFF?text=→' }}
-    />
+    </TouchableOpacity>
+
+    {/* Touchable area for removing the favourite */}
+    <TouchableOpacity
+      style={styles.cardHeartIcon}
+      onPress={() => removeFavourite(name)}
+      accessibilityLabel={`Remove ${name} from favourites`}
+      accessibilityRole="button"
+    >
+      <Icon name="favorite" size={24} color="#FF0000" />
+    </TouchableOpacity>
   </View>
 );
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#dbd3bd',
+    backgroundColor: "#dbd3bd",
     flex: 1,
-    //paddingHorizontal: 20,
-    //paddingTop: 130, // Add padding to accommodate NavBar height
   },
-  header: {
+  headerTextContainer: {
     marginTop: 20,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 55,
     marginBottom: -15,
-    color: '#323232',
-    fontFamily: 'Gramatika-Black',
-		paddingHorizontal: 20,
+    color: "#323232",
+    fontFamily: "Gramatika-Black",
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(50, 50, 50, 0.4)',
-    fontFamily: 'Gramatika-Black',
-		marginTop: 10,
-		paddingHorizontal: 20,
+    color: "rgba(50, 50, 50, 0.4)",
+    fontFamily: "Gramatika-Black",
+    paddingHorizontal: 2,
+    marginTop: 13,
   },
   favouritesList: {
     marginTop: 20,
-		paddingHorizontal: 20,
+    paddingHorizontal: 20,
   },
   itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0eadd',
-    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0eadd",
+    borderRadius: 14,
     padding: 15,
     marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  heartIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 15,
+  itemContent: {
+    flex: 1, // Take up remaining space
+  },
+  cardHeartIcon: {
+    marginLeft: 16,
   },
   itemTitle: {
-    fontSize: 15,
-    color: '#323232',
-    fontFamily: 'Gramatika-Black',
+    fontSize: 22,
+    color: "#323232",
+    fontFamily: "Gramatika-Black",
   },
-  itemAddress: {
-    fontSize: 9,
-    color: '#c2b697',
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 20,
+    fontFamily: "Gramatika-Black",
   },
-  arrowIcon: {
-    marginLeft: 'auto',
-    width: 10,
-    height: 10,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notificationContainer: {
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: '#323232',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 1,
+    alignItems: 'center',
+  },
+  notificationText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: "Gramatika-Black",
   },
 });
 

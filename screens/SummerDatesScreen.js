@@ -1,11 +1,6 @@
-
-
-// screens/SummerDatesScreen.js
-// IN PROGRESS- not much changed
-
 // screens/SummerDatesScreen.js
 
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,51 +8,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Image,
-  
 } from 'react-native';
-
-
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebaseConfig'; // Firebase configuration
+import { AuthContext } from '../App'; // Authentication context
+import NavBar from '../components/NavBar'; // Import NavBar
 
-
-const Header = () => {
-  const navigation = useNavigation();
-  return (
-    <View style={styles.header}>
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>SznLuv</Text>
-        <View style={styles.logoUnderline} />
-      </View>
-      <View style={styles.iconContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-          <Icon name="favorite" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Icon name="person" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-export default function SummerDatesScreen() {
-  const [favorites, setFavorites] = useState({});
-
-  const toggleFavorite = (spotName) => {
-    setFavorites((prevFavorites) => {
-      const updatedFavorites = { ...prevFavorites };
-      if (updatedFavorites[spotName]) {
-        delete updatedFavorites[spotName];
-        Alert.alert('Removed from Favorites', `${spotName} has been removed from your favorites.`);
-      } else {
-        updatedFavorites[spotName] = true;
-        Alert.alert('Added to Favorites', `${spotName} has been added to your favorites.`);
-      }
-      return updatedFavorites;
-    });
-  };
+export default function SummerDatesScreen({ navigation }) {
+  const { user } = useContext(AuthContext); // Access user context
+  const [favorites, setFavorites] = useState({}); // Local state for favorites
 
   const category = {
     title: 'Beaches (NOT ACTIVE)',
@@ -68,10 +28,56 @@ export default function SummerDatesScreen() {
     ],
   };
 
+  // Fetch and synchronize user's favorites from Firestore on component mount
+  useEffect(() => {
+    if (user) {
+      const fetchFavorites = async () => {
+        const userFavoritesRef = doc(db, 'favourites', user.uid);
+        try {
+          const docSnap = await getDoc(userFavoritesRef);
+          if (docSnap.exists()) {
+            setFavorites(docSnap.data());
+          }
+        } catch (error) {
+          console.error('Error fetching favorites:', error);
+        }
+      };
+
+      fetchFavorites();
+    }
+  }, [user]);
+
+  const toggleFavorite = async (spotName) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to add favorites.');
+      return;
+    }
+
+    const userFavoritesRef = doc(db, 'favourites', user.uid);
+
+    try {
+      const docSnap = await getDoc(userFavoritesRef);
+      let userFavorites = docSnap.exists() ? docSnap.data() : {};
+
+      if (userFavorites[spotName]) {
+        delete userFavorites[spotName];
+        Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
+      } else {
+        userFavorites[spotName] = true;
+        Alert.alert('Added to Favorites', `${spotName} has been added.`);
+      }
+
+      await setDoc(userFavoritesRef, userFavorites);
+      setFavorites(userFavorites);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      Alert.alert('Error', 'Could not update favorites. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Use HomeScreen Header */}
-      <Header />
+      <NavBar />
 
       <View style={styles.warningBanner}>
         <Text style={styles.warningText}>⚠️ Summer Dates are not in season.</Text>
@@ -86,10 +92,14 @@ export default function SummerDatesScreen() {
               key={idx}
               style={styles.dateSpotCard}
               onPress={() => Alert.alert('Details', 'Date Spot Detail screen is not available yet.')}
+              accessibilityLabel={`View details for ${spot.name}`}
+              accessibilityRole="button"
             >
               <TouchableOpacity
                 style={styles.cardHeartIcon}
                 onPress={() => toggleFavorite(spot.name)}
+                accessibilityLabel={`Favorite ${spot.name}`}
+                accessibilityRole="button"
               >
                 <Icon
                   name={favorites[spot.name] ? 'favorite' : 'favorite-border'}
@@ -104,6 +114,8 @@ export default function SummerDatesScreen() {
               <TouchableOpacity
                 style={styles.cardArrowIcon}
                 onPress={() => Alert.alert('Details', 'Date Spot Detail screen is not available yet.')}
+                accessibilityLabel={`View details for ${spot.name}`}
+                accessibilityRole="button"
               >
                 <Icon name="chevron-right" size={18} color="#000" />
               </TouchableOpacity>
@@ -115,37 +127,10 @@ export default function SummerDatesScreen() {
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8DD74',
-  },
-  header: {
-    height: 130,
-    backgroundColor: '#333333',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 45, // Align with the HomeScreen header position
-  },
-  logoContainer: {
-    flexDirection: 'column',
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  logoUnderline: {
-    height: 2,
-    backgroundColor: '#C1A9E5',
-    marginTop: 4,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   warningBanner: {
     backgroundColor: '#FF6347',
@@ -212,4 +197,3 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
 });
-
