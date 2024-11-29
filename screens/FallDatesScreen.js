@@ -27,11 +27,11 @@ export default function FallDatesScreen({ navigation }) {
           address: '24990 84 Ave, Langley',
         },
         {
-          name: 'Eagles Acres Dairy',
+          name: 'Eagle Acres Dairy',
           address: '789 Fall Blvd',
         },
         {
-          name: 'Laity Pumpkin Patch', // New spot added
+          name: 'Laity Pumpkin Patch',
           address: '2725 Laity St, Maple Ridge, BC',
         },
       ],
@@ -119,6 +119,8 @@ export default function FallDatesScreen({ navigation }) {
   const handleSpotPress = (spot) => {
     if (spot.name === 'Aldor Family Farm') {
       navigation.navigate('AldorFamilyFarmScreen');
+    } else if (spot.name === 'Eagle Acres Dairy') {
+      navigation.navigate('EagleAcresDairy'); // Navigate to Eagle Acres Dairy screen
     } else if (spot.name === 'Laity Pumpkin Patch') {
       navigation.navigate('LaityPumpkinPatch'); // Navigate to the new screen
     } else {

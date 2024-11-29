@@ -89,6 +89,8 @@ const Favourites = () => {
       navigation.navigate('AldorFamilyFarmScreen');
     } else if (name === 'Laity Pumpkin Patch') {
       navigation.navigate('LaityPumpkinPatch');
+		} else if (name === 'Eagle Acres Dairy') {
+      navigation.navigate('EagleAcresDairy');
     } else {
       Alert.alert('Coming Soon', 'Feature coming soon.');
     }

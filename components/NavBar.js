@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 26, // Increased size by 10% from 24 to 26
+    fontSize: 32, // Increased size by 10% from 24 to 26
     fontWeight: 'bold',
     marginTop: 45,
     
@@ -67,20 +67,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 15,
     marginTop: 45,
-    // Adds spacing between icons
-    // If 'gap' is not supported in your React Native version, use marginLeft on the icons instead
-    // Example for React Native < 0.71:
-    // flexDirection: 'row',
-    // alignItems: 'center',
+   
   },
   iconImage: {
-    width: 43, // Increased size by another 15%
-    height: 43,
+    width: 45, 
+    height: 45,
     resizeMode: 'contain',
-    
-   
-    // If not using 'gap', add marginLeft to create spacing
-    // For example:
-    // marginLeft: 15,
   },
 });

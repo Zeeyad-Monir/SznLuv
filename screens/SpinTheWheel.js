@@ -36,31 +36,31 @@ const { width: screenWidth } = Dimensions.get("window");
 const seasonDateOptions = {
   Fall: [
     "Aldor Acres Family Farm",
-    "Eagle Acres Dairy & Pumpkin Patch",
+    "Eagle Acres Dairy",
     "Laity Pumpkin Patch",
-    "Quarry Rock",
-    "Lighthouse Park",
+    "Sunset Summit",
+    "Leaf Trail",
   ],
   Winter: [
-    "Grouse Mountain Skiing",
-    "Robson Square Ice Skating",
-    "VanDusen Festival of Lights",
-    "Bright Nights in Stanley Park",
+    "Glacier Rink",
+    "Frosty Pond",
+    "Evergreen Acres",
+    "Snowy Pines",
     "Science World",
   ],
   Spring: [
-    "Queen Elizabeth Park",
+    "Blossom Garden",
     "VanDusen Botanical Garden",
-    "Bloedel Conservatory",
-    "Capilano Suspension Bridge",
-    "Granville Island",
+    "Spring Haven",
+    "River Trail",
+    "Meadow Path",
   ],
   Summer: [
-    "Kitsilano Beach",
+    "Sunset Beach",
     "English Bay",
-    "Stanley Park Seawall",
+    "Golden Sands",
     "Grouse Grind",
-    "Deep Cove Kayaking",
+    "Coral Cove",
   ],
 };
 
@@ -365,7 +365,7 @@ const SpinTheWheel = () => {
               style={styles.backButton}
               onPress={retrieveSavedDateIdea}
             >
-              <Text style={styles.backButtonText}>Retrieve Saved Date</Text>
+              <Text style={styles.backButtonText}>Previous Spun Date</Text>
             </TouchableOpacity>
           </>
         ) : (
