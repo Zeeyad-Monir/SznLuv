@@ -242,13 +242,13 @@ const AldorFamilyFarmScreen = () => {
       Animated.parallel([
         Animated.timing(weatherOpacity, {
           toValue: 1,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(weatherTranslateX, {
           toValue: 0,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
@@ -258,13 +258,13 @@ const AldorFamilyFarmScreen = () => {
       Animated.parallel([
         Animated.timing(farmInfoOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 500,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(farmInfoTranslateX, {
           toValue: 0,
-          duration: 600,
+          duration: 500,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
@@ -274,7 +274,7 @@ const AldorFamilyFarmScreen = () => {
       Animated.parallel([
         Animated.timing(imageOpacity, {
           toValue: 1,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           delay: 300,
           useNativeDriver: true,
@@ -292,14 +292,14 @@ const AldorFamilyFarmScreen = () => {
       Animated.parallel([
         Animated.timing(mapOpacity, {
           toValue: 1,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           delay: 600,
           useNativeDriver: true,
         }),
         Animated.timing(mapTranslateX, {
           toValue: 0,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           delay: 600,
           useNativeDriver: true,
@@ -310,16 +310,16 @@ const AldorFamilyFarmScreen = () => {
       Animated.parallel([
         Animated.timing(descriptionOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           easing: Easing.out(Easing.ease),
-          delay: 700, // Delay after map animation to stagger
+          delay: 400, // Delay after map animation to stagger
           useNativeDriver: true,
         }),
         Animated.timing(descriptionTranslateY, {
           toValue: 0,
-          duration: 600,
+          duration: 400,
           easing: Easing.out(Easing.ease),
-          delay:700,
+          delay:400,
           useNativeDriver: true,
         }),
       ]).start();

@@ -126,7 +126,7 @@ export default function FallDatesScreen({ navigation }) {
 
     // Animate categories and cards
     categories.forEach((category, index) => {
-      const delay = 800 + index * 500;
+      const delay = 450 + index * 400;
       Animated.parallel([
         Animated.timing(categoryAnimations[index].translateX, {
           toValue: 0,
@@ -148,14 +148,14 @@ export default function FallDatesScreen({ navigation }) {
         Animated.parallel([
           Animated.timing(cardAnimations[index][idx].translateY, {
             toValue: 0,
-            duration: 450,
+            duration: 700,
             delay: cardDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(cardAnimations[index][idx].opacity, {
             toValue: 1,
-            duration: 450,
+            duration: 700,
             delay: cardDelay,
             useNativeDriver: true,
           }),
