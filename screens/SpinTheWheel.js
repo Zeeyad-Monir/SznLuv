@@ -22,8 +22,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // SVG
 import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 
-// CONFETTI
-import ConfettiCannon from "react-native-confetti-cannon";
+// IMPORT LOTTIE
+import LottieView from "lottie-react-native"; // Import LottieView
 
 // Import Icon library (optional for arrow indicators)
 import { Ionicons } from "@expo/vector-icons"; // If you're using Expo
@@ -89,6 +89,32 @@ const SpinTheWheel = () => {
   // REFS
   const rotation = useRef(new Animated.Value(0)).current;
 
+  // Animated values for greeting text
+  const greetingOpacity = useRef(new Animated.Value(0)).current;
+  const greetingTranslateY = useRef(new Animated.Value(-20)).current;
+
+  // Animated values for wheel
+  const wheelOpacity = useRef(new Animated.Value(0)).current;
+  const wheelTranslateY = useRef(new Animated.Value(30)).current;
+  const wheelScale = useRef(new Animated.Value(0.9)).current;
+
+  // Animated values for spin button
+  const spinButtonOpacity = useRef(new Animated.Value(0)).current;
+  const spinButtonTranslateY = useRef(new Animated.Value(30)).current;
+  const spinButtonScale = useRef(new Animated.Value(0.9)).current;
+
+  // Animated values for result box
+  const resultOpacity = useRef(new Animated.Value(0)).current;
+  const resultTranslateY = useRef(new Animated.Value(30)).current;
+  const resultScale = useRef(new Animated.Value(0.9)).current;
+
+  // Animated values for "Enjoy your date!" text
+  const enjoyTextOpacity = useRef(new Animated.Value(0)).current;
+  const enjoyTextTranslateY = useRef(new Animated.Value(20)).current;
+
+  // Animated value for Lottie animation (optional: to control playback)
+  const lottieRef = useRef(null);
+
   // EFFECTS
   useEffect(() => {
     const loadDateIdea = async () => {
@@ -112,6 +138,188 @@ const SpinTheWheel = () => {
       setDateOptions(seasonDateOptions[selectedSeason]);
     } else {
       setDateOptions([]);
+    }
+  }, [selectedSeason]);
+
+  // Trigger animations when the component loads or selectedDate changes
+  useEffect(() => {
+    if (!selectedDate) {
+      // Reset animated values
+      greetingOpacity.setValue(0);
+      greetingTranslateY.setValue(-20);
+
+      wheelOpacity.setValue(0);
+      wheelTranslateY.setValue(30);
+      wheelScale.setValue(0.9);
+
+      spinButtonOpacity.setValue(0);
+      spinButtonTranslateY.setValue(30);
+      spinButtonScale.setValue(0.9);
+
+      // Animate the greeting text
+      Animated.parallel([
+        Animated.timing(greetingOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(greetingTranslateY, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate the wheel
+      Animated.parallel([
+        Animated.timing(wheelOpacity, {
+          toValue: 1,
+          duration: 600,
+          delay: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wheelTranslateY, {
+          toValue: 0,
+          duration: 2000,
+          delay: 1000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(wheelScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          delay: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate the spin button
+      Animated.parallel([
+        Animated.timing(spinButtonOpacity, {
+          toValue: 1,
+          duration: 600,
+          delay: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(spinButtonTranslateY, {
+          toValue: 0,
+          duration: 600,
+          delay: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(spinButtonScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          delay: 800,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset result box animated values
+      resultOpacity.setValue(0);
+      resultTranslateY.setValue(30);
+      resultScale.setValue(0.9);
+
+      enjoyTextOpacity.setValue(0);
+      enjoyTextTranslateY.setValue(20);
+
+      // When a date is selected, animate the result box
+      Animated.parallel([
+        Animated.timing(resultOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(resultTranslateY, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(resultScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate the "Enjoy your date!" text
+      Animated.parallel([
+        Animated.timing(enjoyTextOpacity, {
+          toValue: 1,
+          duration: 800,
+          delay: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(enjoyTextTranslateY, {
+          toValue: 0,
+          duration: 800,
+          delay: 500,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Play the Lottie animation when a date is selected
+      if (lottieRef.current) {
+        lottieRef.current.play();
+      }
+    }
+  }, [selectedDate]);
+
+  // NEW EFFECT: Animate wheel when a season is selected
+  useEffect(() => {
+    if (selectedSeason) {
+      // Reset wheel animated values
+      wheelOpacity.setValue(0);
+      wheelTranslateY.setValue(30);
+      wheelScale.setValue(0.9);
+
+      // Animate the wheel appearance
+      Animated.parallel([
+        Animated.timing(wheelOpacity, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wheelTranslateY, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(wheelScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // If no season is selected, optionally hide the wheel
+      Animated.parallel([
+        Animated.timing(wheelOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wheelTranslateY, {
+          toValue: 30,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wheelScale, {
+          toValue: 0.9,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [selectedSeason]);
 
@@ -268,7 +476,16 @@ const SpinTheWheel = () => {
       {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* GREETING */}
-        <Text style={styles.helloText}>Hello, User!</Text>
+        <Animated.View
+          style={[
+            {
+              opacity: greetingOpacity,
+              transform: [{ translateY: greetingTranslateY }],
+            },
+          ]}
+        >
+          <Text style={styles.helloText}>Hello, User!</Text>
+        </Animated.View>
 
         {/* CONDITIONAL RENDERING */}
         {!selectedDate ? (
@@ -319,7 +536,14 @@ const SpinTheWheel = () => {
               <Animated.View
                 style={[
                   styles.wheel,
-                  { transform: [{ rotate: wheelRotation }] },
+                  {
+                    opacity: wheelOpacity,
+                    transform: [
+                      { rotate: wheelRotation },
+                      { translateY: wheelTranslateY },
+                      { scale: wheelScale },
+                    ],
+                  },
                   isSpinning && styles.wheelShadow,
                 ]}
               >
@@ -346,26 +570,36 @@ const SpinTheWheel = () => {
             </View>
 
             {/* BUTTONS */}
-            <TouchableOpacity
-              style={[
-                styles.spinButton,
-                isSpinning && styles.disabledButton,
-                (!selectedSeason || dateOptions.length === 0) &&
-                  styles.disabledButton,
-              ]}
-              onPress={startSpin}
-              disabled={
-                isSpinning || !selectedSeason || dateOptions.length === 0
-              }
+            <Animated.View
+              style={{
+                opacity: spinButtonOpacity,
+                transform: [
+                  { translateY: spinButtonTranslateY },
+                  { scale: spinButtonScale },
+                ],
+              }}
             >
-              <Text style={styles.spinButtonText}>SPIN THE WHEEL</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.spinButton,
+                  isSpinning && styles.disabledButton,
+                  (!selectedSeason || dateOptions.length === 0) &&
+                    styles.disabledButton,
+                ]}
+                onPress={startSpin}
+                disabled={
+                  isSpinning || !selectedSeason || dateOptions.length === 0
+                }
+              >
+                <Text style={styles.spinButtonText}>SPIN THE WHEEL</Text>
+              </TouchableOpacity>
+            </Animated.View>
 
             <TouchableOpacity
               style={styles.backButton}
               onPress={retrieveSavedDateIdea}
             >
-              <Text style={styles.backButtonText}>Previous Spun Date</Text>
+              <Text style={styles.backButtonText}>Previous Date</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -373,22 +607,38 @@ const SpinTheWheel = () => {
             {/* SUBTITLE */}
             <Text style={styles.subtitle}>You’ve spun:</Text>
             {/* RESULT */}
-            <View style={styles.resultBox}>
-              <Text style={styles.resultText}>{selectedDate}</Text>
-              {/* You can dynamically set additional info based on the selectedDate */}
-            </View>
-            {/* CONFETTI */}
-            <ConfettiCannon
-              count={100}
-              origin={{ x: screenWidth / 2, y: 0 }}
-              autoStart={true}
-              fadeOut={true}
-              fallSpeed={2000}
-              explosionSpeed={0}
-              angle={90}
+            <Animated.View
+              style={{
+                opacity: resultOpacity,
+                transform: [
+                  { translateY: resultTranslateY },
+                  { scale: resultScale },
+                ],
+              }}
+            >
+              <View style={styles.resultBox}>
+                <Text style={styles.resultText}>{selectedDate}</Text>
+                {/* You can dynamically set additional info based on the selectedDate */}
+              </View>
+            </Animated.View>
+            {/* REPLACE CONFETTI WITH LOTTIE ANIMATION */}
+            <LottieView
+              ref={lottieRef}
+              source={require("../assets/wheelFalling.json")} // Adjust the path based on your project structure
+              autoPlay={false}
+              loop={false}
+              style={styles.lottie}
+              speed={0.8}
             />
             {/* ENCOURAGEMENT */}
-            <Text style={styles.enjoyText}>Enjoy your date!</Text>
+            <Animated.View
+              style={{
+                opacity: enjoyTextOpacity,
+                transform: [{ translateY: enjoyTextTranslateY }],
+              }}
+            >
+              <Text style={styles.enjoyText}>Enjoy your date!</Text>
+            </Animated.View>
             {/* BUTTON */}
             <TouchableOpacity
               style={styles.backButton}
@@ -549,6 +799,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#faf4e4",
+  },
+  // ADD NEW STYLE FOR LOTTIE ANIMATION
+  lottie: {
+    position: 'absolute',
+    width: Dimensions.get('window').width * 1.2,
+    height: Dimensions.get('window').height * 1.5,
+    top: -Dimensions.get('window').height * 0.15,
+    left: -Dimensions.get('window').width * 0.25,
+    transform: [{ scale: 1.15 }],
+    opacity: 0.6,
   },
 });
 

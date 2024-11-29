@@ -227,7 +227,7 @@ export default function FallDatesScreen({ navigation }) {
         autoPlay
         loop
         style={styles.leavesAnimation}
-        speed={0.7}
+        speed={0.6}
       />
 
       {/* Animated Title and Icons */}
