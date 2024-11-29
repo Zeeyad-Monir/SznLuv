@@ -25,8 +25,9 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 // CONFETTI
 import ConfettiCannon from "react-native-confetti-cannon";
 
-// Import the Picker component for the dropdown menu
-import { Picker } from "@react-native-picker/picker"; // Ensure this package is installed
+// Import Icon library (optional for arrow indicators)
+import { Ionicons } from "@expo/vector-icons"; // If you're using Expo
+// If not using Expo, you can use react-native-vector-icons or any other icon library
 
 // Get the width of the device screen for positioning elements
 const { width: screenWidth } = Dimensions.get("window");
@@ -83,6 +84,7 @@ const SpinTheWheel = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSeason, setSelectedSeason] = useState(""); // New state for selected season
   const [dateOptions, setDateOptions] = useState([]); // Date options based on selected season
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
 
   // REFS
   const rotation = useRef(new Animated.Value(0)).current;
@@ -273,21 +275,36 @@ const SpinTheWheel = () => {
           <>
             {/* SEASON SELECTION DROPDOWN */}
             <View style={styles.dropdownContainer}>
-              <Picker
-                selectedValue={selectedSeason}
-                onValueChange={(itemValue, itemIndex) => {
-                  setSelectedSeason(itemValue);
-                  console.log("Selected Season:", itemValue);
-                }}
-                style={styles.picker}
-                mode="dropdown"
+              <TouchableOpacity
+                style={styles.dropdownHeader}
+                onPress={() => setIsDropdownOpen(!isDropdownOpen)}
               >
-                <Picker.Item label="Select Season" value="" />
-                <Picker.Item label="Fall" value="Fall" />
-                <Picker.Item label="Winter" value="Winter" />
-                <Picker.Item label="Spring" value="Spring" />
-                <Picker.Item label="Summer" value="Summer" />
-              </Picker>
+                <Text style={styles.dropdownHeaderText}>
+                  {selectedSeason ? selectedSeason : "Seasons"}
+                </Text>
+                <Ionicons
+                  name={isDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color="#555"
+                />
+              </TouchableOpacity>
+              {isDropdownOpen && (
+                <View style={styles.dropdownOptions}>
+                  {Object.keys(seasonDateOptions).map((season) => (
+                    <TouchableOpacity
+                      key={season}
+                      style={styles.dropdownOption}
+                      onPress={() => {
+                        setSelectedSeason(season);
+                        setIsDropdownOpen(false);
+                        console.log("Selected Season:", season);
+                      }}
+                    >
+                      <Text style={styles.dropdownOptionText}>{season}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
 
             {/* SUBTITLE */}
@@ -417,13 +434,39 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 5,
+    borderRadius: 8,
     backgroundColor: "#fff",
     overflow: "hidden",
+    // Add shadow for iOS
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    // Add elevation for Android
+    elevation: 3,
   },
-  picker: {
-    height: Platform.OS === "ios" ? 200 : 50,
-    width: "100%",
+  dropdownHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 15,
+  },
+  dropdownHeaderText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  dropdownOptions: {
+    backgroundColor: "#fff",
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: "#555",
   },
   wheelContainer: {
     position: "relative",
