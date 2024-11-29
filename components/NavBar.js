@@ -16,7 +16,7 @@ export default function NavBar() {
       {/* Icon Container */}
       <View style={styles.iconContainer}>
         {/* Favorites Screen Link */}
-        <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
+        <TouchableOpacity onPress={() => navigation.navigate('Favourites')}>
           <Image
             source={require('../assets/FAVOURITES.png')}
             style={styles.iconImage}
