@@ -1,5 +1,5 @@
 // screens/FallDatesScreen.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,28 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { doc, getDoc, setDoc } from 'firebase/firestore'; // Import Firestore functions
-import { auth, db } from '../firebaseConfig'; // Import Firebase config
-import { AuthContext } from '../App'; // Import AuthContext
-import NavBar from '../components/NavBar'; // Adjust the path if necessary
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebaseConfig';
+import { AuthContext } from '../App';
+import NavBar from '../components/NavBar';
+import LottieView from 'lottie-react-native';
+import fallingLeaves from '../assets/fallingLeaves.json'; // Make sure to have this file
 
 export default function FallDatesScreen({ navigation }) {
-  const { user } = useContext(AuthContext); // Access user context
-  const [favorites, setFavorites] = useState({}); // Local state for favorites
+  const { user } = useContext(AuthContext);
+  const [favorites, setFavorites] = useState({});
+
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+
+  // Animated values for title and icons
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(-50)).current;
 
   const categories = [
     {
@@ -64,8 +76,22 @@ export default function FallDatesScreen({ navigation }) {
     },
   ];
 
+  // Animated values for categories and cards
+  const categoryAnimations = categories.map(() => ({
+    translateX: useRef(new Animated.Value(-50)).current,
+    opacity: useRef(new Animated.Value(0)).current,
+  }));
+
+  const cardAnimations = categories.map((category) =>
+    category.spots.map(() => ({
+      translateY: useRef(new Animated.Value(20)).current,
+      opacity: useRef(new Animated.Value(0)).current,
+      scale: useRef(new Animated.Value(0.8)).current,
+    }))
+  );
+
   // Fetch and synchronize user's favorites from Firestore on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       const fetchFavorites = async () => {
         const userFavoritesRef = doc(db, 'favourites', user.uid);
@@ -81,7 +107,68 @@ export default function FallDatesScreen({ navigation }) {
 
       fetchFavorites();
     }
-  }, [user]);
+
+    // Animate the title and icons
+    Animated.parallel([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleTranslateY, {
+        toValue: 0,
+        duration: 1000,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate categories and cards
+    categories.forEach((category, index) => {
+      const delay = 1000 + index * 500;
+      Animated.parallel([
+        Animated.timing(categoryAnimations[index].translateX, {
+          toValue: 0,
+          duration: 800,
+          delay: delay,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(categoryAnimations[index].opacity, {
+          toValue: 1,
+          duration: 800,
+          delay: delay,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      category.spots.forEach((spot, idx) => {
+        const cardDelay = delay + (idx + 1) * 300;
+        Animated.parallel([
+          Animated.timing(cardAnimations[index][idx].translateY, {
+            toValue: 0,
+            duration: 800,
+            delay: cardDelay,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardAnimations[index][idx].opacity, {
+            toValue: 1,
+            duration: 800,
+            delay: cardDelay,
+            useNativeDriver: true,
+          }),
+          Animated.spring(cardAnimations[index][idx].scale, {
+            toValue: 1,
+            friction: 5,
+            tension: 40,
+            delay: cardDelay,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    });
+  }, []);
 
   const toggleFavorite = async (spotName) => {
     if (!user) {
@@ -92,11 +179,9 @@ export default function FallDatesScreen({ navigation }) {
     const userFavoritesRef = doc(db, 'favourites', user.uid);
 
     try {
-      // Fetch existing favorites from Firestore
       const docSnap = await getDoc(userFavoritesRef);
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
-      // Add or remove favorite
       if (userFavorites[spotName]) {
         delete userFavorites[spotName];
         Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
@@ -105,10 +190,7 @@ export default function FallDatesScreen({ navigation }) {
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
 
-      // Update Firestore
       await setDoc(userFavoritesRef, userFavorites);
-
-      // Update local state
       setFavorites(userFavorites);
     } catch (error) {
       console.error('Error updating favorites:', error);
@@ -120,9 +202,9 @@ export default function FallDatesScreen({ navigation }) {
     if (spot.name === 'Aldor Family Farm') {
       navigation.navigate('AldorFamilyFarmScreen');
     } else if (spot.name === 'Eagle Acres Dairy') {
-      navigation.navigate('EagleAcresDairy'); // Navigate to Eagle Acres Dairy screen
+      navigation.navigate('EagleAcresDairy');
     } else if (spot.name === 'Laity Pumpkin Patch') {
-      navigation.navigate('LaityPumpkinPatch'); // Navigate to the new screen
+      navigation.navigate('LaityPumpkinPatch');
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
@@ -130,58 +212,102 @@ export default function FallDatesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Integrated Navigation Bar */}
-      <NavBar />
+      {/* Falling Leaves Animation */}
+      <LottieView
+        source={fallingLeaves}
+        autoPlay
+        loop
+        style={styles.leavesAnimation}
+        speed={0.8}
+      />
+
+      {/* Animated Title and Icons */}
+      <Animated.View
+        style={[
+          styles.headerContainer,
+          {
+            opacity: titleOpacity,
+            transform: [{ translateY: titleTranslateY }],
+          },
+        ]}
+      >
+        {/* Integrated Navigation Bar */}
+        <NavBar />
+        {/* Screen Title */}
+        <Text style={styles.mainTitle}>Fall Dates</Text>
+      </Animated.View>
 
       {/* Main Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Screen Title */}
-        <Text style={styles.mainTitle}>Fall Dates</Text>
-
-        {/* Categories and Their Spots */}
         {categories.map((category, index) => (
-          <View key={index} style={styles.categorySection}>
+          <Animated.View
+            key={index}
+            style={[
+              styles.categorySection,
+              {
+                transform: [
+                  { translateX: categoryAnimations[index].translateX },
+                ],
+                opacity: categoryAnimations[index].opacity,
+              },
+            ]}
+          >
             <Text style={styles.categoryTitle}>{category.title}</Text>
             {category.spots.map((spot, idx) => (
-              <TouchableOpacity
+              <Animated.View
                 key={idx}
-                style={styles.dateSpotCard}
-                onPress={() => handleSpotPress(spot)}
-                accessibilityLabel={`View details for ${spot.name}`}
-                accessibilityRole="button"
+                style={[
+                  styles.dateSpotCard,
+                  {
+                    transform: [
+                      { translateY: cardAnimations[index][idx].translateY },
+                      { scale: cardAnimations[index][idx].scale },
+                    ],
+                    opacity: cardAnimations[index][idx].opacity,
+                  },
+                ]}
               >
-                {/* Favorite Icon */}
                 <TouchableOpacity
-                  style={styles.cardHeartIcon}
-                  onPress={() => toggleFavorite(spot.name)}
-                  accessibilityLabel={`Favorite ${spot.name}`}
-                  accessibilityRole="button"
-                >
-                  <Icon
-                    name={favorites[spot.name] ? 'favorite' : 'favorite-border'}
-                    size={20}
-                    color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'}
-                  />
-                </TouchableOpacity>
-
-                {/* Spot Information */}
-                <View style={styles.cardTextContainer}>
-                  <Text style={styles.dateSpotName}>{spot.name}</Text>
-                  <Text style={styles.addressText}>{spot.address}</Text>
-                </View>
-
-                {/* Navigation Arrow Icon */}
-                <TouchableOpacity
-                  style={styles.cardArrowIcon}
+                  style={styles.dateSpotCardContent}
                   onPress={() => handleSpotPress(spot)}
                   accessibilityLabel={`View details for ${spot.name}`}
                   accessibilityRole="button"
                 >
-                  <Icon name="chevron-right" size={18} color="#000" />
+                  {/* Favorite Icon */}
+                  <TouchableOpacity
+                    style={styles.cardHeartIcon}
+                    onPress={() => toggleFavorite(spot.name)}
+                    accessibilityLabel={`Favorite ${spot.name}`}
+                    accessibilityRole="button"
+                  >
+                    <Icon
+                      name={
+                        favorites[spot.name] ? 'favorite' : 'favorite-border'
+                      }
+                      size={20}
+                      color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Spot Information */}
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.dateSpotName}>{spot.name}</Text>
+                    <Text style={styles.addressText}>{spot.address}</Text>
+                  </View>
+
+                  {/* Navigation Arrow Icon */}
+                  <TouchableOpacity
+                    style={styles.cardArrowIcon}
+                    onPress={() => handleSpotPress(spot)}
+                    accessibilityLabel={`View details for ${spot.name}`}
+                    accessibilityRole="button"
+                  >
+                    <Icon name="chevron-right" size={18} color="#000" />
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
+              </Animated.View>
             ))}
-          </View>
+          </Animated.View>
         ))}
       </ScrollView>
     </View>
@@ -191,13 +317,19 @@ export default function FallDatesScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4A460',
+    backgroundColor: '#F4A460', // Warm autumn background
   },
-
-  /* Main Content Styles */
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  leavesAnimation: {
+    position: 'absolute',
+    width: Dimensions.get('window').width * 1.2, // Increase width by 50%
+    height: Dimensions.get('window').height * 1.5, // Increase height by 50%
+    top: -Dimensions.get('window').height * 0.2, // Adjust position if necessary
+    left: -Dimensions.get('window').width * 0.25, // Center the animation
+    transform: [{ scale: 1.65 }], // Scale up by 20%
+    opacity: 0.6, // Reduce opacity by 10%
+  },
+  headerContainer: {
+    //marginTop: 20,
   },
   mainTitle: {
     color: '#F5F5DC',
@@ -206,8 +338,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 20,
   },
-
-  /* Category Section Styles */
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 20,
+  },
   categorySection: {
     marginBottom: 40,
   },
@@ -217,8 +352,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 15,
   },
-
-  /* Date Spot Card Styles */
   dateSpotCard: {
     backgroundColor: '#FFF8DC',
     borderRadius: 14,
