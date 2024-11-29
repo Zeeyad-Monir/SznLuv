@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useContext } from "react";
+// Favourites.js
+
+import React, { useEffect, useState, useContext, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,6 +9,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Animated,
+  Easing,
 } from "react-native";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -22,6 +26,17 @@ const Favourites = () => {
   const [notificationMessage, setNotificationMessage] = useState('');
 
   const navigation = useNavigation();
+
+  // Animated values for header text
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(-20)).current;
+
+  // Animated values for favourites list
+  const [itemAnimations, setItemAnimations] = useState([]);
+
+  // Animated value for notification message
+  const notificationTranslateY = useRef(new Animated.Value(50)).current;
+  const notificationOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const fetchFavourites = async () => {
@@ -50,6 +65,95 @@ const Favourites = () => {
     fetchFavourites();
   }, [user]);
 
+  // Trigger animations after loading is complete
+  useEffect(() => {
+    if (!loading) {
+      // Animate the header text
+      Animated.parallel([
+        Animated.timing(headerOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(headerTranslateY, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Initialize animations for each item
+      const animations = favourites.map(() => ({
+        translateY: new Animated.Value(20),
+        opacity: new Animated.Value(0),
+      }));
+      setItemAnimations(animations);
+
+      // Animate each item with a staggered effect
+      const animationsArray = animations.map((anim, index) => {
+        return Animated.parallel([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 600,
+            delay: 500 + index * 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.translateY, {
+            toValue: 0,
+            duration: 600,
+            delay: 500 + index * 150,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]);
+      });
+
+      Animated.stagger(100, animationsArray).start();
+    }
+  }, [loading, favourites]);
+
+  // Animate notification message when it changes
+  useEffect(() => {
+    if (notificationMessage !== '') {
+      // Slide in notification
+      Animated.parallel([
+        Animated.timing(notificationTranslateY, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(notificationOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Slide out notification after 3 seconds
+      const timeout = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(notificationTranslateY, {
+            toValue: 50,
+            duration: 500,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(notificationOpacity, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setNotificationMessage('');
+        });
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [notificationMessage]);
+
   const removeFavourite = async (spotName) => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to remove favourites.');
@@ -71,10 +175,14 @@ const Favourites = () => {
           prevFavourites.filter((fav) => fav !== spotName).sort((a, b) => a.localeCompare(b))
         );
 
+        // Reset item animations
+        const animations = favourites.map(() => ({
+          translateY: new Animated.Value(20),
+          opacity: new Animated.Value(0),
+        }));
+        setItemAnimations(animations);
+
         setNotificationMessage(`"${spotName}" removed from favourites.`);
-        setTimeout(() => {
-          setNotificationMessage('');
-        }, 3000);
       } else {
         console.log('Favourite not found.');
       }
@@ -89,7 +197,7 @@ const Favourites = () => {
       navigation.navigate('AldorFamilyFarmScreen');
     } else if (name === 'Laity Pumpkin Patch') {
       navigation.navigate('LaityPumpkinPatch');
-		} else if (name === 'Eagle Acres Dairy') {
+    } else if (name === 'Eagle Acres Dairy') {
       navigation.navigate('EagleAcresDairy');
     } else {
       Alert.alert('Coming Soon', 'Feature coming soon.');
@@ -109,24 +217,47 @@ const Favourites = () => {
       <NavBar />
 
       {notificationMessage !== '' && (
-        <View style={styles.notificationContainer}>
+        <Animated.View
+          style={[
+            styles.notificationContainer,
+            {
+              opacity: notificationOpacity,
+              transform: [{ translateY: notificationTranslateY }],
+            },
+          ]}
+        >
           <Text style={styles.notificationText}>{notificationMessage}</Text>
-        </View>
+        </Animated.View>
       )}
 
-      <View style={styles.headerTextContainer}>
+      <Animated.View
+        style={[
+          styles.headerTextContainer,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
         <Text style={styles.title}>Favourites</Text>
         <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
-      </View>
+      </Animated.View>
       <ScrollView style={styles.favouritesList}>
         {favourites.length > 0 ? (
           favourites.map((favourite, index) => (
-            <FavouriteItem
-              key={index}
-              name={favourite}
-              removeFavourite={removeFavourite}
-              onPress={() => handleFavouritePress(favourite)}
-            />
+            <Animated.View
+              key={favourite}
+              style={{
+                opacity: itemAnimations[index]?.opacity || 1,
+                transform: [{ translateY: itemAnimations[index]?.translateY || 0 }],
+              }}
+            >
+              <FavouriteItem
+                name={favourite}
+                removeFavourite={removeFavourite}
+                onPress={() => handleFavouritePress(favourite)}
+              />
+            </Animated.View>
           ))
         ) : (
           <Text style={styles.emptyText}>No favourites yet! Add some dates to get started.</Text>

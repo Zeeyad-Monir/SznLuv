@@ -1,7 +1,6 @@
 // screens/HomeScreen.js
-// IN PROGRESS
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,13 +8,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Image,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../App';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-import NavBar from '../components/NavBar'; // Import the NavBar component
+import NavBar from '../components/NavBar';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -27,6 +27,34 @@ export default function HomeScreen() {
   const [springCount, setSpringCount] = useState(0);
   const [summerCount, setSummerCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Animated values for greeting text
+  const greetingOpacity = useRef(new Animated.Value(0)).current;
+  const greetingTranslateY = useRef(new Animated.Value(-20)).current;
+
+  // Animated values for season blocks
+  const seasonAnimations = [
+    {
+      translateY: useRef(new Animated.Value(30)).current,
+      opacity: useRef(new Animated.Value(0)).current,
+      scale: useRef(new Animated.Value(0.9)).current,
+    },
+    {
+      translateY: useRef(new Animated.Value(30)).current,
+      opacity: useRef(new Animated.Value(0)).current,
+      scale: useRef(new Animated.Value(0.9)).current,
+    },
+    {
+      translateY: useRef(new Animated.Value(30)).current,
+      opacity: useRef(new Animated.Value(0)).current,
+      scale: useRef(new Animated.Value(0.9)).current,
+    },
+    {
+      translateY: useRef(new Animated.Value(30)).current,
+      opacity: useRef(new Animated.Value(0)).current,
+      scale: useRef(new Animated.Value(0.9)).current,
+    },
+  ];
 
   // Fetch username and seasonal date counts when the screen loads
   useEffect(() => {
@@ -85,6 +113,53 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
+  // Trigger animations after loading is complete
+  useEffect(() => {
+    if (!loading) {
+      // Animate the greeting text
+      Animated.parallel([
+        Animated.timing(greetingOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(greetingTranslateY, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate the season blocks
+      seasonAnimations.forEach((anim, index) => {
+        const delay = 500 + index * 300;
+        Animated.parallel([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 600,
+            delay: delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.translateY, {
+            toValue: 0,
+            duration: 600,
+            delay: delay,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.spring(anim.scale, {
+            toValue: 1,
+            friction: 5,
+            tension: 40,
+            delay: delay,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }
+  }, [loading]);
+
   if (loading) {
     // Loading indicator while data is being fetched
     return (
@@ -102,58 +177,124 @@ export default function HomeScreen() {
       {/* Main scrollable content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Welcome message for the user */}
-        <View style={styles.greetingContainer}>
+        <Animated.View
+          style={[
+            styles.greetingContainer,
+            {
+              opacity: greetingOpacity,
+              transform: [{ translateY: greetingTranslateY }],
+            },
+          ]}
+        >
           <Text style={styles.greetingText}>Hello, {userName}!</Text>
           <Text style={styles.subtext}>In Season</Text>
-        </View>
+        </Animated.View>
 
         {/* Seasonal blocks with active date counts */}
         <View style={styles.seasonContainer}>
           {/* Fall block with navigation to fall dates */}
-          <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#FF8657' }]}
-            onPress={() => navigation.navigate('FallDatesScreen')}
+          <Animated.View
+            style={[
+              {
+                opacity: seasonAnimations[0].opacity,
+                transform: [
+                  { translateY: seasonAnimations[0].translateY },
+                  { scale: seasonAnimations[0].scale },
+                ],
+              },
+            ]}
           >
-            <Text style={[styles.seasonTitle, { color: '#FFFFFF' }]}>Fall</Text>
-            <Text style={[styles.seasonSubtitle, { color: '#FFFFFF' }]}>
-              {fallCount} Active Ideas
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.seasonBlock, { backgroundColor: '#FF8657' }]}
+              onPress={() => navigation.navigate('FallDatesScreen')}
+            >
+              <Text style={[styles.seasonTitle, { color: '#FFFFFF' }]}>Fall</Text>
+              <Text style={[styles.seasonSubtitle, { color: '#FFFFFF' }]}>
+                {fallCount} Active Ideas
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
-          <Text style={styles.subtext}>Upcoming Seasons</Text>
+          <Animated.Text
+            style={[
+              styles.subtext,
+              {
+                opacity: seasonAnimations[1].opacity,
+                transform: [{ translateY: seasonAnimations[1].translateY }],
+              },
+            ]}
+          >
+            Upcoming Seasons
+          </Animated.Text>
 
           {/* Winter block with navigation to winter dates */}
-          <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#B9CCEC', marginTop: 28 }]}
-            onPress={() => navigation.navigate('WinterDatesScreen')}
+          <Animated.View
+            style={[
+              {
+                opacity: seasonAnimations[1].opacity,
+                transform: [
+                  { translateY: seasonAnimations[1].translateY },
+                  { scale: seasonAnimations[1].scale },
+                ],
+              },
+            ]}
           >
-            <Text style={[styles.seasonTitle, { color: '#333333' }]}>Winter</Text>
-            <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
-              {winterCount} Active Ideas
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.seasonBlock, { backgroundColor: '#B9CCEC', marginTop: 28 }]}
+              onPress={() => navigation.navigate('WinterDatesScreen')}
+            >
+              <Text style={[styles.seasonTitle, { color: '#333333' }]}>Winter</Text>
+              <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
+                {winterCount} Active Ideas
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* Spring block with navigation to spring dates */}
-          <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#FF9FD2' }]}
-            onPress={() => navigation.navigate('SpringDatesScreen')}
+          <Animated.View
+            style={[
+              {
+                opacity: seasonAnimations[2].opacity,
+                transform: [
+                  { translateY: seasonAnimations[2].translateY },
+                  { scale: seasonAnimations[2].scale },
+                ],
+              },
+            ]}
           >
-            <Text style={[styles.seasonTitle, { color: '#333333' }]}>Spring</Text>
-            <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
-              {springCount} Active Ideas
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.seasonBlock, { backgroundColor: '#FF9FD2' }]}
+              onPress={() => navigation.navigate('SpringDatesScreen')}
+            >
+              <Text style={[styles.seasonTitle, { color: '#333333' }]}>Spring</Text>
+              <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
+                {springCount} Active Ideas
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* Summer block with navigation to summer dates */}
-          <TouchableOpacity
-            style={[styles.seasonBlock, { backgroundColor: '#F8DD74' }]}
-            onPress={() => navigation.navigate('SummerDatesScreen')}
+          <Animated.View
+            style={[
+              {
+                opacity: seasonAnimations[3].opacity,
+                transform: [
+                  { translateY: seasonAnimations[3].translateY },
+                  { scale: seasonAnimations[3].scale },
+                ],
+              },
+            ]}
           >
-            <Text style={[styles.seasonTitle, { color: '#333333' }]}>Summer</Text>
-            <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
-              {summerCount} Active Ideas
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.seasonBlock, { backgroundColor: '#F8DD74' }]}
+              onPress={() => navigation.navigate('SummerDatesScreen')}
+            >
+              <Text style={[styles.seasonTitle, { color: '#333333' }]}>Summer</Text>
+              <Text style={[styles.seasonSubtitle, { color: '#333333' }]}>
+                {summerCount} Active Ideas
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* Bottom padding for scroll view */}
           <View style={{ height: 20 }} />

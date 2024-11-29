@@ -1,4 +1,5 @@
 // screens/FallDatesScreen.js
+
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { auth, db } from '../firebaseConfig';
 import { AuthContext } from '../App';
 import NavBar from '../components/NavBar';
 import LottieView from 'lottie-react-native';
-import fallingLeaves from '../assets/fallingLeaves.json'; // Make sure to have this file
+import fallingLeaves from '../assets/fallingLeaves.json'; // Ensure this file exists
 
 export default function FallDatesScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -32,7 +33,7 @@ export default function FallDatesScreen({ navigation }) {
 
   const categories = [
     {
-      title: 'Aldor Family Farm',
+      title: 'Pumpkin Patches',
       spots: [
         {
           name: 'Aldor Family Farm',
@@ -205,6 +206,14 @@ export default function FallDatesScreen({ navigation }) {
       navigation.navigate('EagleAcresDairy');
     } else if (spot.name === 'Laity Pumpkin Patch') {
       navigation.navigate('LaityPumpkinPatch');
+    } else if (spot.name === 'Sunset Summit') {
+      navigation.navigate('SunsetSummitScreen');
+    } else if (spot.name === 'Leaf Trail') {
+      navigation.navigate('LeafTrailScreen');
+    } else if (spot.name === 'Maple Park') {
+      navigation.navigate('MapleParkScreen');
+    } else if (spot.name === 'Riverfront Meadows') {
+      navigation.navigate('RiverfrontMeadowsScreen');
     } else {
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
@@ -218,7 +227,7 @@ export default function FallDatesScreen({ navigation }) {
         autoPlay
         loop
         style={styles.leavesAnimation}
-        speed={0.8}
+        speed={0.7}
       />
 
       {/* Animated Title and Icons */}
@@ -321,15 +330,15 @@ const styles = StyleSheet.create({
   },
   leavesAnimation: {
     position: 'absolute',
-    width: Dimensions.get('window').width * 1.2, // Increase width by 50%
-    height: Dimensions.get('window').height * 1.5, // Increase height by 50%
-    top: -Dimensions.get('window').height * 0.2, // Adjust position if necessary
-    left: -Dimensions.get('window').width * 0.25, // Center the animation
-    transform: [{ scale: 1.65 }], // Scale up by 20%
-    opacity: 0.6, // Reduce opacity by 10%
+    width: Dimensions.get('window').width * 1.2,
+    height: Dimensions.get('window').height * 1.5,
+    top: -Dimensions.get('window').height * 0.2,
+    left: -Dimensions.get('window').width * 0.25,
+    transform: [{ scale: 1.65 }],
+    opacity: 0.6,
   },
   headerContainer: {
-    //marginTop: 20,
+    // Optional: Adjust margin or padding if needed
   },
   mainTitle: {
     color: '#F5F5DC',
@@ -364,6 +373,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  dateSpotCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cardHeartIcon: {
     marginRight: 16,
