@@ -1,4 +1,3 @@
-// Favourites.js
 import React, { useEffect, useState, useContext } from "react";
 import {
   StyleSheet,
@@ -14,7 +13,7 @@ import { db } from "../firebaseConfig";
 import NavBar from '../components/NavBar';
 import { AuthContext } from '../App';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
+import { useNavigation } from '@react-navigation/native';
 
 const Favourites = () => {
   const { user } = useContext(AuthContext);
@@ -22,7 +21,7 @@ const Favourites = () => {
   const [loading, setLoading] = useState(true);
   const [notificationMessage, setNotificationMessage] = useState('');
 
-  const navigation = useNavigation(); // Initialize navigation
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchFavourites = async () => {
@@ -33,7 +32,10 @@ const Favourites = () => {
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setFavourites(Object.keys(data).filter((key) => data[key]));
+            const sortedFavourites = Object.keys(data)
+              .filter((key) => data[key])
+              .sort((a, b) => a.localeCompare(b));
+            setFavourites(sortedFavourites);
           } else {
             console.log("No favourites found for user.");
           }
@@ -57,21 +59,18 @@ const Favourites = () => {
     const userFavoritesRef = doc(db, 'favourites', user.uid);
 
     try {
-      // Fetch existing favourites from Firestore
       const docSnap = await getDoc(userFavoritesRef);
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
-      // Remove favourite
       if (userFavorites[spotName]) {
         delete userFavorites[spotName];
 
-        // Update Firestore
         await setDoc(userFavoritesRef, userFavorites);
 
-        // Update local state
-        setFavourites((prevFavourites) => prevFavourites.filter((fav) => fav !== spotName));
+        setFavourites((prevFavourites) =>
+          prevFavourites.filter((fav) => fav !== spotName).sort((a, b) => a.localeCompare(b))
+        );
 
-        // Show notification
         setNotificationMessage(`"${spotName}" removed from favourites.`);
         setTimeout(() => {
           setNotificationMessage('');
@@ -85,13 +84,12 @@ const Favourites = () => {
     }
   };
 
-  // Handler for when a favourite is pressed
   const handleFavouritePress = (name) => {
     if (name === 'Aldor Family Farm') {
-      // Navigate to AldorFamilyFarmScreen
       navigation.navigate('AldorFamilyFarmScreen');
+    } else if (name === 'Laity Pumpkin Patch') {
+      navigation.navigate('LaityPumpkinPatch');
     } else {
-      // Show alert for features coming soon
       Alert.alert('Coming Soon', 'Feature coming soon.');
     }
   };
@@ -108,7 +106,6 @@ const Favourites = () => {
     <View style={styles.container}>
       <NavBar />
 
-      {/* Notification Message */}
       {notificationMessage !== '' && (
         <View style={styles.notificationContainer}>
           <Text style={styles.notificationText}>{notificationMessage}</Text>
@@ -126,7 +123,7 @@ const Favourites = () => {
               key={index}
               name={favourite}
               removeFavourite={removeFavourite}
-              onPress={() => handleFavouritePress(favourite)} // Pass onPress handler
+              onPress={() => handleFavouritePress(favourite)}
             />
           ))
         ) : (
@@ -137,10 +134,8 @@ const Favourites = () => {
   );
 };
 
-// Updated FavouriteItem to handle navigation press
 const FavouriteItem = ({ name, removeFavourite, onPress }) => (
   <View style={styles.itemContainer}>
-    {/* Touchable area for navigating to the date's screen */}
     <TouchableOpacity
       style={styles.itemContent}
       onPress={onPress}
@@ -149,8 +144,9 @@ const FavouriteItem = ({ name, removeFavourite, onPress }) => (
     >
       <Text style={styles.itemTitle}>{name}</Text>
     </TouchableOpacity>
-
-    {/* Touchable area for removing the favourite */}
+    <TouchableOpacity onPress={onPress} style={styles.arrowIcon}>
+      <Icon name="chevron-right" size={24} color="#323232" />
+    </TouchableOpacity>
     <TouchableOpacity
       style={styles.cardHeartIcon}
       onPress={() => removeFavourite(name)}
@@ -202,7 +198,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   itemContent: {
-    flex: 1, // Take up remaining space
+    flex: 1,
+  },
+  arrowIcon: {
+    marginHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardHeartIcon: {
     marginLeft: 16,

@@ -21,6 +21,7 @@ import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
 import SpinTheWheel from './screens/SpinTheWheel';
 import Favourites from './screens/Favourites';
 import ProfileSettings from './screens/ProfileSettings'; // Import the new ProfileSettings
+import LaityPumpkinPatch from './screens/LaityPumpkinPatch'; // Import the new ProfileSettings
 
 // Import SettingsProvider
 import { SettingsProvider } from './screens/SettingsContext';
@@ -69,6 +70,7 @@ export default function App() {
                 <Stack.Screen name="Favourites" component={Favourites} />
                 <Stack.Screen name="ProfileSettings" component={ProfileSettings} />
                 <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
+                <Stack.Screen name="LaityPumpkinPatch" component={LaityPumpkinPatch} />
               </>
             ) : (
               <>
