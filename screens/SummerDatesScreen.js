@@ -33,7 +33,7 @@ export default function SummerDatesScreen({ navigation }) {
 
   const categories = [
     {
-      title: 'Beaches (NOT ACTIVE)',
+      title: 'Beaches',
       spots: [
         { name: 'Sunset Beach', address: '123 Ocean Drive' },
         { name: 'Golden Sands', address: '456 Shoreline Ave' },
@@ -91,20 +91,20 @@ export default function SummerDatesScreen({ navigation }) {
 
     // Animate categories and cards with consistent timing
     categories.forEach((category, index) => {
-      const delay = 1000 + index * 500; // Start after title animation
+      const delay = 800 + index * 500; // Start after title animation
 
       // Animate category slide-in and fade-in
       Animated.parallel([
         Animated.timing(categoryAnimations[index].translateX, {
           toValue: 0,
-          duration: 800,
+          duration: 500,
           delay: delay,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(categoryAnimations[index].opacity, {
           toValue: 1,
-          duration: 800,
+          duration: 500,
           delay: delay,
           useNativeDriver: true,
         }),
@@ -117,14 +117,14 @@ export default function SummerDatesScreen({ navigation }) {
         Animated.parallel([
           Animated.timing(cardAnimations[index][idx].translateY, {
             toValue: 0,
-            duration: 800,
+            duration: 500,
             delay: cardDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(cardAnimations[index][idx].opacity, {
             toValue: 1,
-            duration: 800,
+            duration: 500,
             delay: cardDelay,
             useNativeDriver: true,
           }),

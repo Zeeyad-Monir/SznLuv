@@ -1,6 +1,6 @@
 // ProfileSettings.js
 
-import React, { useContext, useState } from 'react'; // Import useContext and useState
+import React, { useContext, useState, useEffect } from 'react'; // Import useEffect
 import {
   View,
   Text,
@@ -10,16 +10,29 @@ import {
   Dimensions,
   ScrollView,
   Alert,
+  ActivityIndicator, // Import ActivityIndicator for loading state
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NavBar from '../components/NavBar'; // Adjust the path as needed
 import { SettingsContext } from './SettingsContext'; // Adjust the path as needed
+import { AuthContext } from '../App'; // Import AuthContext to get authenticated user
+import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import { db, logout } from '../firebaseConfig'; // Import Firestore database instance and logout function
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation for navigation
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const ProfileSettings = () => {
+  const { user } = useContext(AuthContext); // Get the authenticated user from AuthContext
   const { isLocationEnabled, toggleLocationServices } = useContext(SettingsContext);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+  
+  // State to hold the fetched username
+  const [userName, setUserName] = useState('');
+  // State to manage loading state while fetching username
+  const [loadingUsername, setLoadingUsername] = useState(true);
+
+  const navigation = useNavigation(); // Initialize navigation
 
   const toggleNotifications = () => setIsNotificationsEnabled(previousState => !previousState);
 
@@ -36,6 +49,70 @@ const ProfileSettings = () => {
     }
   };
 
+  // useEffect to fetch the username from Firestore when the component mounts
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (!user) {
+        setUserName('User'); // Default name if user is not authenticated
+        setLoadingUsername(false);
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid); // Reference to the user's document
+        const userDocSnap = await getDoc(userDocRef); // Fetch the document snapshot
+
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setUserName(data.username || 'User'); // Set the username or default to 'User'
+        } else {
+          console.log('No user data found!');
+          setUserName('User'); // Default name if document does not exist
+        }
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+        setUserName('User'); // Default name on error
+      } finally {
+        setLoadingUsername(false); // Stop loading regardless of success or failure
+      }
+    };
+
+    fetchUserName();
+  }, [user]);
+
+  /**
+   * handleSignOut
+   * 
+   * Handles the sign-out process by calling the logout function and navigating the user to the Login screen.
+   */
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Confirm Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout(); // Call the logout function from firebaseConfig.js
+              Alert.alert('Signed Out', 'You have been signed out successfully.');
+              //navigation.navigate('Login'); // Navigate to the Login screen
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   return (
     <View style={styles.mainContainer}>
       {/* Use the NavBar Component */}
@@ -47,17 +124,24 @@ const ProfileSettings = () => {
         <View style={styles.profileSection}>
           {/* Profile Image with Gradient Background */}
           <View style={[styles.profileImage, { backgroundColor: '#D24B3A' }]}>
-            <Text style={styles.profileImageText}>Z</Text>
+            <Text style={styles.profileImageText}>
+              {loadingUsername ? '...' : userName.charAt(0)} {/* Show first letter or loading indicator */}
+            </Text>
           </View>
 
           {/* User Name */}
-          <Text style={styles.userName}>Zeeyad Monir</Text>
+          {loadingUsername ? (
+            <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
+          ) : (
+            <Text style={styles.userName}>{userName}</Text>
+          )}
 
           {/* Edit Profile Text */}
           <TouchableOpacity onPress={() => {
             // Implement navigation to Edit Profile screen
             // For example:
             // navigation.navigate('EditProfile');
+            Alert.alert('Info', 'Edit Profile feature coming soon.');
           }}>
             <Text style={styles.editProfileText}>Edit profile</Text>
           </TouchableOpacity>
@@ -69,6 +153,7 @@ const ProfileSettings = () => {
           <TouchableOpacity style={styles.settingItem} onPress={() => {
             // Implement navigation to Change Password screen
             // navigation.navigate('ChangePassword');
+            Alert.alert('Info', 'Change Password feature coming soon.');
           }}>
             <Text style={styles.settingText}>Change Password</Text>
             <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
@@ -78,6 +163,7 @@ const ProfileSettings = () => {
           <TouchableOpacity style={styles.settingItem} onPress={() => {
             // Implement navigation to Account Settings screen
             // navigation.navigate('AccountSettings');
+            Alert.alert('Info', 'Account Settings feature coming soon.');
           }}>
             <Text style={styles.settingText}>Account Settings</Text>
             <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
@@ -109,6 +195,16 @@ const ProfileSettings = () => {
             />
           </View>
         </View>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleSignOut}
+          accessibilityLabel="Sign Out"
+          accessibilityRole="button"
+        >
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -143,6 +239,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 40,
     fontWeight: 'bold',
+    textAlign: 'center', // Ensures text is horizontally centered
+    lineHeight: 120, // Aligns text vertically
+  },
+  loadingIndicator: {
+    marginTop: 10,
   },
   userName: {
     fontSize: 22,
@@ -176,6 +277,20 @@ const styles = StyleSheet.create({
   },
   switch: {
     transform: [{ scaleX: 1 }, { scaleY: 1 }],
+  },
+  signOutButton: {
+    width: '90%',
+    height: 50,
+    backgroundColor: '#D24B3A', // Matching the profile image background color
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 30,
+  },
+  signOutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   bottomSpacing: {
     height: 30,

@@ -1,5 +1,5 @@
 // Import necessary modules and components from React and React Native
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  Platform, // Import Platform for platform-specific code
+  Platform,
+  ActivityIndicator,
 } from "react-native";
 
 // Import your external NavBar component
@@ -25,12 +26,25 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 // IMPORT LOTTIE
 import LottieView from "lottie-react-native"; // Import LottieView
 
+// Import Lottie animations statically
+import fallingLeavesAnimation from "../assets/fallingLeaves.json";
+import snowFallingAnimation from "../assets/snowFalling.json";
+import flowersFallingAnimation from "../assets/flowersFalling.json"; // Corrected filename
+import summerFallingAnimation from "../assets/summerFalling.json";
+import wheelFallingAnimation from "../assets/wheelFalling.json"; // Adjust the path if necessary
+
 // Import Icon library (optional for arrow indicators)
 import { Ionicons } from "@expo/vector-icons"; // If you're using Expo
-// If not using Expo, you can use react-native-vector-icons or any other icon library
 
-// Get the width of the device screen for positioning elements
-const { width: screenWidth } = Dimensions.get("window");
+// Firestore Imports
+import { doc, getDoc } from "firebase/firestore"; // Added Firestore functions
+import { db } from "../firebaseConfig"; // Import Firestore database instance
+
+// Auth Context Import
+import { AuthContext } from "../App"; // Import AuthContext to get authenticated user
+
+// Get the width and height of the device screen for positioning elements
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 // DATA: Season-specific date ideas
 const seasonDateOptions = {
@@ -79,12 +93,30 @@ const sectionColors = [
 
 // WHEEL COMPONENT
 const SpinTheWheel = () => {
+  // Context to get the authenticated user
+  const { user } = useContext(AuthContext); // Access AuthContext
+
   // STATE
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSeason, setSelectedSeason] = useState(""); // New state for selected season
   const [dateOptions, setDateOptions] = useState([]); // Date options based on selected season
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
+
+  // NEW STATE: Background animation source and style
+  const [backgroundAnimation, setBackgroundAnimation] = useState(null);
+  const [backgroundAnimationStyle, setBackgroundAnimationStyle] = useState(null);
+
+  // NEW STATE: Background animation speed
+  const [backgroundAnimationSpeed, setBackgroundAnimationSpeed] = useState(1.0); // Default speed
+
+  // SPEED CONFIGURATION FOR BACKGROUND ANIMATIONS
+  const backgroundAnimationSpeeds = {
+    Fall: 0.55, // Speed for Fall
+    Winter: 0.2, // Speed for Winter
+    Spring: 0.5, // Speed for Spring
+    Summer: 0.7, // Speed for Summer
+  };
 
   // REFS
   const rotation = useRef(new Animated.Value(0)).current;
@@ -112,8 +144,13 @@ const SpinTheWheel = () => {
   const enjoyTextOpacity = useRef(new Animated.Value(0)).current;
   const enjoyTextTranslateY = useRef(new Animated.Value(20)).current;
 
-  // Animated value for Lottie animation (optional: to control playback)
+  // Animated value for Lottie animation (wheel falling)
   const lottieRef = useRef(null);
+
+  // STATE for username
+  const [userName, setUserName] = useState(""); // Added state for username
+  // STATE for loading username
+  const [loadingUsername, setLoadingUsername] = useState(true); // Added state for loading
 
   // EFFECTS
   useEffect(() => {
@@ -132,12 +169,72 @@ const SpinTheWheel = () => {
     loadDateIdea();
   }, []);
 
-  // Update date options when the selected season changes
+  // Fetch username when component mounts
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (!user) {
+        setUserName("User"); // Default name if user is not authenticated
+        setLoadingUsername(false);
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, "users", user.uid); // Reference to the user's document
+        const userDocSnap = await getDoc(userDocRef); // Fetch the document snapshot
+
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setUserName(data.username || "User"); // Set the username or default to 'User'
+        } else {
+          console.log("No user data found!");
+          setUserName("User"); // Default name if document does not exist
+        }
+      } catch (error) {
+        console.error("Error fetching user name:", error);
+        setUserName("User"); // Default name on error
+      } finally {
+        setLoadingUsername(false); // Stop loading regardless of success or failure
+      }
+    };
+
+    fetchUserName();
+  }, [user]);
+
+  // Update date options and background animation when the selected season changes
   useEffect(() => {
     if (selectedSeason && seasonDateOptions[selectedSeason]) {
       setDateOptions(seasonDateOptions[selectedSeason]);
     } else {
       setDateOptions([]);
+    }
+
+    // Update background animation, its style, and speed based on selected season
+    switch (selectedSeason) {
+      case "Fall":
+        setBackgroundAnimation(fallingLeavesAnimation);
+        setBackgroundAnimationStyle(styles.fallingLeavesAnimation);
+        setBackgroundAnimationSpeed(backgroundAnimationSpeeds.Fall);
+        break;
+      case "Winter":
+        setBackgroundAnimation(snowFallingAnimation);
+        setBackgroundAnimationStyle(styles.snowFallingAnimation);
+        setBackgroundAnimationSpeed(backgroundAnimationSpeeds.Winter);
+        break;
+      case "Spring":
+        setBackgroundAnimation(flowersFallingAnimation); // Corrected variable name
+        setBackgroundAnimationStyle(styles.flowersFallingAnimation);
+        setBackgroundAnimationSpeed(backgroundAnimationSpeeds.Spring);
+        break;
+      case "Summer":
+        setBackgroundAnimation(summerFallingAnimation);
+        setBackgroundAnimationStyle(styles.summerFallingAnimation);
+        setBackgroundAnimationSpeed(backgroundAnimationSpeeds.Summer);
+        break;
+      default:
+        setBackgroundAnimation(null);
+        setBackgroundAnimationStyle(null);
+        setBackgroundAnimationSpeed(1.0); // Default speed
+        break;
     }
   }, [selectedSeason]);
 
@@ -418,12 +515,12 @@ const SpinTheWheel = () => {
 
       const textAngle = startAngle + angle / 2;
       const textRadius = radius * 0.7;
-      const textX =
-        radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
-      const textY =
-        radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
+      const textX = radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
+      const textY = radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
 
-      const words = option.split(" ");
+      // Use "Mystery Spot" as the display text for each section
+      const displayText = "Mystery Spot";
+      const words = displayText.split(" ");
       const lines = [];
       let line = "";
 
@@ -470,6 +567,21 @@ const SpinTheWheel = () => {
   // RENDERING
   return (
     <View style={styles.mainContainer}>
+      {/* Background Color View */}
+      <View style={styles.backgroundColorView} />
+
+      {/* Background Lottie Animation */}
+      {/* Updated the conditional rendering to stop the animation when a date is selected */}
+      {!selectedDate && backgroundAnimation && (
+        <LottieView
+          source={backgroundAnimation}
+          autoPlay
+          loop
+          style={backgroundAnimationStyle}
+          speed={backgroundAnimationSpeed} // Added speed configuration
+        />
+      )}
+
       {/* Integrate the external NavBar component */}
       <NavBar />
 
@@ -484,7 +596,9 @@ const SpinTheWheel = () => {
             },
           ]}
         >
-          <Text style={styles.helloText}>Hello, User!</Text>
+          <Text style={styles.helloText}>
+            {loadingUsername ? "Hello, ..." : `Hello, ${userName}!`}
+          </Text>
         </Animated.View>
 
         {/* CONDITIONAL RENDERING */}
@@ -621,10 +735,10 @@ const SpinTheWheel = () => {
                 {/* You can dynamically set additional info based on the selectedDate */}
               </View>
             </Animated.View>
-            {/* REPLACE CONFETTI WITH LOTTIE ANIMATION */}
+            {/* LOTTIE ANIMATION */}
             <LottieView
               ref={lottieRef}
-              source={require("../assets/wheelFalling.json")} // Adjust the path based on your project structure
+              source={wheelFallingAnimation} // Adjust the path based on your project structure
               autoPlay={false}
               loop={false}
               style={styles.lottie}
@@ -657,12 +771,59 @@ const SpinTheWheel = () => {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    position: "relative", // Ensure positioning context
+  },
+  // Added background color view
+  backgroundColorView: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "#faf4e4",
+  },
+  // Adjusted styles for background Lottie animations
+  fallingLeavesAnimation: {
+    position: "absolute",
+    width: Dimensions.get("window").width * 1.2,
+    height: Dimensions.get("window").height * 1.5,
+    top: -Dimensions.get("window").height * 0.2,
+    left: -Dimensions.get("window").width * 0.25,
+    transform: [{ scale: 1.65 }],
+    opacity: 0.10, // Adjusted opacity
+    zIndex: 0, // Adjusted zIndex
+  },
+  snowFallingAnimation: {
+    position: "absolute",
+    width: Dimensions.get("window").width * 1.3,
+    height: Dimensions.get("window").height * 1.6,
+    top: -Dimensions.get("window").height * 0.25,
+    left: -Dimensions.get("window").width * 0.3,
+    transform: [{ scale: 1.5 }],
+    opacity: 0.6, // Adjusted opacity
+    zIndex: 0,
+  },
+  flowersFallingAnimation: {
+    position: "absolute",
+    width: Dimensions.get("window").width * 1.2,
+    height: Dimensions.get("window").height * 1.5,
+    top: -Dimensions.get("window").height * 0.18,
+    left: -Dimensions.get("window").width * 0.22,
+    transform: [{ scale: 2.3 }],
+    opacity: 0.20, // Adjusted opacity
+    zIndex: 0,
+  },
+  summerFallingAnimation: {
+    position: "absolute",
+    width: Dimensions.get("window").width * 1.25,
+    height: Dimensions.get("window").height * 1.55,
+    top: -Dimensions.get("window").height * 0.2,
+    left: -Dimensions.get("window").width * 0.24,
+    transform: [{ scale: 1.6 }],
+    opacity: 0.25, // Adjusted opacity
+    zIndex: 0,
   },
   scrollContainer: {
     alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 10,
+    zIndex: 1, // Ensure content is above background animations
   },
   helloText: {
     fontSize: 36,
@@ -800,13 +961,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#faf4e4",
   },
-  // ADD NEW STYLE FOR LOTTIE ANIMATION
+  // Existing style for Lottie animation (wheelFalling.json)
   lottie: {
-    position: 'absolute',
-    width: Dimensions.get('window').width * 1.2,
-    height: Dimensions.get('window').height * 1.5,
-    top: -Dimensions.get('window').height * 0.15,
-    left: -Dimensions.get('window').width * 0.25,
+    position: "absolute",
+    width: Dimensions.get("window").width * 1.2,
+    height: Dimensions.get("window").height * 1.5,
+    top: -Dimensions.get("window").height * 0.15,
+    left: -Dimensions.get("window").width * 0.25,
     transform: [{ scale: 1.15 }],
     opacity: 0.6,
   },

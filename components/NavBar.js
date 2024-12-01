@@ -22,7 +22,14 @@ export default function NavBar() {
             style={styles.iconImage}
           />
         </TouchableOpacity>
-
+        {/* Spin The Wheel Link */}
+          <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
+          <Image
+            source={require('../assets/SPINTHEWHEEL.png')}
+            style={styles.iconImage}
+          />
+          
+        </TouchableOpacity>
         {/* Profile Screen Link */}
         <TouchableOpacity onPress={() => navigation.navigate('ProfileSettings')}>
           <Image
@@ -31,13 +38,7 @@ export default function NavBar() {
           />
         </TouchableOpacity>
 
-        {/* Spin The Wheel Link */}
-        <TouchableOpacity onPress={() => navigation.navigate('SpinTheWheel')}>
-          <Image
-            source={require('../assets/SPINTHEWHEEL.png')}
-            style={styles.iconImage}
-          />
-        </TouchableOpacity>
+        
       </View>
     </View>
   );

@@ -2,7 +2,7 @@
 // Detailed comments added for better understanding and future reference
 
 // Import React and necessary hooks for managing state, side effects, and context
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react'; // Added useRef for animations
 
 // Import components from React Native for building the UI
 import {
@@ -16,7 +16,9 @@ import {
   Switch, // Toggle switch for temperature units
   FlatList, // For rendering lists
   Alert, // For displaying alert messages
-} from 'react-native';
+  Animated, // For animations
+  Easing, // For easing functions in animations
+} from 'react-native'; // Added Animated and Easing
 
 // Import Expo's Location module to access the device's location
 import * as Location from 'expo-location'; // LOCATION
@@ -77,6 +79,24 @@ const LaityPumpkinPatch = () => {
   // Latitude and longitude for Laity Pumpkin Patch
   const farmLatitude = 49.21939;
   const farmLongitude = -122.60193;
+
+  // ------------------ ANIMATION SETUP ------------------
+
+  // Animated values for different sections
+  const weatherOpacity = useRef(new Animated.Value(0)).current;
+  const weatherTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+
+  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
+  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current; // Slide in from left
+
+  const imageOpacity = useRef(new Animated.Value(0)).current;
+  const imageScale = useRef(new Animated.Value(0.95)).current;
+
+  const aboutOpacity = useRef(new Animated.Value(0)).current;
+  const aboutTranslateY = useRef(new Animated.Value(30)).current; // Slide in from bottom
+
+  const mapOpacity = useRef(new Animated.Value(0)).current;
+  const mapTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
 
   // ------------------ LOCATION EFFECT HOOK ------------------
 
@@ -212,6 +232,111 @@ const LaityPumpkinPatch = () => {
     fetchWeatherData();
   }, [location, isLocationEnabled]); // Dependencies on location and isLocationEnabled
 
+  // ------------------ ANIMATION EFFECT HOOK ------------------
+
+  // Trigger animations after loading is complete and data is fetched
+  useEffect(() => {
+    if (!loading) {
+      // Animate Weather Report Section
+      Animated.parallel([
+        Animated.timing(weatherOpacity, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(weatherTranslateX, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Farm Information Section
+      Animated.parallel([
+        Animated.timing(farmInfoOpacity, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(farmInfoTranslateX, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Image Section with a slight delay
+      Animated.parallel([
+        Animated.timing(imageOpacity, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          delay: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(imageScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          delay: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate About Section with a slight delay
+      Animated.parallel([
+        Animated.timing(aboutOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          delay: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(aboutTranslateY, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          delay: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate Map Section with a further delay
+      Animated.parallel([
+        Animated.timing(mapOpacity, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          delay: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mapTranslateX, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          delay: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [
+    loading,
+    weatherOpacity,
+    weatherTranslateX,
+    farmInfoOpacity,
+    farmInfoTranslateX,
+    imageOpacity,
+    imageScale,
+    aboutOpacity,
+    aboutTranslateY,
+    mapOpacity,
+    mapTranslateX,
+  ]); // Include all animated values in dependencies
+
   // ------------------ HELPER FUNCTIONS ------------------
 
   // Function to convert temperature based on unit toggle
@@ -266,7 +391,15 @@ const LaityPumpkinPatch = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
         {isLocationEnabled && weatherData ? (
-          <View style={styles.weatherContainer}>
+          <Animated.View
+            style={[
+              styles.weatherContainer,
+              {
+                opacity: weatherOpacity,
+                transform: [{ translateX: weatherTranslateX }],
+              },
+            ]}
+          >
             {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
             <View style={styles.unitToggle}>
               <Text style={styles.unitText}>°C</Text>
@@ -336,7 +469,7 @@ const LaityPumpkinPatch = () => {
                 )}
               />
             </View>
-          </View>
+          </Animated.View>
         ) : !isLocationEnabled ? (
           // Inform the user that weather data is unavailable due to disabled location services
           <View style={styles.weatherDisabledContainer}>
@@ -353,37 +486,71 @@ const LaityPumpkinPatch = () => {
         )}
 
         {/* ------------------ FARM INFORMATION SECTION ------------------ */}
-        <Text style={styles.title}>Laity Pumpkin Patch</Text>
-        <Text style={styles.address}>2725 Laity St, Maple Ridge, BC</Text>
-        <View style={styles.activityBox}>
-          {/* Highlighting activities available at the farm */}
-          <Text style={styles.activityText}>Wineries, pumpkins, and more!</Text>
-        </View>
+        <Animated.View
+          style={[
+            styles.farmInfoContainer,
+            {
+              opacity: farmInfoOpacity,
+              transform: [{ translateX: farmInfoTranslateX }],
+            },
+          ]}
+        >
+          <Text style={styles.title}>Laity Pumpkin Patch</Text>
+          <Text style={styles.address}>2725 Laity St, Maple Ridge, BC</Text>
+          <View style={styles.activityBox}>
+            {/* Highlighting activities available at the farm */}
+            <Text style={styles.activityText}>Wineries, pumpkins, and more!</Text>
+          </View>
+        </Animated.View>
 
         {/* ------------------ IMAGE SECTION ------------------ */}
-        <View style={styles.imagePlaceholder}>
+        <Animated.View
+          style={[
+            styles.imagePlaceholder,
+            {
+              opacity: imageOpacity,
+              transform: [{ scale: imageScale }],
+            },
+          ]}
+        >
           <Image
             source={require('../assets/Laity.png')} // Ensure this path is correct
             style={styles.image}
             resizeMode="cover" // Ensures the image fits the container
           />
-        </View>
+        </Animated.View>
 
         {/* ------------------ ABOUT THE FARM SECTION ------------------ */}
-        <View style={styles.aboutContainer}>
+        <Animated.View
+          style={[
+            styles.aboutContainer,
+            {
+              opacity: aboutOpacity, // Apply animated opacity
+              transform: [{ translateY: aboutTranslateY }], // Apply animated translation
+            },
+          ]}
+        >
           <Text style={styles.aboutText}>
             We opened a brand new location across the street to our original location. The original Laity Pumpkin Patch is
             referred to as the North location and is designed for the younger members of your family. Our newest location
             is referred to as the South location and is designed to entertain your children as they get older. Both locations
             have attractions that the whole family can enjoy together!
           </Text>
-        </View>
+        </Animated.View>
 
         {/* ------------------ USER'S CURRENT LOCATION SECTION ------------------ */}
         <View style={styles.currentLocationBox}>{content}</View>
 
         {/* ------------------ MAP SECTION ------------------ */}
-        <View style={styles.mapContainer}>
+        <Animated.View
+          style={[
+            styles.mapContainer,
+            {
+              opacity: mapOpacity,
+              transform: [{ translateX: mapTranslateX }],
+            },
+          ]}
+        >
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
           <View style={styles.mapWrapper}>
@@ -426,7 +593,7 @@ const LaityPumpkinPatch = () => {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -530,6 +697,10 @@ const styles = StyleSheet.create({
 
   /* ------------------ FARM INFORMATION STYLES ------------------ */
 
+  farmInfoContainer: {
+    // New style for animated farm information section
+    // Moved from title and address to a container for animation
+  },
   title: {
     fontSize: 24, // Large font size for the farm name
     fontWeight: 'bold',
@@ -577,6 +748,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden', // Ensure the image stays within bounds
   },
   image: {
     width: '100%',
@@ -596,6 +768,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    marginBottom: 15, // Added margin for spacing
   },
   aboutText: {
     fontSize: 16,

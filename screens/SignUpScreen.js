@@ -15,10 +15,10 @@ import {
 import { useNavigation } from '@react-navigation/native';
 
 // SIGNUP/AUTHENTICATION
-// Importing the Firestore database instance and the register function for Firebase Authentication
-import { db, register } from '../firebaseConfig';
+// Importing the Firestore database instance and the register & logout functions for Firebase Authentication
+import { db, register, logout } from '../firebaseConfig';
 // Importing Firestore functions for document manipulation and transactional operations
-import { doc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, runTransaction } from 'firebase/firestore';
 
 /**
  * SignUpScreen Component
@@ -97,6 +97,7 @@ export default function SignUpScreen() {
    * - Username availability check
    * - Firebase Authentication registration
    * - Storing the username in Firestore
+   * - Signing out and navigating to LoginScreen
    * - Error handling and user feedback
    */
   const handleSignUp = async () => {
@@ -175,7 +176,7 @@ export default function SignUpScreen() {
 
       /**
        * Register the user using Firebase Authentication with the provided email and password.
-       * The register function is assumed to handle Firebase's createUserWithEmailAndPassword internally.
+       * The register function handles Firebase's createUserWithEmailAndPassword internally.
        */
       const userCredential = await register(normalizedEmail, password);
       const user = userCredential.user; // Extract the user object from the credential
@@ -204,12 +205,38 @@ export default function SignUpScreen() {
         }
       });
 
+      // **New Step: Store Username in the 'users' Collection**
+      /**
+       * Create a document in the 'users' collection with the user's UID as the document ID.
+       * This document will store the username and any other user-specific information.
+       */
+      await setDoc(doc(db, 'users', user.uid), {
+        username: normalizedUsername, // Store the username
+        email: normalizedEmail,       // Store the email (optional, already in 'usernames' collection)
+        createdAt: new Date(),        // Timestamp of account creation
+        // Add any additional fields you want to store for the user here
+      });
+
       // ============================
-      // SIGNUP: SUCCESS FEEDBACK AND NAVIGATION
+      // SIGNUP: SIGN OUT AND NAVIGATE
       // ============================
 
-      Alert.alert('Success', 'Account created successfully!'); // Inform the user of successful registration
-      navigation.navigate('Login'); // Navigate the user to the Login screen
+      /**
+       * Since Firebase automatically signs in the user upon successful registration,
+       * we need to sign them out before navigating to the Login screen.
+       */
+      await logout(); // Sign out the user
+
+      // Navigate the user to the Login screen
+      //navigation.navigate('Login'); 
+
+      // ============================
+      // SIGNUP: SUCCESS FEEDBACK
+      // ============================
+
+      // Inform the user of successful registration after navigating
+      Alert.alert('Success', 'Account created successfully! Please log in with your credentials.');
+
     } catch (error) {
       // Log the error for debugging purposes
       console.error('Registration failed:', error);
@@ -249,8 +276,8 @@ export default function SignUpScreen() {
 
   /**
    * The component returns a View that contains all the UI elements for the sign-up screen,
-   * including input fields for username, email, and password, as well as buttons for signing up
-   * and navigating to the login screen.
+   * including input fields for username, email, and password, as well as a button for signing up
+   * and navigation to the login screen.
    */
   return (
     <View style={styles.container}>
@@ -348,32 +375,16 @@ export default function SignUpScreen() {
       </TouchableOpacity>
 
       {/* 
-        Link to Login Screen 
-        Allows users who already have an account to navigate to the login screen.
+        **Removed: Link to Login Screen**
+        Previously, this TouchableOpacity allowed users to navigate to the Login screen manually.
+        Since we now navigate automatically after sign-up, we remove this manual navigation link.
       */}
-      <TouchableOpacity
-        style={styles.loginContainer}
-        onPress={() => navigation.navigate('Login')} // Navigates to the Login screen on press
-        accessibilityLabel="Navigate to Login" // Accessibility label for screen readers
-      >
-        <Text style={styles.loginText}>
-          Already have an account?{' '}
-          <Text style={styles.loginLinkText}>Log In</Text> {/* Emphasized "Log In" text */}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
-// ============================
-// STYLESHEET DEFINITIONS
-// ============================
-
 /**
- * styles
- * 
- * Defines the styling for all the components within the SignUpScreen.
- * Uses React Native's StyleSheet for efficient styling.
+ * Stylesheet for SignUpScreen components.
  */
 const styles = StyleSheet.create({
   container: {
@@ -428,18 +439,8 @@ const styles = StyleSheet.create({
     fontSize: 18, // Font size for button text
     fontWeight: 'bold', // Bold font weight for emphasis
   },
-  loginContainer: {
-    marginTop: 30, // Space above the login link
-  },
-  loginText: {
-    fontWeight: 'bold', // Bold font weight for the login text
-    fontSize: 14, // Smaller font size for secondary text
-    color: '#323232', // Dark color for the login text
-    textAlign: 'center', // Centers the text
-  },
-  loginLinkText: {
-    fontWeight: 'bold', // Bold font weight to emphasize the link
-    color: '#FF9FD2', // Pink color for the link to stand out
-    textDecorationLine: 'underline', // Underlines the link text
-  },
+  /* 
+    **Removed: loginContainer and related styles**
+    Since we've removed the manual navigation link to the Login screen, these styles are no longer needed.
+  */
 });

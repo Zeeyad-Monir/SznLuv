@@ -51,6 +51,13 @@ const Favourites = () => {
               .filter((key) => data[key])
               .sort((a, b) => a.localeCompare(b));
             setFavourites(sortedFavourites);
+
+            // Initialize animations for each favourite item
+            const animations = sortedFavourites.map(() => ({
+              translateY: new Animated.Value(20),
+              opacity: new Animated.Value(0),
+            }));
+            setItemAnimations(animations);
           } else {
             console.log("No favourites found for user.");
           }
@@ -65,44 +72,37 @@ const Favourites = () => {
     fetchFavourites();
   }, [user]);
 
-  // Trigger animations after loading is complete
+  // Trigger animations only once after loading is complete
   useEffect(() => {
     if (!loading) {
       // Animate the header text
       Animated.parallel([
         Animated.timing(headerOpacity, {
           toValue: 1,
-          duration: 800,
+          duration: 700,
           useNativeDriver: true,
         }),
         Animated.timing(headerTranslateY, {
           toValue: 0,
-          duration: 800,
+          duration: 700,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Initialize animations for each item
-      const animations = favourites.map(() => ({
-        translateY: new Animated.Value(20),
-        opacity: new Animated.Value(0),
-      }));
-      setItemAnimations(animations);
-
-      // Animate each item with a staggered effect
-      const animationsArray = animations.map((anim, index) => {
+      // Animate each favourite item with a staggered effect
+      const animationsArray = itemAnimations.map((anim, index) => {
         return Animated.parallel([
           Animated.timing(anim.opacity, {
             toValue: 1,
-            duration: 600,
-            delay: 500 + index * 150,
+            duration: 500,
+            delay: 400 + index * 150,
             useNativeDriver: true,
           }),
           Animated.timing(anim.translateY, {
             toValue: 0,
-            duration: 600,
-            delay: 500 + index * 150,
+            duration: 400,
+            delay: 400 + index * 150,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
@@ -111,7 +111,7 @@ const Favourites = () => {
 
       Animated.stagger(100, animationsArray).start();
     }
-  }, [loading, favourites]);
+  }, [loading, itemAnimations]);
 
   // Animate notification message when it changes
   useEffect(() => {
@@ -171,16 +171,10 @@ const Favourites = () => {
 
         await setDoc(userFavoritesRef, userFavorites);
 
+        // Update the favourites state by removing the spotName
         setFavourites((prevFavourites) =>
           prevFavourites.filter((fav) => fav !== spotName).sort((a, b) => a.localeCompare(b))
         );
-
-        // Reset item animations
-        const animations = favourites.map(() => ({
-          translateY: new Animated.Value(20),
-          opacity: new Animated.Value(0),
-        }));
-        setItemAnimations(animations);
 
         setNotificationMessage(`"${spotName}" removed from favourites.`);
       } else {
@@ -304,12 +298,11 @@ const styles = StyleSheet.create({
     fontSize: 55,
     marginBottom: -15,
     color: "#323232",
-    fontFamily: "Gramatika-Black",
+    fontWeight: 'bold',
   },
   subtitle: {
     fontSize: 14,
     color: "rgba(50, 50, 50, 0.4)",
-    fontFamily: "Gramatika-Black",
     paddingHorizontal: 2,
     marginTop: 13,
   },

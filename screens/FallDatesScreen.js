@@ -113,61 +113,77 @@ export default function FallDatesScreen({ navigation }) {
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 1,
-        duration: 900,
+        duration: 1000, // Increased to match WinterDatesScreen.js
         useNativeDriver: true,
       }),
       Animated.timing(titleTranslateY, {
         toValue: 0,
-        duration: 900,
+        duration: 1000, // Increased to match WinterDatesScreen.js
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Animate categories and cards
-    categories.forEach((category, index) => {
-      const delay = 450 + index * 400;
+    // Initialize cumulative delay with title animation duration
+    let currentDelay = 500;
+
+    categories.forEach((category, categoryIndex) => {
+      // Set category animation delay after previous animations
+      const categoryDelay = currentDelay + categoryIndex * 400;
+
+      // Animate category slide-in and fade-in
       Animated.parallel([
-        Animated.timing(categoryAnimations[index].translateX, {
+        Animated.timing(categoryAnimations[categoryIndex].translateX, {
           toValue: 0,
-          duration: 450,
-          delay: delay,
+          duration: 500,
+          delay: categoryDelay,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(categoryAnimations[index].opacity, {
+        Animated.timing(categoryAnimations[categoryIndex].opacity, {
           toValue: 1,
-          duration: 450,
-          delay: delay,
+          duration: 500,
+          delay: categoryDelay,
           useNativeDriver: true,
         }),
       ]).start();
 
-      category.spots.forEach((spot, idx) => {
-        const cardDelay = delay + (idx + 1) * 300;
+      // Animate each card within the category
+      category.spots.forEach((spot, spotIndex) => {
+        const spotDelay = categoryDelay + (spotIndex + 1) * 300;
+
         Animated.parallel([
-          Animated.timing(cardAnimations[index][idx].translateY, {
+          Animated.timing(cardAnimations[categoryIndex][spotIndex].translateY, {
             toValue: 0,
-            duration: 700,
-            delay: cardDelay,
+            duration: 500,
+            delay: spotDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
-          Animated.timing(cardAnimations[index][idx].opacity, {
+          Animated.timing(cardAnimations[categoryIndex][spotIndex].opacity, {
             toValue: 1,
-            duration: 700,
-            delay: cardDelay,
+            duration: 500,
+            delay: spotDelay,
             useNativeDriver: true,
           }),
-          Animated.spring(cardAnimations[index][idx].scale, {
+          Animated.spring(cardAnimations[categoryIndex][spotIndex].scale, {
             toValue: 1,
             friction: 5,
             tension: 40,
-            delay: cardDelay,
+            delay: spotDelay,
             useNativeDriver: true,
           }),
         ]).start();
+
+        // Update currentDelay to ensure next category starts after this spot
+        const spotAnimationEnd = spotDelay + 1; // spotDelay + duration
+        if (spotAnimationEnd > currentDelay) {
+          currentDelay = spotAnimationEnd;
+        }
       });
+
+      // Add inter-category delay after the last spot of the current category
+      currentDelay += 1; // Adjust as needed
     });
   }, []);
 
