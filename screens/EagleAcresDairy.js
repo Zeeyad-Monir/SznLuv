@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   // Container for the entire screen
   container: {
     flex: 1,
-    backgroundColor: '#FF8657', // Bright orange background to make the app lively
+    backgroundColor: '#F4A460', // Bright orange background to make the app lively
   },
 
   /* ------------------ SCROLLABLE CONTENT STYLES ------------------ */
