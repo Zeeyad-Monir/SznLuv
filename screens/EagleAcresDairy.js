@@ -1,7 +1,11 @@
-// EagleAcresDairy.js
+// EAGLEACRESDAIRY.JS
+
+// =========================
+// IMPORTS SECTION
+// =========================
 
 // Import React and necessary hooks for managing state, side effects, and context
-import React, { useState, useEffect, useContext, useRef } from 'react'; // Added useRef for animations
+import React, { useState, useEffect, useContext, useRef } from 'react';
 
 // Import components from React Native for building the UI
 import {
@@ -14,10 +18,10 @@ import {
   Image,
   Switch,
   FlatList,
-  Alert, // If using alerts
-  Animated, // For animations
-  Easing, // For easing functions in animations
-} from 'react-native'; // Added Animated and Easing
+  Alert,
+  Animated,
+  Easing,
+} from 'react-native';
 
 // Import Expo's Location module to access the device's location
 import * as Location from 'expo-location';
@@ -26,7 +30,7 @@ import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 
 // Import MapViewDirections for displaying route directions on the map
-import MapViewDirections from 'react-native-maps-directions'; // MAPS
+import MapViewDirections from 'react-native-maps-directions';
 
 // Import the external NavBar component
 import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
@@ -34,18 +38,41 @@ import NavBar from '../components/NavBar'; // Adjust the path based on your proj
 // Import SettingsContext to access location services settings
 import { SettingsContext } from './SettingsContext'; // Adjust the path based on your project structure
 
+// =========================
+// API KEYS SECTION
+// =========================
+
 // API key for OpenWeatherMap to fetch weather data
 const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
-// Main functional component representing the screen for Eagle Acres Dairy & Pumpkin Patch
+
+// =========================
+// COMPONENT DEFINITION
+// =========================
+
+/**
+ * EagleAcresDairy Component
+ * 
+ * This component represents the screen for Eagle Acres Dairy & Pumpkin Patch.
+ * It displays weather information, farm details, images, and a map with directions.
+ * It handles location permissions and provides interactive animations.
+ */
 const EagleAcresDairy = () => {
-  // ------------------ CONTEXT ACCESS ------------------
+  // =========================
+  // CONTEXT ACCESS SECTION
+  // =========================
+
+  // Accessing the isLocationEnabled value from SettingsContext
   const { isLocationEnabled } = useContext(SettingsContext);
 
-  // ------------------ STATE VARIABLES ------------------
+  // =========================
+  // STATE VARIABLES SECTION
+  // =========================
+
+  // State variables for managing location, loading states, errors, and data
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,11 +82,17 @@ const EagleAcresDairy = () => {
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
   const [dailyData, setDailyData] = useState([]);
 
-  // ------------------ FARM COORDINATES ------------------
-  const farmLatitude = 49.1744; // Update if different
-  const farmLongitude = -122.5645; // Update if different
+  // =========================
+  // FARM COORDINATES SECTION
+  // =========================
 
-  // ------------------ ANIMATION SETUP ------------------
+  // Coordinates for the Eagle Acres Dairy & Pumpkin Patch
+  const farmLatitude = 49.1744;
+  const farmLongitude = -122.5645;
+
+  // =========================
+  // ANIMATION SETUP SECTION
+  // =========================
 
   // Animated values for different sections
   const weatherOpacity = useRef(new Animated.Value(0)).current;
@@ -77,7 +110,18 @@ const EagleAcresDairy = () => {
   const mapOpacity = useRef(new Animated.Value(0)).current;
   const mapTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
 
-  // ------------------ LOCATION EFFECT HOOK ------------------
+  // =========================
+  // LOCATION EFFECT HOOK SECTION
+  // =========================
+
+  /**
+   * useEffect Hook: Handles location tracking based on user settings.
+   * 
+   * - Requests location permissions if enabled.
+   * - Subscribes to location updates.
+   * - Updates the location state with new coordinates.
+   * - Handles errors related to location services.
+   */
   useEffect(() => {
     let locationSubscription;
 
@@ -88,6 +132,7 @@ const EagleAcresDairy = () => {
       }
 
       try {
+        // Requesting foreground location permissions
         let { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== 'granted') {
@@ -101,11 +146,12 @@ const EagleAcresDairy = () => {
           return;
         }
 
+        // Subscribing to location updates with high accuracy and distance interval
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 1600,
+            timeInterval: 1000, // Update every second
+            distanceInterval: 1600, // Update every mile (approx. 1600 meters)
           },
           (newLocation) => {
             setLocation(newLocation);
@@ -120,12 +166,24 @@ const EagleAcresDairy = () => {
 
     startLocationTracking();
 
+    // Cleanup function to remove location subscription when component unmounts
     return () => {
       if (locationSubscription) locationSubscription.remove();
     };
   }, [isLocationEnabled]);
 
-  // ------------------ WEATHER DATA EFFECT HOOK ------------------
+  // =========================
+  // WEATHER DATA EFFECT HOOK SECTION
+  // =========================
+
+  /**
+   * useEffect Hook: Fetches weather data based on the user's current location.
+   * 
+   * - Checks if location services are enabled.
+   * - Fetches weather forecast data from OpenWeatherMap API.
+   * - Processes the fetched data to extract daily forecasts.
+   * - Handles errors related to weather data fetching.
+   */
   useEffect(() => {
     const fetchWeatherData = async () => {
       if (!isLocationEnabled) {
@@ -137,6 +195,7 @@ const EagleAcresDairy = () => {
         const { latitude, longitude } = location.coords;
 
         try {
+          // Fetching weather forecast data from OpenWeatherMap API
           const response = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
           );
@@ -144,6 +203,7 @@ const EagleAcresDairy = () => {
           const data = await response.json();
 
           if (response.ok) {
+            // Processing fetched data to extract daily forecasts
             const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
             setDailyData(dailyForecasts);
@@ -156,11 +216,20 @@ const EagleAcresDairy = () => {
       }
     };
 
+    /**
+     * processDailyData Function
+     * 
+     * Processes the raw weather data to extract daily forecasts.
+     * Selects the forecast closest to noon for each day.
+     *
+     * @param {Array} list - Array of weather forecast data points.
+     * @returns {Array} - Array of processed daily weather data.
+     */
     const processDailyData = (list) => {
       const days = {};
       list.forEach((item) => {
         const date = new Date(item.dt * 1000);
-        const day = date.toISOString().split('T')[0];
+        const day = date.toISOString().split('T')[0]; // Extracting the date in YYYY-MM-DD format
         if (!days[day]) {
           days[day] = [];
         }
@@ -168,12 +237,13 @@ const EagleAcresDairy = () => {
       });
 
       const dailyData = Object.keys(days).map((day) => {
+        // Selecting the forecast closest to noon
         const dayData = days[day];
         const noonData =
           dayData.find((item) => {
             const date = new Date(item.dt * 1000);
             return date.getHours() === 12;
-          }) || dayData[Math.floor(dayData.length / 2)];
+          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback to the middle item if noon data is not available
 
         return noonData;
       });
@@ -184,7 +254,19 @@ const EagleAcresDairy = () => {
     fetchWeatherData();
   }, [location, isLocationEnabled]);
 
-  // ------------------ ANIMATION EFFECT HOOK ------------------
+  // =========================
+  // ANIMATION EFFECT HOOK SECTION
+  // =========================
+
+  /**
+   * useEffect Hook: Triggers animations once the loading state changes.
+   * 
+   * - Animates weather information sliding in from the right.
+   * - Animates farm information sliding in from the left.
+   * - Animates the image fading in and scaling up.
+   * - Animates the about section fading in and moving up.
+   * - Animates the map sliding in from the right.
+   */
   useEffect(() => {
     if (!loading) {
       // Animate Weather Report Section
@@ -287,16 +369,37 @@ const EagleAcresDairy = () => {
     mapTranslateX,
   ]); // Include all animated values in dependencies
 
-  // ------------------ HELPER FUNCTIONS ------------------
+  // =========================
+  // HELPER FUNCTIONS SECTION
+  // =========================
+
+  /**
+   * convertTemp Function
+   * 
+   * Converts temperature between Celsius and Fahrenheit based on user preference.
+   *
+   * @param {number} temp - The temperature value to convert.
+   * @returns {string} - The converted temperature as a string with one decimal place.
+   */
   const convertTemp = (temp) => {
     return isMetric ? temp.toFixed(1) : ((temp * 9) / 5 + 32).toFixed(1);
   };
 
+  /**
+   * getUnit Function
+   * 
+   * Retrieves the temperature unit symbol based on user preference.
+   *
+   * @returns {string} - The temperature unit symbol ('°C' or '°F').
+   */
   const getUnit = () => {
     return isMetric ? '°C' : '°F';
   };
 
-  // ------------------ CONDITIONAL CONTENT RENDERING ------------------
+  // =========================
+  // CONDITIONAL CONTENT RENDERING SECTION
+  // =========================
+
   let content;
 
   if (loading) {
@@ -322,7 +425,10 @@ const EagleAcresDairy = () => {
     );
   }
 
-  // ------------------ MAIN COMPONENT RENDERING ------------------
+  // =========================
+  // RENDERING SECTION
+  // =========================
+
   return (
     <View style={styles.container}>
       {/* ------------------ NAVIGATION BAR ------------------ */}
@@ -460,8 +566,8 @@ const EagleAcresDairy = () => {
           style={[
             styles.aboutContainer,
             {
-              opacity: aboutOpacity, // Apply animated opacity
-              transform: [{ translateY: aboutTranslateY }], // Apply animated translation
+              opacity: aboutOpacity,
+              transform: [{ translateY: aboutTranslateY }],
             },
           ]}
         >
@@ -536,12 +642,20 @@ const EagleAcresDairy = () => {
 // Export the component so it can be used in other parts of the app
 export default EagleAcresDairy;
 
-// ------------------ STYLESHEET FOR THE COMPONENT ------------------
+// =========================
+// STYLESHEET SECTION
+// =========================
+
+/**
+ * Styles for EagleAcresDairy components
+ * 
+ * This stylesheet defines the visual appearance of the EagleAcresDairy screen, including layout, colors, fonts, and spacing.
+ */
 const styles = StyleSheet.create({
   // Container for the entire screen
   container: {
     flex: 1,
-    backgroundColor: '#F4A460', // Bright orange background to make the app lively
+    backgroundColor: '#F4A460',
   },
 
   /* ------------------ SCROLLABLE CONTENT STYLES ------------------ */
@@ -675,7 +789,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    overflow: 'hidden', // Ensure the image stays within bounds
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
@@ -694,7 +808,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-    marginBottom: 15, // Added margin for spacing
+    marginBottom: 15,
   },
   aboutText: {
     fontSize: 16,

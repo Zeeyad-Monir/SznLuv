@@ -1,6 +1,14 @@
-// screens/HomeScreen.js
+// SCREENS/HOMESCREEN.JS
+// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
 
+// =========================
+// IMPORTS SECTION
+// =========================
+
+// Importing necessary modules and hooks from React
 import React, { useEffect, useState, useContext, useRef } from 'react';
+
+// Importing React Native components and APIs
 import {
   View,
   Text,
@@ -12,37 +20,57 @@ import {
   Easing,
   ImageBackground,
 } from 'react-native';
+
+// Importing navigation hook to navigate between screens
 import { useNavigation } from '@react-navigation/native';
-import { AuthContext } from '../App'; // Ensure AuthContext provides the authenticated user
+
+// Importing AuthContext to access authenticated user information
+import { AuthContext } from '../App';
+
+// Importing Firebase authentication and database functions
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-import NavBar from '../components/NavBar'; // Ensure NavBar component exists
+
+// Importing a custom navigation bar component
+import NavBar from '../components/NavBar';
+
+// =========================
+// HELPER FUNCTIONS SECTION
+// =========================
 
 /**
- * Helper function to convert HEX color codes to RGBA.
- * @param {string} hex - The HEX color code (e.g., '#FFFFFF' or '#FFF').
- * @param {number} alpha - The alpha value for opacity (0 to 1).
- * @returns {string} - The RGBA color string.
+ * hexToRGBA Function
+ * 
+ * Converts a hex color code to an RGBA color string with the specified alpha transparency.
+ *
+ * @param {string} hex - The hex color code (e.g., '#FF8657' or '#FFF').
+ * @param {number} alpha - The alpha transparency value (0 to 1).
+ * @returns {string} - The resulting RGBA color string.
  */
 const hexToRGBA = (hex, alpha) => {
   let r = 0, g = 0, b = 0;
 
-  // Handle 3-digit HEX
+  // Handling shorthand hex codes (e.g., '#FFF')
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16);
     g = parseInt(hex[2] + hex[2], 16);
     b = parseInt(hex[3] + hex[3], 16);
-  }
-  // Handle 6-digit HEX
+  } 
+  // Handling full hex codes (e.g., '#FFFFFF')
   else if (hex.length === 7) {
     r = parseInt(hex[1] + hex[2], 16);
     g = parseInt(hex[3] + hex[4], 16);
     b = parseInt(hex[5] + hex[6], 16);
   }
+  
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-// Define the seasonal images (ensure these assets exist in your project)
+// =========================
+// CONSTANTS SECTION
+// =========================
+
+// Importing seasonal images for different seasons
 const seasonalImages = {
   fall: require('../assets/fall2.png'),
   winter: require('../assets/winter2.png'),
@@ -50,7 +78,7 @@ const seasonalImages = {
   summer: require('../assets/summer3.png'),
 };
 
-// Define the base colors for each season (used for overlays)
+// Defining base colors for each season
 const seasonalColors = {
   fall: '#FF8657',
   winter: '#B9CCEC',
@@ -58,7 +86,7 @@ const seasonalColors = {
   summer: '#F8DD74',
 };
 
-// Define the opacity levels for each season (0 to 1)
+// Defining opacity levels for each season's overlay
 const seasonalOpacities = {
   fall: 0.1,
   winter: 0.3,
@@ -66,7 +94,7 @@ const seasonalOpacities = {
   summer: 0.3,
 };
 
-// Compute the overlay colors with dynamic opacity
+// Creating RGBA overlay colors for each season using the hexToRGBA helper function
 const seasonalOverlays = {
   fall: hexToRGBA(seasonalColors.fall, seasonalOpacities.fall),
   winter: hexToRGBA(seasonalColors.winter, seasonalOpacities.winter),
@@ -74,23 +102,50 @@ const seasonalOverlays = {
   summer: hexToRGBA(seasonalColors.summer, seasonalOpacities.summer),
 };
 
-export default function HomeScreen() {
-  const navigation = useNavigation();
-  const { user } = useContext(AuthContext); // Assumes AuthContext provides 'user' object
+// =========================
+// COMPONENT DEFINITION
+// =========================
 
-  // State variables
+/**
+ * HomeScreen Component
+ * 
+ * This component serves as the main landing screen of the application.
+ * It greets the user, displays seasonal categories (Fall, Winter, Spring, Summer) with active date idea counts,
+ * and allows navigation to respective seasonal date screens.
+ * The component also includes animations for a dynamic and engaging user experience.
+ */
+export default function HomeScreen() {
+  // Initializing navigation hook to enable screen navigation
+  const navigation = useNavigation();
+
+  // Accessing the authenticated user from AuthContext
+  const { user } = useContext(AuthContext);
+
+  // =========================
+  // STATE VARIABLES SECTION
+  // =========================
+
+  // State to store the user's name
   const [userName, setUserName] = useState('');
+
+  // States to store the count of active date ideas for each season
   const [fallCount, setFallCount] = useState(0);
   const [winterCount, setWinterCount] = useState(0);
   const [springCount, setSpringCount] = useState(0);
   const [summerCount, setSummerCount] = useState(0);
+
+  // State to manage the loading indicator visibility
   const [loading, setLoading] = useState(true);
 
-  // Animated values for greeting text
+  // =========================
+  // ANIMATED VALUES SECTION
+  // =========================
+
+  // Animated values for the greeting text animations
   const greetingOpacity = useRef(new Animated.Value(0)).current;
   const greetingTranslateY = useRef(new Animated.Value(-20)).current;
 
-  // Animated values for season blocks
+  // Animated values for each seasonal category's entrance animations
   const seasonAnimations = [
     {
       translateY: useRef(new Animated.Value(30)).current,
@@ -114,53 +169,62 @@ export default function HomeScreen() {
     },
   ];
 
+  // =========================
+  // DATA FETCHING FUNCTIONS
+  // =========================
+
   /**
-   * Fetches the username from Firestore's 'users' collection using the authenticated user's UID.
+   * fetchUserName Function
+   * 
+   * Fetches the authenticated user's name from Firebase Firestore.
+   * If the user's document exists, it retrieves the username; otherwise, defaults to 'User'.
    */
   const fetchUserName = async () => {
     try {
-      // Reference to the user's document in 'users' collection
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
+      const userRef = doc(db, 'users', user.uid); // Reference to the user's document
+      const userSnap = await getDoc(userRef); // Fetching the document snapshot
 
       if (userSnap.exists()) {
-        setUserName(userSnap.data().username); // Set the fetched username
+        setUserName(userSnap.data().username); // Setting the username from Firestore
       } else {
-        setUserName('User'); // Fallback if no username is found
+        setUserName('User'); // Default username if document doesn't exist
       }
     } catch (error) {
-      console.error('Error fetching user name:', error);
-      setUserName('User'); // Fallback on error
+      console.error('Error fetching user name:', error); // Logging any errors
+      setUserName('User'); // Default username in case of error
     }
   };
 
   /**
-   * Fetches the active date ideas count for each season from Firestore's 'dateCounts' collection.
+   * fetchDateCounts Function
+   * 
+   * Fetches the count of active date ideas for each season from Firebase Firestore.
+   * If the count documents exist, it retrieves the counts; otherwise, sets default values.
    */
   const fetchDateCounts = async () => {
     try {
-      // Fetch Fall count
+      // Fetching Fall date count
       const fallDatesRef = doc(db, 'dateCounts', 'fall');
       const fallDatesSnap = await getDoc(fallDatesRef);
-      setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 7); // Default to 12 if not found
+      setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 7);
 
-      // Fetch Winter count
+      // Fetching Winter date count
       const winterDatesRef = doc(db, 'dateCounts', 'winter');
       const winterDatesSnap = await getDoc(winterDatesRef);
-      setWinterCount(winterDatesSnap.exists() ? winterDatesSnap.data().count : 4); // Default to 4 if not found
+      setWinterCount(winterDatesSnap.exists() ? winterDatesSnap.data().count : 4);
 
-      // Fetch Spring count
+      // Fetching Spring date count
       const springDatesRef = doc(db, 'dateCounts', 'spring');
       const springDatesSnap = await getDoc(springDatesRef);
-      setSpringCount(springDatesSnap.exists() ? springDatesSnap.data().count : 4); // Default to 2 if not found
+      setSpringCount(springDatesSnap.exists() ? springDatesSnap.data().count : 4);
 
-      // Fetch Summer count
+      // Fetching Summer date count
       const summerDatesRef = doc(db, 'dateCounts', 'summer');
       const summerDatesSnap = await getDoc(summerDatesRef);
-      setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 3); // Default to 2 if not found
+      setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 3);
     } catch (error) {
-      console.error('Error fetching date counts:', error);
-      // Reset counts to 0 if error occurs
+      console.error('Error fetching date counts:', error); // Logging any errors
+      // Setting default counts in case of error
       setFallCount(0);
       setWinterCount(0);
       setSpringCount(0);
@@ -169,140 +233,161 @@ export default function HomeScreen() {
   };
 
   /**
-   * Combined function to fetch both username and date counts.
+   * fetchData Function
+   * 
+   * Aggregates data fetching functions to retrieve user information and date counts.
+   * Sets the loading state to false once data fetching is complete.
    */
   const fetchData = async () => {
-    await fetchUserName();
-    await fetchDateCounts();
-    setLoading(false); // Stop loading once data is fetched
+    await fetchUserName(); // Fetching user's name
+    await fetchDateCounts(); // Fetching date counts for each season
+    setLoading(false); // Setting loading to false after data is fetched
   };
 
+  // =========================
+  // USE EFFECTS SECTION
+  // =========================
+
   /**
-   * useEffect hook to fetch data on component mount.
+   * useEffect Hook: Fetches initial data when the component mounts.
    */
   useEffect(() => {
-    fetchData();
+    fetchData(); // Initiates data fetching on component mount
   }, []);
 
   /**
-   * useEffect hook to trigger animations after data is loaded.
+   * useEffect Hook: Triggers animations once the loading state changes.
+   * 
+   * - Animates the greeting text fading in and sliding into position.
+   * - Animates each seasonal category's entrance with fade-in, slide-up, and scaling effects.
    */
   useEffect(() => {
     if (!loading) {
-      // Animate the greeting text
+      // Animating the greeting container
       Animated.parallel([
         Animated.timing(greetingOpacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
+          toValue: 1, // Final opacity
+          duration: 700, // Duration of the animation
+          useNativeDriver: true, // Enables native driver for better performance
         }),
         Animated.timing(greetingTranslateY, {
-          toValue: 0,
+          toValue: 0, // Final vertical position
           duration: 700,
-          easing: Easing.out(Easing.ease),
+          easing: Easing.out(Easing.ease), // Easing function for smoothness
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Animate the season blocks with staggered delays
+      // Animating each seasonal category
       seasonAnimations.forEach((anim, index) => {
-        const delay = 500 + index * 300; // Stagger each animation by 300ms
+        const delay = 500 + index * 300; // Staggered delay for each animation
+
         Animated.parallel([
+          // Animating opacity
           Animated.timing(anim.opacity, {
-            toValue: 1,
-            duration: 600,
-            delay: delay,
+            toValue: 1, // Final opacity
+            duration: 600, // Duration of the animation
+            delay: delay, // Delay before the animation starts
             useNativeDriver: true,
           }),
+          // Animating vertical translation
           Animated.timing(anim.translateY, {
-            toValue: 0,
+            toValue: 0, // Final vertical position
             duration: 600,
             delay: delay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
+          // Animating scaling
           Animated.spring(anim.scale, {
-            toValue: 1,
-            friction: 5,
-            tension: 40,
+            toValue: 1, // Final scale
+            friction: 5, // Friction for the spring effect
+            tension: 40, // Tension for the spring effect
             delay: delay,
             useNativeDriver: true,
           }),
-        ]).start();
+        ]).start(); // Starting the parallel animations
       });
     }
   }, [loading]);
 
-  /**
-   * If data is still loading, display a loading spinner.
-   */
+  // =========================
+  // CONDITIONAL RENDERING SECTION
+  // =========================
+
+  let content;
+
   if (loading) {
-    return (
+    // Display a loading indicator while data is being fetched
+    content = (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
   }
 
-  /**
-   * Render the main HomeScreen content.
-   */
+  // =========================
+  // RENDERING SECTION
+  // =========================
+
   return (
     <View style={styles.container}>
-      {/* Navigation Bar */}
+      {/* Custom Navigation Bar */}
       <NavBar />
 
-      {/* Main scrollable content */}
+      {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Welcome message for the user */}
+        {/* Greeting Container with Animations */}
         <Animated.View
           style={[
-            styles.greetingContainer,
+            styles.greetingContainer, // Base styles
             {
-              opacity: greetingOpacity,
-              transform: [{ translateY: greetingTranslateY }],
+              opacity: greetingOpacity, // Animated opacity
+              transform: [{ translateY: greetingTranslateY }], // Animated vertical translation
             },
           ]}
         >
+          {/* Greeting Text */}
           <Text style={styles.greetingText}>Hello, {userName}!</Text>
+
+          {/* Subtext indicating the seasonal categories */}
           <Text style={styles.subtext}>Seasons</Text>
         </Animated.View>
 
-        {/* Seasonal blocks with active date counts */}
+        {/* Seasonal Categories Container */}
         <View style={styles.seasonContainer}>
-          {/* Fall Block */}
+          {/* =========================
+              FALL SEASON CARD
+              ========================= */}
           <Animated.View
             style={[
               {
-                opacity: seasonAnimations[0].opacity,
+                opacity: seasonAnimations[0].opacity, // Animated opacity
                 transform: [
-                  { translateY: seasonAnimations[0].translateY },
-                  { scale: seasonAnimations[0].scale },
+                  { translateY: seasonAnimations[0].translateY }, // Animated vertical translation
+                  { scale: seasonAnimations[0].scale }, // Animated scaling
                 ],
               },
             ]}
           >
             <TouchableOpacity
-              style={styles.seasonTouchable}
-              onPress={() => navigation.navigate('FallDatesScreen')}
-              accessible={true}
-              accessibilityLabel="Fall Season - View Active Date Ideas"
+              style={styles.seasonTouchable} // Base styles for the touchable area
+              onPress={() => navigation.navigate('FallDatesScreen')} // Navigates to FallDatesScreen on press
+              accessible={true} // Enables accessibility
+              accessibilityLabel="Fall Season - View Active Date Ideas" // Accessibility label for screen readers
             >
+              {/* Background Image for Fall Season */}
               <ImageBackground
-                source={seasonalImages.fall}
-                style={styles.imageBackground}
-                imageStyle={{ borderRadius: 12, opacity: 1 }} // Keep image opacity at 1; overlay controls tint
+                source={seasonalImages.fall} // Fall season image
+                style={styles.imageBackground} // Styles for the image background
+                imageStyle={{ borderRadius: 12, opacity: 1 }} // Additional image styles
               >
-                {/* Removed the overlay View to eliminate tint */}
-                {/* <View
-                  style={[
-                    styles.imageOverlay,
-                    { backgroundColor: seasonalOverlays.fall },
-                  ]}
-                /> */}
-                {/* Text Container */}
+                {/* Text Container for Season Title and Subtitle */}
                 <View style={styles.textContainer}>
+                  {/* Fall Season Title */}
                   <Text style={[styles.seasonTitle, styles.fallTitle]}>Fall</Text>
+
+                  {/* Fall Season Subtitle displaying active date idea count */}
                   <Text style={[styles.seasonSubtitle, styles.fallSubtitle]}>
                     {fallCount} Active Ideas
                   </Text>
@@ -311,7 +396,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Winter Block */}
+          {/* =========================
+              WINTER SEASON CARD
+              ========================= */}
           <Animated.View
             style={[
               {
@@ -334,14 +421,6 @@ export default function HomeScreen() {
                 style={styles.imageBackground}
                 imageStyle={{ borderRadius: 12, opacity: 1 }}
               >
-                {/* Removed the overlay View to eliminate tint */}
-                {/* <View
-                  style={[
-                    styles.imageOverlay,
-                    { backgroundColor: seasonalOverlays.winter },
-                  ]}
-                /> */}
-                {/* Text Container */}
                 <View style={styles.textContainer}>
                   <Text style={[styles.seasonTitle, styles.winterTitle]}>Winter</Text>
                   <Text style={[styles.seasonSubtitle, styles.winterSubtitle]}>
@@ -352,7 +431,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Spring Block */}
+          {/* =========================
+              SPRING SEASON CARD
+              ========================= */}
           <Animated.View
             style={[
               {
@@ -375,14 +456,6 @@ export default function HomeScreen() {
                 style={styles.imageBackground}
                 imageStyle={{ borderRadius: 12, opacity: 1 }}
               >
-                {/* Removed the overlay View to eliminate tint */}
-                {/* <View
-                  style={[
-                    styles.imageOverlay,
-                    { backgroundColor: seasonalOverlays.spring },
-                  ]}
-                /> */}
-                {/* Text Container */}
                 <View style={styles.textContainer}>
                   <Text style={[styles.seasonTitle, styles.springTitle]}>Spring</Text>
                   <Text style={[styles.seasonSubtitle, styles.springSubtitle]}>
@@ -393,7 +466,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Summer Block */}
+          {/* =========================
+              SUMMER SEASON CARD
+              ========================= */}
           <Animated.View
             style={[
               {
@@ -416,14 +491,6 @@ export default function HomeScreen() {
                 style={styles.imageBackground}
                 imageStyle={{ borderRadius: 12, opacity: 1 }}
               >
-                {/* Removed the overlay View to eliminate tint */}
-                {/* <View
-                  style={[
-                    styles.imageOverlay,
-                    { backgroundColor: seasonalOverlays.summer },
-                  ]}
-                /> */}
-                {/* Text Container */}
                 <View style={styles.textContainer}>
                   <Text style={[styles.seasonTitle, styles.summerTitle]}>Summer</Text>
                   <Text style={[styles.seasonSubtitle, styles.summerSubtitle]}>
@@ -434,7 +501,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Bottom padding for scroll view */}
+          {/* Spacer at the bottom of the season cards */}
           <View style={{ height: 20 }} />
         </View>
       </ScrollView>
@@ -442,91 +509,121 @@ export default function HomeScreen() {
   );
 }
 
+// =========================
+// STYLESHEET SECTION
+// =========================
+
 /**
- * Stylesheet for HomeScreen components.
+ * Styles for HomeScreen components
+ * 
+ * This stylesheet defines the visual appearance of the HomeScreen, including layout, colors, fonts, and spacing.
  */
 const styles = StyleSheet.create({
+  // Main container covering the entire screen
   container: {
-    flex: 1,
-    backgroundColor: '#FFF5E4', // Light cream background color
+    flex: 1, // Takes up the full available space
+    backgroundColor: '#FFF5E4', // Light background color for a welcoming feel
   },
+
+  // Styling for the ScrollView content container
   scrollContent: {
-    paddingBottom: 20, // Prevent content cutoff
+    paddingBottom: 20, // Padding at the bottom to prevent content cutoff
   },
+
+  // Greeting Container
   greetingContainer: {
-    marginTop: 40, // Vertical space for greeting
-    paddingHorizontal: 20, // Horizontal padding for greeting
+    marginTop: 40, // Space above the greeting
+    paddingHorizontal: 20, // Horizontal padding inside the container
   },
+
+  // Greeting Text Style
   greetingText: {
-    fontSize: 55,
-    fontWeight: 'bold',
-    color: '#333333', // Greeting text color
+    fontSize: 55, // Large font size for prominence
+    fontWeight: 'bold', // Bold font weight for emphasis
+    color: '#333333', // Dark gray color for readability
   },
+
+  // Subtext Style below the greeting
   subtext: {
-    marginTop: 20, // Space below greeting
-    fontSize: 18,
-    marginBottom: -12,
-    color: '#C2B697', // Subtext color
-    fontWeight: 'bold',
+    marginTop: 20, // Space above the subtext
+    fontSize: 18, // Font size for the subtext
+    marginBottom: -12, // Negative margin to adjust spacing
+    color: '#C2B697', // Medium brown color for subtlety
+    fontWeight: 'bold', // Bold font weight for emphasis
   },
+
+  // Seasonal Categories Container
   seasonContainer: {
-    paddingHorizontal: 20, // Padding for season blocks
-    marginTop: 24, // Space above season blocks
+    paddingHorizontal: 20, // Horizontal padding inside the container
+    marginTop: 24, // Space above the seasonal categories
   },
+
+  // Touchable Area for Each Season Card
   seasonTouchable: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12, // Rounded corners
-    marginBottom: 24, // Space between blocks
-    overflow: 'hidden', // Ensure children respect borderRadius
+    width: '100%', // Full width of the container
+    height: 160, // Fixed height for consistency
+    borderRadius: 12, // Rounded corners for aesthetics
+    marginBottom: 24, // Space below each season card
+    overflow: 'hidden', // Clips any child content outside the container
   },
+
+  // Image Background for Season Cards
   imageBackground: {
-    flex: 1,
-    justifyContent: 'flex-start', // Align text at the top
+    flex: 1, // Takes up the full available space
+    justifyContent: 'flex-start', // Aligns children at the top
   },
-  // Removed imageOverlay style as it's no longer needed
+
+  // Text Container within Season Cards
   textContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 20, // Horizontal padding inside the container
+    paddingTop: 20, // Top padding for spacing
   },
+
+  // Season Title Text Style
   seasonTitle: {
-    fontSize: 35,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // Default color; can be overridden
+    fontSize: 35, // Large font size for the season title
+    fontWeight: 'bold', // Bold font weight for emphasis
+    color: '#FFFFFF', // White color for contrast against the background image
   },
+
+  // Season Subtitle Text Style displaying active date idea counts
   seasonSubtitle: {
-    marginTop: 2, // Space below season title
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // Default color; can be overridden
+    marginTop: 2, // Space above the subtitle
+    fontSize: 14, // Font size for the subtitle
+    fontWeight: 'bold', // Bold font weight for emphasis
+    color: '#FFFFFF', // White color for readability
   },
+
+  // Specific Title Colors for Each Season (can be customized if needed)
   fallTitle: {
-    color: '#FFFFFF', // Ensure contrast against fall overlay
+    color: '#FFFFFF', // White color for Fall season
   },
   fallSubtitle: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White color for Fall subtitle
   },
   winterTitle: {
-    color: '#FFFFFF', // Adjust based on winter overlay tint
+    color: '#FFFFFF', // White color for Winter season
   },
   winterSubtitle: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White color for Winter subtitle
   },
   springTitle: {
-    color: '#FFFFFF', // Adjust based on spring overlay tint
+    color: '#FFFFFF', // White color for Spring season
   },
   springSubtitle: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White color for Spring subtitle
   },
   summerTitle: {
-    color: '#FFFFFF', // Adjust based on summer overlay tint
+    color: '#FFFFFF', // White color for Summer season
   },
   summerSubtitle: {
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White color for Summer subtitle
   },
+
+  // Loading Container for ActivityIndicator
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1, // Takes up the full available space
+    justifyContent: 'center', // Centers children vertically
+    alignItems: 'center', // Centers children horizontally
   },
 });

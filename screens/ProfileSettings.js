@@ -1,6 +1,12 @@
-// ProfileSettings.js
+//PROFILESETTINGS.JS
+// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
 
-import React, { useContext, useState, useEffect } from 'react'; // Import useEffect
+// =========================
+// IMPORTS SECTION
+// =========================
+
+// Importing necessary modules and components from React and React Native
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,149 +16,240 @@ import {
   Dimensions,
   ScrollView,
   Alert,
-  ActivityIndicator, // Import ActivityIndicator for loading state
+  ActivityIndicator,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import NavBar from '../components/NavBar'; // Adjust the path as needed
-import { SettingsContext } from './SettingsContext'; // Adjust the path as needed
-import { AuthContext } from '../App'; // Import AuthContext to get authenticated user
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
-import { db, logout } from '../firebaseConfig'; // Import Firestore database instance and logout function
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation for navigation
 
+// Importing Ionicons for icon usage in the UI
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+// Importing a custom navigation bar component
+import NavBar from '../components/NavBar';
+
+// Importing context providers for settings and authentication
+import { SettingsContext } from './SettingsContext';
+import { AuthContext } from '../App';
+
+// Importing Firestore functions for database interactions
+import { doc, getDoc } from 'firebase/firestore';
+
+// Importing Firebase configuration and logout function
+import { db, logout } from '../firebaseConfig';
+
+// Importing navigation hook for navigating between screens
+import { useNavigation } from '@react-navigation/native';
+
+// =========================
+// CONSTANTS SECTION
+// =========================
+
+// Destructuring to get screen width and height for responsive design
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// =========================
+// COMPONENT DEFINITION
+// =========================
+
 const ProfileSettings = () => {
-  const { user } = useContext(AuthContext); // Get the authenticated user from AuthContext
+  // =========================
+  // CONTEXT USAGE
+  // =========================
+
+  // Accessing the authenticated user from AuthContext
+  const { user } = useContext(AuthContext);
+
+  // Accessing location settings and toggle function from SettingsContext
   const { isLocationEnabled, toggleLocationServices } = useContext(SettingsContext);
+
+  // =========================
+  // STATE VARIABLES
+  // =========================
+
+  // State to manage notification toggle
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
-  
-  // State to hold the fetched username
+
+  // State to store the user's name fetched from the database
   const [userName, setUserName] = useState('');
-  // State to manage loading state while fetching username
+
+  // State to manage the loading indicator while fetching the username
   const [loadingUsername, setLoadingUsername] = useState(true);
 
-  const navigation = useNavigation(); // Initialize navigation
+  // =========================
+  // NAVIGATION HOOK
+  // =========================
 
+  // Hook to navigate between different screens
+  const navigation = useNavigation();
+
+  // =========================
+  // EVENT HANDLERS
+  // =========================
+
+  /**
+   * Toggles the notifications switch state.
+   * It inverses the current state of isNotificationsEnabled.
+   */
   const toggleNotifications = () => setIsNotificationsEnabled(previousState => !previousState);
 
+  /**
+   * Handles the toggling of location services.
+   * It calls the toggleLocationServices function from context and shows an alert based on the new state.
+   */
   const handleToggleLocation = async () => {
     try {
+      // Toggling the location services
       await toggleLocationServices();
+
+      // Determining the message based on the current state of location services
       const message = isLocationEnabled
         ? 'Location services have been disabled.'
         : 'Location services have been enabled.';
+
+      // Displaying an alert to inform the user about the change
       Alert.alert('Location Services', message);
     } catch (error) {
+      // Logging the error for debugging purposes
       console.error('Error toggling location services:', error);
+
+      // Displaying an error alert to the user
       Alert.alert('Error', 'Failed to toggle location services.');
     }
   };
 
-  // useEffect to fetch the username from Firestore when the component mounts
-  useEffect(() => {
-    const fetchUserName = async () => {
-      if (!user) {
-        setUserName('User'); // Default name if user is not authenticated
-        setLoadingUsername(false);
-        return;
-      }
-
-      try {
-        const userDocRef = doc(db, 'users', user.uid); // Reference to the user's document
-        const userDocSnap = await getDoc(userDocRef); // Fetch the document snapshot
-
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
-          setUserName(data.username || 'User'); // Set the username or default to 'User'
-        } else {
-          console.log('No user data found!');
-          setUserName('User'); // Default name if document does not exist
-        }
-      } catch (error) {
-        console.error('Error fetching user name:', error);
-        setUserName('User'); // Default name on error
-      } finally {
-        setLoadingUsername(false); // Stop loading regardless of success or failure
-      }
-    };
-
-    fetchUserName();
-  }, [user]);
-
   /**
-   * handleSignOut
-   * 
-   * Handles the sign-out process by calling the logout function and navigating the user to the Login screen.
+   * Handles the sign-out process.
+   * It prompts the user for confirmation before signing out and handles any errors that occur.
    */
   const handleSignOut = async () => {
     Alert.alert(
-      'Confirm Sign Out',
-      'Are you sure you want to sign out?',
+      'Confirm Sign Out', // Title of the alert
+      'Are you sure you want to sign out?', // Message of the alert
       [
         {
-          text: 'Cancel',
+          text: 'Cancel', // Option to cancel the action
           style: 'cancel',
         },
         {
-          text: 'Sign Out',
+          text: 'Sign Out', // Option to proceed with sign-out
           style: 'destructive',
           onPress: async () => {
             try {
-              await logout(); // Call the logout function from firebaseConfig.js
+              // Attempting to log out the user
+              await logout();
+
+              // Informing the user of successful sign-out
               Alert.alert('Signed Out', 'You have been signed out successfully.');
-              //navigation.navigate('Login'); // Navigate to the Login screen
             } catch (error) {
+              // Logging the error for debugging purposes
               console.error('Error signing out:', error);
+
+              // Displaying an error alert to the user
               Alert.alert('Error', 'Failed to sign out. Please try again.');
             }
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true } // Allows the alert to be dismissed by tapping outside
     );
   };
 
+  // =========================
+  // EFFECTS SECTION
+  // =========================
+
+  /**
+   * useEffect hook to fetch the user's name from Firestore when the component mounts or when the user changes.
+   */
+  useEffect(() => {
+    /**
+     * Async function to fetch the user's name from the Firestore database.
+     */
+    const fetchUserName = async () => {
+      // If there is no authenticated user, set a default name and stop loading
+      if (!user) {
+        setUserName('User');
+        setLoadingUsername(false);
+        return;
+      }
+
+      try {
+        // Creating a reference to the user's document in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+
+        // Fetching the user's document snapshot
+        const userDocSnap = await getDoc(userDocRef);
+
+        // Checking if the document exists
+        if (userDocSnap.exists()) {
+          // Extracting data from the document
+          const data = userDocSnap.data();
+
+          // Setting the user's name, defaulting to 'User' if not available
+          setUserName(data.username || 'User');
+        } else {
+          // Logging if no user data is found
+          console.log('No user data found!');
+
+          // Setting a default name
+          setUserName('User');
+        }
+      } catch (error) {
+        // Logging any errors that occur during the fetch
+        console.error('Error fetching user name:', error);
+
+        // Setting a default name in case of an error
+        setUserName('User');
+      } finally {
+        // Stopping the loading indicator regardless of success or failure
+        setLoadingUsername(false);
+      }
+    };
+
+    // Invoking the fetchUserName function
+    fetchUserName();
+  }, [user]); // Dependency array includes 'user' to refetch if user changes
+
+  // =========================
+  // RENDERING SECTION
+  // =========================
+
   return (
     <View style={styles.mainContainer}>
-      {/* Use the NavBar Component */}
+      {/* Custom Navigation Bar */}
       <NavBar />
 
-      {/* Scrollable Content */}
+      {/* Scrollable content container */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Profile Section */}
+        {/* PROFILE SECTION */}
         <View style={styles.profileSection}>
-          {/* Profile Image with Gradient Background */}
+          {/* Profile Image Placeholder */}
           <View style={[styles.profileImage, { backgroundColor: '#D24B3A' }]}>
             <Text style={styles.profileImageText}>
-              {loadingUsername ? '...' : userName.charAt(0)} {/* Show first letter or loading indicator */}
+              {/* Displaying the first character of the user's name or a loading indicator */}
+              {loadingUsername ? '...' : userName.charAt(0)}
             </Text>
           </View>
 
-          {/* User Name */}
+          {/* Displaying either a loading indicator or the user's name */}
           {loadingUsername ? (
             <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
           ) : (
             <Text style={styles.userName}>{userName}</Text>
           )}
 
-          {/* Edit Profile Text */}
+          {/* Edit Profile Button */}
           <TouchableOpacity onPress={() => {
-            // Implement navigation to Edit Profile screen
-            // For example:
-            // navigation.navigate('EditProfile');
+            // Informing the user that the feature is coming soon
             Alert.alert('Info', 'Edit Profile feature coming soon.');
           }}>
             <Text style={styles.editProfileText}>Edit profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Settings Section */}
+        {/* SETTINGS SECTION */}
         <View style={styles.settingsSection}>
-          {/* Change Password */}
+          {/* Change Password Setting */}
           <TouchableOpacity style={styles.settingItem} onPress={() => {
-            // Implement navigation to Change Password screen
-            // navigation.navigate('ChangePassword');
+            // Informing the user that the feature is coming soon
             Alert.alert('Info', 'Change Password feature coming soon.');
           }}>
             <Text style={styles.settingText}>Change Password</Text>
@@ -161,28 +258,27 @@ const ProfileSettings = () => {
 
           {/* Account Settings */}
           <TouchableOpacity style={styles.settingItem} onPress={() => {
-            // Implement navigation to Account Settings screen
-            // navigation.navigate('AccountSettings');
+            // Informing the user that the feature is coming soon
             Alert.alert('Info', 'Account Settings feature coming soon.');
           }}>
             <Text style={styles.settingText}>Account Settings</Text>
             <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
           </TouchableOpacity>
 
-          {/* Allow Location Services */}
+          {/* Allow Location Services Toggle */}
           <View style={styles.settingItem}>
             <Text style={styles.settingText}>Allow Location Services</Text>
             <Switch
-              trackColor={{ false: '#A9A9A9', true: '#D9E5B6' }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor="#A9A9A9"
-              onValueChange={handleToggleLocation}
-              value={isLocationEnabled}
-              style={styles.switch}
+              trackColor={{ false: '#A9A9A9', true: '#D9E5B6' }} // Colors for the switch track
+              thumbColor="#FFFFFF" // Color for the switch thumb
+              ios_backgroundColor="#A9A9A9" // Background color for iOS
+              onValueChange={handleToggleLocation} // Handler when the switch value changes
+              value={isLocationEnabled} // Current value of the switch
+              style={styles.switch} // Additional styling
             />
           </View>
 
-          {/* Allow Notifications */}
+          {/* Allow Notifications Toggle */}
           <View style={styles.settingItem}>
             <Text style={styles.settingText}>Allow Notifications</Text>
             <Switch
@@ -196,106 +292,130 @@ const ProfileSettings = () => {
           </View>
         </View>
 
-        {/* Sign Out Button */}
+        {/* SIGN OUT BUTTON */}
         <TouchableOpacity
           style={styles.signOutButton}
-          onPress={handleSignOut}
-          accessibilityLabel="Sign Out"
-          accessibilityRole="button"
+          onPress={handleSignOut} // Handler for sign out
+          accessibilityLabel="Sign Out" // Accessibility label for screen readers
+          accessibilityRole="button" // Accessibility role
         >
           <Text style={styles.signOutButtonText}>Sign Out</Text>
         </TouchableOpacity>
 
-        {/* Bottom Spacing */}
+        {/* Bottom Spacing to ensure content is not cut off */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
   );
 };
 
+// =========================
+// STYLESHEET SECTION
+// =========================
+
 const styles = StyleSheet.create({
+  // Main container covering the entire screen
   mainContainer: {
-    flex: 1,
-    backgroundColor: '#FAF3E0',
+    flex: 1, // Takes up the full available space
+    backgroundColor: '#FAF3E0', // Background color of the screen
   },
+  // Container for scrollable content
   scrollContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 10,
+    alignItems: 'center', // Centers items horizontally
+    paddingVertical: 20, // Vertical padding
+    paddingHorizontal: 10, // Horizontal padding
   },
+  // Profile section containing the profile image and user info
   profileSection: {
-    alignItems: 'center',
-    marginTop: screenHeight * 0.05,
-    marginBottom: 30,
+    alignItems: 'center', // Centers items horizontally
+    marginTop: screenHeight * 0.05, // Top margin relative to screen height
+    marginBottom: 30, // Bottom margin
   },
+  // Styling for the profile image placeholder
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 120, // Width of the profile image
+    height: 120, // Height of the profile image
+    borderRadius: 60, // Makes the image circular
+    alignItems: 'center', // Centers child content horizontally
+    justifyContent: 'center', // Centers child content vertically
   },
+  // Text inside the profile image placeholder
   profileImageText: {
-    color: '#FFFFFF',
-    fontSize: 40,
-    fontWeight: 'bold',
-    textAlign: 'center', // Ensures text is horizontally centered
-    lineHeight: 120, // Aligns text vertically
+    color: '#FFFFFF', // Text color
+    fontSize: 40, // Font size
+    fontWeight: 'bold', // Font weight
+    textAlign: 'center', // Centers text
+    lineHeight: 120, // Line height to vertically center the text
   },
+  // Styling for the loading indicator below the profile image
   loadingIndicator: {
-    marginTop: 10,
+    marginTop: 10, // Top margin
   },
+  // Styling for the user's name text
   userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginTop: 12,
+    fontSize: 22, // Font size
+    fontWeight: 'bold', // Font weight
+    color: '#000000', // Text color
+    marginTop: 12, // Top margin
   },
+  // Styling for the "Edit profile" text
   editProfileText: {
-    fontSize: 14,
-    color: '#B0A89A',
-    marginTop: 5,
+    fontSize: 14, // Font size
+    color: '#B0A89A', // Text color
+    marginTop: 5, // Top margin
   },
+  // Container for the settings items
   settingsSection: {
-    width: '90%',
+    width: '90%', // Width relative to the parent container
   },
+  // Styling for each individual setting item
   settingItem: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#2C2C2C',
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    marginVertical: 6,
+    width: '100%', // Full width of the settings section
+    height: 50, // Fixed height
+    backgroundColor: '#2C2C2C', // Background color of the setting item
+    borderRadius: 8, // Rounded corners
+    flexDirection: 'row', // Aligns children horizontally
+    alignItems: 'center', // Centers children vertically
+    justifyContent: 'space-between', // Spaces children apart
+    paddingHorizontal: 15, // Horizontal padding inside the setting item
+    marginVertical: 6, // Vertical margin between setting items
   },
+  // Styling for the text inside each setting item
   settingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
+    fontSize: 16, // Font size
+    fontWeight: '500', // Font weight
+    color: '#FFFFFF', // Text color
   },
+  // Styling for the switches inside the setting items
   switch: {
-    transform: [{ scaleX: 1 }, { scaleY: 1 }],
+    transform: [{ scaleX: 1 }, { scaleY: 1 }], // Scale transformations (currently set to default)
   },
+  // Styling for the Sign Out button
   signOutButton: {
-    width: '90%',
-    height: 50,
-    backgroundColor: '#D24B3A', // Matching the profile image background color
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 30,
+    width: '90%', // Width relative to the parent container
+    height: 50, // Fixed height
+    backgroundColor: '#D24B3A', // Background color of the button
+    borderRadius: 8, // Rounded corners
+    alignItems: 'center', // Centers child content horizontally
+    justifyContent: 'center', // Centers child content vertically
+    marginTop: 30, // Top margin to separate from settings
   },
+  // Styling for the text inside the Sign Out button
   signOutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFFFFF', // Text color
+    fontSize: 16, // Font size
+    fontWeight: 'bold', // Font weight
   },
+  // Bottom spacing to ensure content is not cut off at the bottom
   bottomSpacing: {
-    height: 30,
-    backgroundColor: '#FAF3E0',
+    height: 30, // Fixed height for spacing
+    backgroundColor: '#FAF3E0', // Same as the main background to blend in
   },
 });
 
+// =========================
+// EXPORT SECTION
+// =========================
+
+// Exporting the ProfileSettings component as the default export
 export default ProfileSettings;

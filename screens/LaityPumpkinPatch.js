@@ -1,175 +1,205 @@
-// LaityPumpkinPatch.js
-// Detailed comments added for better understanding and future reference
+// SCREENS/LAITYPUMPKINPATCH.JS
 
-// Import React and necessary hooks for managing state, side effects, and context
-import React, { useState, useEffect, useContext, useRef } from 'react'; // Added useRef for animations
+// =========================
+// IMPORTS SECTION
+// =========================
 
-// Import components from React Native for building the UI
+// Importing necessary modules and hooks from React
+import React, { useState, useEffect, useContext, useRef } from 'react';
+
+// Importing React Native components and APIs
 import {
-  View, // Container component for layout
-  Text, // Component for displaying text
-  StyleSheet, // For creating styles
-  ActivityIndicator, // For showing a loading spinner
-  ScrollView, // For creating scrollable content
-  TouchableOpacity, // For touchable elements like buttons
-  Image, // For displaying images
-  Switch, // Toggle switch for temperature units
-  FlatList, // For rendering lists
-  Alert, // For displaying alert messages
-  Animated, // For animations
-  Easing, // For easing functions in animations
-} from 'react-native'; // Added Animated and Easing
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Switch,
+  FlatList,
+  Alert,
+  Animated,
+  Easing,
+} from 'react-native';
 
-// Import Expo's Location module to access the device's location
-import * as Location from 'expo-location'; // LOCATION
+// Importing Expo's Location API for handling location services
+import * as Location from 'expo-location';
 
-// Import MapView components for displaying maps and markers
+// Importing MapView and Marker from react-native-maps for map functionalities
 import MapView, { Marker } from 'react-native-maps';
 
-// Import MapViewDirections for displaying route directions on the map
-import MapViewDirections from 'react-native-maps-directions'; // MAPS
+// Importing MapViewDirections for displaying directions on the map
+import MapViewDirections from 'react-native-maps-directions';
 
-// Import the external NavBar component
-import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
+// Importing a custom navigation bar component
+import NavBar from '../components/NavBar';
 
-// Import SettingsContext to access location services settings
-import { SettingsContext } from './SettingsContext'; // Adjust the path based on your project structure
+// Importing SettingsContext to access location settings
+import { SettingsContext } from './SettingsContext';
 
-// API key for OpenWeatherMap to fetch weather data
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
+// =========================
+// CONSTANTS SECTION
+// =========================
 
-// Google Maps API key for accessing directions and geolocation services
-const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
+// OpenWeatherMap API key for fetching weather data
+const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316';
 
-// Main functional component representing the screen for Laity Pumpkin Patch
+// Google Maps API key for map directions
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
+
+// =========================
+// COMPONENT DEFINITION
+// =========================
+
+/**
+ * LaityPumpkinPatch Component
+ * 
+ * This component displays information about the Laity Pumpkin Patch, including:
+ * - User's current location
+ * - Weather forecast
+ * - Detailed information about the pumpkin patch
+ * - An interactive map with directions
+ * 
+ * It utilizes animations for a dynamic user interface and integrates with Firebase Firestore
+ * to manage user favorites. Location services are handled based on user settings.
+ */
 const LaityPumpkinPatch = () => {
-  // ------------------ CONTEXT ACCESS ------------------
-
-  // Access isLocationEnabled from SettingsContext to determine if location services are enabled
+  // Accessing the isLocationEnabled value from SettingsContext
   const { isLocationEnabled } = useContext(SettingsContext);
 
-  // ------------------ STATE VARIABLES ------------------
+  // =========================
+  // STATE VARIABLES SECTION
+  // =========================
 
-  // State to hold the user's current location data
+  // State to store the user's current location
   const [location, setLocation] = useState(null);
 
-  // State to hold any error messages related to location fetching
+  // State to store any error messages related to location fetching
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // State to manage the loading indicator while fetching location
+  // State to manage the loading indicator visibility
   const [loading, setLoading] = useState(true);
 
-  // State to hold the weather data fetched from the API
+  // State to store fetched weather data
   const [weatherData, setWeatherData] = useState(null);
 
-  // State to hold any errors that occur during weather data fetching
+  // State to store any error messages related to weather data fetching
   const [weatherError, setWeatherError] = useState(null);
 
-  // State for temperature unit toggle (true for Celsius, false for Fahrenheit)
+  // State to toggle between metric and imperial units
   const [isMetric, setIsMetric] = useState(true);
 
-  // State to manage which day's details are shown
+  // State to manage the selected day's index in the weather forecast
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
 
-  // State to hold daily forecast data
+  // State to store processed daily weather data
   const [dailyData, setDailyData] = useState([]);
 
-  // ------------------ FARM COORDINATES ------------------
+  // =========================
+  // LOCATION CONSTANTS SECTION
+  // =========================
 
-  // Latitude and longitude for Laity Pumpkin Patch
+  // Latitude and longitude of the Laity Pumpkin Patch
   const farmLatitude = 49.21939;
   const farmLongitude = -122.60193;
 
-  // ------------------ ANIMATION SETUP ------------------
+  // =========================
+  // ANIMATED VALUES SECTION
+  // =========================
 
-  // Animated values for different sections
+  // Animated values for weather information animations
   const weatherOpacity = useRef(new Animated.Value(0)).current;
-  const weatherTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+  const weatherTranslateX = useRef(new Animated.Value(50)).current;
 
+  // Animated values for farm information animations
   const farmInfoOpacity = useRef(new Animated.Value(0)).current;
-  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current; // Slide in from left
+  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current;
 
+  // Animated values for image animations
   const imageOpacity = useRef(new Animated.Value(0)).current;
   const imageScale = useRef(new Animated.Value(0.95)).current;
 
+  // Animated values for about section animations
   const aboutOpacity = useRef(new Animated.Value(0)).current;
-  const aboutTranslateY = useRef(new Animated.Value(30)).current; // Slide in from bottom
+  const aboutTranslateY = useRef(new Animated.Value(30)).current;
 
+  // Animated values for map animations
   const mapOpacity = useRef(new Animated.Value(0)).current;
-  const mapTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+  const mapTranslateX = useRef(new Animated.Value(50)).current;
 
-  // ------------------ LOCATION EFFECT HOOK ------------------
+  // =========================
+  // LOCATION EFFECT SECTION
+  // =========================
 
-  // useEffect hook to handle side effects related to location tracking
+  /**
+   * useEffect Hook: Handles location tracking based on user settings.
+   * 
+   * - Requests location permissions if enabled.
+   * - Subscribes to location updates.
+   * - Updates the location state with new coordinates.
+   * - Handles errors related to location services.
+   */
   useEffect(() => {
-    let locationSubscription; // Variable to hold the subscription to location updates
+    let locationSubscription;
 
-    // Function to initiate location tracking
     const startLocationTracking = async () => {
-      // Check if location services are enabled
       if (!isLocationEnabled) {
-        // If location services are disabled, skip requesting permissions and fetching location
-        setLoading(false); // Stop loading indicator
+        setLoading(false); // Stop loading if location services are disabled
         return;
       }
 
-      // ------------------ REQUEST PERMISSION ------------------
-
       try {
-        // Request permission to access the device's location in the foreground
+        // Requesting foreground location permissions
         let { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== 'granted') {
-          // If permission is denied, update the error message and stop loading
           setErrorMsg('Permission to access location was denied.');
           setLoading(false);
           return;
         }
 
-        // ------------------ START WATCHING LOCATION ------------------
-
-        // Start watching the user's position with specified accuracy and intervals
+        // Subscribing to location updates with high accuracy and distance interval
         locationSubscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.High, // High accuracy for precise location data
-            timeInterval: 1000, // Minimum time interval between location updates (in milliseconds)
-            distanceInterval: 1600, // Minimum distance (in meters) to travel before receiving updates
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000, // Update every second
+            distanceInterval: 1600, // Update every mile (approx. 1600 meters)
           },
           (newLocation) => {
-            // Callback function executed when new location data is available
-
-            // Update the location state with the new location data
-            setLocation(newLocation);
-
-            // Stop the loading indicator once location is received
-            setLoading(false);
+            setLocation(newLocation); // Update location state with new coordinates
+            setLoading(false); // Stop loading once location is obtained
           }
         );
       } catch (error) {
-        // Handle any errors that occur while fetching the location
         setErrorMsg('Error fetching location.');
         setLoading(false);
       }
     };
 
-    // Start location tracking when the component mounts or when isLocationEnabled changes
     startLocationTracking();
 
-    // Clean up the location subscription when the component unmounts to prevent memory leaks
+    // Cleanup function to remove location subscription when component unmounts
     return () => {
       if (locationSubscription) locationSubscription.remove();
     };
-  }, [isLocationEnabled]); // Dependency on isLocationEnabled ensures this runs whenever the setting changes
+  }, [isLocationEnabled]);
 
-  // ------------------ WEATHER DATA EFFECT HOOK ------------------
+  // =========================
+  // WEATHER DATA EFFECT SECTION
+  // =========================
 
-  // useEffect hook to fetch weather data whenever the location or location settings change
+  /**
+   * useEffect Hook: Fetches weather data based on the user's current location.
+   * 
+   * - Checks if location services are enabled.
+   * - Fetches weather forecast data from OpenWeatherMap API.
+   * - Processes the fetched data to extract daily forecasts.
+   * - Handles errors related to weather data fetching.
+   */
   useEffect(() => {
-    // Function to fetch weather data from OpenWeatherMap API
     const fetchWeatherData = async () => {
-      // Check if location services are enabled and location data is available
       if (!isLocationEnabled) {
-        // If location services are disabled, skip fetching weather data
         setWeatherError('Location services are disabled.');
         return;
       }
@@ -178,7 +208,7 @@ const LaityPumpkinPatch = () => {
         const { latitude, longitude } = location.coords;
 
         try {
-          // Fetch the 5-day forecast data in 3-hour intervals
+          // Fetching weather forecast data from OpenWeatherMap API
           const response = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
           );
@@ -186,41 +216,47 @@ const LaityPumpkinPatch = () => {
           const data = await response.json();
 
           if (response.ok) {
-            // Process data to get daily forecasts
+            // Processing fetched data to extract daily forecasts
             const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
             setDailyData(dailyForecasts);
           } else {
-            // If the response has an error, update the weatherError state
             setWeatherError(data.message || 'Unable to fetch weather data.');
           }
         } catch (error) {
-          // Handle any network or other errors during the fetch
           setWeatherError(error.message || 'An error occurred while fetching weather data.');
         }
       }
     };
 
-    // Function to process 3-hour interval data into daily data
+    /**
+     * processDailyData Function
+     * 
+     * Processes the raw weather data to extract daily forecasts.
+     * Selects the forecast closest to noon for each day.
+     *
+     * @param {Array} list - Array of weather forecast data points.
+     * @returns {Array} - Array of processed daily weather data.
+     */
     const processDailyData = (list) => {
       const days = {};
       list.forEach((item) => {
         const date = new Date(item.dt * 1000);
-        const day = date.toISOString().split('T')[0];
+        const day = date.toISOString().split('T')[0]; // Extracting the date in YYYY-MM-DD format
         if (!days[day]) {
           days[day] = [];
         }
         days[day].push(item);
       });
 
-      // Get daily data by selecting data points at 12:00 PM
       const dailyData = Object.keys(days).map((day) => {
+        // Selecting the forecast closest to noon
         const dayData = days[day];
         const noonData =
           dayData.find((item) => {
             const date = new Date(item.dt * 1000);
             return date.getHours() === 12;
-          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback if 12:00 PM data is not available
+          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback to the middle item if noon data is not available
 
         return noonData;
       });
@@ -228,32 +264,41 @@ const LaityPumpkinPatch = () => {
       return dailyData;
     };
 
-    // Invoke the function to fetch weather data when location or settings change
     fetchWeatherData();
-  }, [location, isLocationEnabled]); // Dependencies on location and isLocationEnabled
+  }, [location, isLocationEnabled]);
 
-  // ------------------ ANIMATION EFFECT HOOK ------------------
+  // =========================
+  // ANIMATION EFFECT SECTION
+  // =========================
 
-  // Trigger animations after loading is complete and data is fetched
+  /**
+   * useEffect Hook: Triggers animations once the loading state changes.
+   * 
+   * - Animates weather information sliding in from the right.
+   * - Animates farm information sliding in from the left.
+   * - Animates the image fading in and scaling up.
+   * - Animates the about section fading in and moving up.
+   * - Animates the map sliding in from the right.
+   */
   useEffect(() => {
     if (!loading) {
-      // Animate Weather Report Section
+      // Animating the weather information container
       Animated.parallel([
         Animated.timing(weatherOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
+          toValue: 1, // Final opacity
+          duration: 700, // Duration of the animation
+          easing: Easing.out(Easing.ease), // Easing function for smoothness
           useNativeDriver: true,
         }),
         Animated.timing(weatherTranslateX, {
-          toValue: 0,
+          toValue: 0, // Final translation
           duration: 700,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Animate Farm Information Section
+      // Animating the farm information container
       Animated.parallel([
         Animated.timing(farmInfoOpacity, {
           toValue: 1,
@@ -269,25 +314,25 @@ const LaityPumpkinPatch = () => {
         }),
       ]).start();
 
-      // Animate Image Section with a slight delay
+      // Animating the image container
       Animated.parallel([
         Animated.timing(imageOpacity, {
           toValue: 1,
           duration: 700,
           easing: Easing.out(Easing.ease),
-          delay: 300,
+          delay: 300, // Delayed start
           useNativeDriver: true,
         }),
         Animated.spring(imageScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
+          toValue: 1, // Final scale
+          friction: 8, // Friction for the spring effect
+          tension: 40, // Tension for the spring effect
           delay: 300,
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Animate About Section with a slight delay
+      // Animating the about section
       Animated.parallel([
         Animated.timing(aboutOpacity, {
           toValue: 1,
@@ -305,7 +350,7 @@ const LaityPumpkinPatch = () => {
         }),
       ]).start();
 
-      // Animate Map Section with a further delay
+      // Animating the map container
       Animated.parallel([
         Animated.timing(mapOpacity, {
           toValue: 1,
@@ -335,32 +380,49 @@ const LaityPumpkinPatch = () => {
     aboutTranslateY,
     mapOpacity,
     mapTranslateX,
-  ]); // Include all animated values in dependencies
+  ]);
 
-  // ------------------ HELPER FUNCTIONS ------------------
+  // =========================
+  // UTILITY FUNCTIONS SECTION
+  // =========================
 
-  // Function to convert temperature based on unit toggle
+  /**
+   * convertTemp Function
+   * 
+   * Converts temperature between Celsius and Fahrenheit based on user preference.
+   *
+   * @param {number} temp - The temperature value to convert.
+   * @returns {string} - The converted temperature as a string with one decimal place.
+   */
   const convertTemp = (temp) => {
     return isMetric ? temp.toFixed(1) : ((temp * 9) / 5 + 32).toFixed(1);
   };
 
-  // Function to get temperature unit symbol
+  /**
+   * getUnit Function
+   * 
+   * Retrieves the temperature unit symbol based on user preference.
+   *
+   * @returns {string} - The temperature unit symbol ('°C' or '°F').
+   */
   const getUnit = () => {
     return isMetric ? '°C' : '°F';
   };
 
-  // ------------------ CONDITIONAL CONTENT RENDERING ------------------
+  // =========================
+  // CONTENT RENDERING SECTION
+  // =========================
 
-  let content; // Variable to determine what content to display based on state
+  let content;
 
   if (loading) {
-    // Display a loading indicator while fetching location
+    // Display a loading indicator while fetching data
     content = <ActivityIndicator size="large" color="#0000ff" />;
   } else if (errorMsg) {
-    // Display an error message if there's an issue fetching location
+    // Display error message if location fetching fails
     content = <Text style={styles.errorText}>{errorMsg}</Text>;
   } else if (location) {
-    // Display the user's current latitude and longitude
+    // Display user's current location coordinates
     const { latitude, longitude } = location.coords;
     content = (
       <View style={styles.locationContainer}>
@@ -370,7 +432,7 @@ const LaityPumpkinPatch = () => {
       </View>
     );
   } else if (!isLocationEnabled) {
-    // Display a message if location services are disabled
+    // Inform the user if location services are disabled
     content = (
       <View style={styles.locationDisabledContainer}>
         <Text style={styles.locationDisabledText}>
@@ -380,71 +442,77 @@ const LaityPumpkinPatch = () => {
     );
   }
 
-  // ------------------ MAIN COMPONENT RENDERING ------------------
+  // =========================
+  // RENDERING SECTION
+  // =========================
 
   return (
     <View style={styles.container}>
-      {/* ------------------ NAVIGATION BAR ------------------ */}
+      {/* Custom Navigation Bar */}
       <NavBar />
 
-      {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
+      {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* ------------------ WEATHER REPORT SECTION ------------------ */}
         {isLocationEnabled && weatherData ? (
+          // Weather Information Section with Animations
           <Animated.View
             style={[
               styles.weatherContainer,
               {
-                opacity: weatherOpacity,
-                transform: [{ translateX: weatherTranslateX }],
+                opacity: weatherOpacity, // Animated opacity
+                transform: [{ translateX: weatherTranslateX }], // Animated horizontal translation
               },
             ]}
           >
-            {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
+            {/* Unit Toggle Switch */}
             <View style={styles.unitToggle}>
               <Text style={styles.unitText}>°C</Text>
               <Switch
                 value={!isMetric}
-                onValueChange={() => setIsMetric((prev) => !prev)}
+                onValueChange={() => setIsMetric((prev) => !prev)} // Toggle between metric and imperial
               />
               <Text style={styles.unitText}>°F</Text>
             </View>
 
-            {/* ------------------ LOCATION NAME ------------------ */}
+            {/* Location Name Display */}
             <View style={styles.locationNameContainer}>
               <Text style={styles.locationName}>
                 {weatherData.city.name}, {weatherData.city.country}
               </Text>
             </View>
 
-            {/* ------------------ 5-DAY FORECAST (Horizontal Scroll) ------------------ */}
+            {/* Daily Weather Forecast */}
             <View style={styles.dailyContainer}>
               <FlatList
-                data={dailyData.slice(0, 5)} // Display only the first 5 days
+                data={dailyData.slice(0, 5)} // Displaying the first 5 days
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                keyExtractor={(item, index) => index.toString()}
+                keyExtractor={(item, index) => index.toString()} // Unique key for each item
                 renderItem={({ item, index }) => (
                   <TouchableOpacity
                     onPress={() =>
-                      setSelectedDayIndex(selectedDayIndex === index ? null : index)
+                      setSelectedDayIndex(selectedDayIndex === index ? null : index) // Toggle detailed view
                     }
                   >
                     <View style={styles.dailyItem}>
                       <View style={styles.dailyHeader}>
+                        {/* Day of the Week */}
                         <Text style={styles.dailyDay}>
                           {new Date(item.dt * 1000).toLocaleDateString('en-US', {
                             weekday: 'short',
                           })}
                         </Text>
+
+                        {/* Weather Icon */}
                         <Image
                           source={{
                             uri: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`,
                           }}
                           style={styles.dailyIcon}
                         />
+
                         {selectedDayIndex === index ? (
-                          // Show details when selected
+                          // Detailed Weather Information
                           <View style={styles.detailContainer}>
                             <Text style={styles.detailText}>
                               Wind: {item.wind.speed} m/s
@@ -457,7 +525,7 @@ const LaityPumpkinPatch = () => {
                             </Text>
                           </View>
                         ) : (
-                          // Show temperature when not selected
+                          // Daily Temperature Display
                           <Text style={styles.dailyTemp}>
                             {convertTemp(item.main.temp)}
                             {getUnit()}
@@ -471,65 +539,71 @@ const LaityPumpkinPatch = () => {
             </View>
           </Animated.View>
         ) : !isLocationEnabled ? (
-          // Inform the user that weather data is unavailable due to disabled location services
+          // Weather Disabled Message
           <View style={styles.weatherDisabledContainer}>
             <Text style={styles.weatherDisabledText}>
               Weather information is unavailable because location services are disabled.
             </Text>
           </View>
         ) : weatherError ? (
-          // Display an error message if there's an issue fetching weather data
+          // Weather Fetching Error Message
           <Text style={styles.errorText}>{weatherError}</Text>
         ) : (
-          // Display a loading indicator while fetching weather data
+          // Fallback Loading Indicator
           <ActivityIndicator size="large" color="#0000ff" />
         )}
 
-        {/* ------------------ FARM INFORMATION SECTION ------------------ */}
+        {/* Farm Information Section with Animations */}
         <Animated.View
           style={[
             styles.farmInfoContainer,
             {
-              opacity: farmInfoOpacity,
-              transform: [{ translateX: farmInfoTranslateX }],
+              opacity: farmInfoOpacity, // Animated opacity
+              transform: [{ translateX: farmInfoTranslateX }], // Animated horizontal translation
             },
           ]}
         >
+          {/* Farm Title */}
           <Text style={styles.title}>Laity Pumpkin Patch</Text>
+
+          {/* Farm Address */}
           <Text style={styles.address}>2725 Laity St, Maple Ridge, BC</Text>
+
+          {/* Activity Box Highlighting Features */}
           <View style={styles.activityBox}>
-            {/* Highlighting activities available at the farm */}
             <Text style={styles.activityText}>Wineries, pumpkins, and more!</Text>
           </View>
         </Animated.View>
 
-        {/* ------------------ IMAGE SECTION ------------------ */}
+        {/* Image Section with Animations */}
         <Animated.View
           style={[
             styles.imagePlaceholder,
             {
-              opacity: imageOpacity,
-              transform: [{ scale: imageScale }],
+              opacity: imageOpacity, // Animated opacity
+              transform: [{ scale: imageScale }], // Animated scaling
             },
           ]}
         >
+          {/* Displaying the farm image */}
           <Image
-            source={require('../assets/Laity.png')} // Ensure this path is correct
+            source={require('../assets/Laity.png')} // Image source
             style={styles.image}
-            resizeMode="cover" // Ensures the image fits the container
+            resizeMode="cover" // Image resize mode
           />
         </Animated.View>
 
-        {/* ------------------ ABOUT THE FARM SECTION ------------------ */}
+        {/* About Section with Animations */}
         <Animated.View
           style={[
             styles.aboutContainer,
             {
-              opacity: aboutOpacity, // Apply animated opacity
-              transform: [{ translateY: aboutTranslateY }], // Apply animated translation
+              opacity: aboutOpacity, // Animated opacity
+              transform: [{ translateY: aboutTranslateY }], // Animated vertical translation
             },
           ]}
         >
+          {/* About Text */}
           <Text style={styles.aboutText}>
             We opened a brand new location across the street to our original location. The original Laity Pumpkin Patch is
             referred to as the North location and is designed for the younger members of your family. Our newest location
@@ -538,54 +612,59 @@ const LaityPumpkinPatch = () => {
           </Text>
         </Animated.View>
 
-        {/* ------------------ USER'S CURRENT LOCATION SECTION ------------------ */}
+        {/* Current Location Display */}
         <View style={styles.currentLocationBox}>{content}</View>
 
-        {/* ------------------ MAP SECTION ------------------ */}
+        {/* Map Section with Animations */}
         <Animated.View
           style={[
             styles.mapContainer,
             {
-              opacity: mapOpacity,
-              transform: [{ translateX: mapTranslateX }],
+              opacity: mapOpacity, // Animated opacity
+              transform: [{ translateX: mapTranslateX }], // Animated horizontal translation
             },
           ]}
         >
-          {/* Header for Map Section */}
+          {/* Map Header */}
           <Text style={styles.mapHeader}>How to get there?</Text>
+
+          {/* Map Wrapper */}
           <View style={styles.mapWrapper}>
+            {/* MapView Component */}
             <MapView
               style={styles.map}
               initialRegion={{
                 latitude: farmLatitude,
                 longitude: farmLongitude,
-                latitudeDelta: 0.25, // Zoom level (smaller value zooms in)
-                longitudeDelta: 0.25,
+                latitudeDelta: 0.25, // Zoom level for latitude
+                longitudeDelta: 0.25, // Zoom level for longitude
               }}
-              showsUserLocation={isLocationEnabled} // Only show user location if enabled
+              showsUserLocation={isLocationEnabled} // Shows user location if enabled
             >
-              {/* Marker indicating the location of Laity Pumpkin Patch */}
+              {/* Marker for Laity Pumpkin Patch */}
               <Marker
                 coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
                 title="Laity Pumpkin Patch"
                 description="Pumpkin Patch location"
               />
+
+              {/* Directions from User Location to Pumpkin Patch */}
               {isLocationEnabled && location && (
-                // If the user's location is available and enabled, display directions from their current location to the pumpkin patch
                 <MapViewDirections
                   origin={{
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,
                   }}
                   destination={{ latitude: farmLatitude, longitude: farmLongitude }}
-                  apikey={GOOGLE_MAPS_APIKEY} // Replace with your actual Google Maps API Key
-                  strokeWidth={4}
-                  strokeColor="hotpink"
+                  apikey={GOOGLE_MAPS_APIKEY} // Google Maps API key
+                  strokeWidth={4} // Width of the directions line
+                  strokeColor="hotpink" // Color of the directions line
                 />
               )}
             </MapView>
+
+            {/* Overlay Message if Location Services are Disabled */}
             {!isLocationEnabled && (
-              // Overlay message informing the user that location services are disabled
               <View style={styles.mapDisabledOverlay}>
                 <Text style={styles.mapDisabledText}>
                   Location services are disabled. Enable them to see your route on the map.
@@ -599,275 +678,330 @@ const LaityPumpkinPatch = () => {
   );
 };
 
-// Export the component so it can be used in other parts of the app
+// Exporting the LaityPumpkinPatch component as the default export
 export default LaityPumpkinPatch;
 
-// ------------------ STYLESHEET FOR THE COMPONENT ------------------
+// =========================
+// STYLESHEET SECTION
+// =========================
 
+/**
+ * Styles for LaityPumpkinPatch components
+ * 
+ * This stylesheet defines the visual appearance of the LaityPumpkinPatch screen, including layout, colors, fonts, and spacing.
+ */
 const styles = StyleSheet.create({
-  // Container for the entire screen
+  // Main container covering the entire screen
   container: {
-    flex: 1,
-    backgroundColor: '#F4A460', // Bright orange background to make the app lively
+    flex: 1, // Takes up the full available space
+    backgroundColor: '#F4A460', // Background color matching the theme
   },
 
-  /* ------------------ SCROLLABLE CONTENT STYLES ------------------ */
-
+  // Styling for the ScrollView content container
   scrollContent: {
-    paddingBottom: 20, // Space at the bottom to ensure content isn't cut off
+    paddingBottom: 20, // Padding at the bottom to prevent content cutoff
   },
 
-  /* ------------------ WEATHER REPORT STYLES ------------------ */
-
+  // Weather Information Container
   weatherContainer: {
-    backgroundColor: '#BBCDEC', // Background color as specified
-    borderRadius: 10, // Rounded corners for a smooth look
-    margin: 15, // Margin around the container to separate it from other sections
-    padding: 10, // Reduced padding inside the container
+    backgroundColor: '#BBCDEC', // Light blue background for weather section
+    borderRadius: 10, // Rounded corners
+    margin: 15, // Margin around the container
+    padding: 10, // Padding inside the container
   },
+
+  // Unit Toggle Switch Container
   unitToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 5, // Reduced margin
+    flexDirection: 'row', // Horizontal layout
+    alignItems: 'center', // Vertically centers child elements
+    justifyContent: 'center', // Horizontally centers child elements
+    marginBottom: 5, // Space below the toggle
   },
+
+  // Unit Text Style
   unitText: {
-    fontSize: 16,
-    color: '#000', // Black text for contrast
-    marginHorizontal: 5,
+    fontSize: 16, // Font size for unit labels
+    color: '#000', // Black color for readability
+    marginHorizontal: 5, // Horizontal margin between elements
   },
+
+  // Location Name Container
   locationNameContainer: {
-    alignItems: 'center',
-    marginBottom: 5, // Reduced margin
+    alignItems: 'center', // Centers child elements horizontally
+    marginBottom: 5, // Space below the location name
   },
+
+  // Location Name Text
   locationName: {
-    fontSize: 16,
-    color: '#000', // Black text for contrast
-    fontWeight: 'bold',
+    fontSize: 16, // Font size for location name
+    color: '#000', // Black color for readability
+    fontWeight: 'bold', // Bold font weight for emphasis
   },
+
+  // Daily Weather Forecast Container
   dailyContainer: {
-    marginBottom: 10, // Reduced to make it more concise
+    marginBottom: 10, // Space below the daily forecasts
   },
+
+  // Individual Daily Forecast Item
   dailyItem: {
-    width: 80, // Adjust the width to fit more items
-    marginRight: 10,
+    width: 80, // Width of each forecast item
+    marginRight: 10, // Space between forecast items
   },
+
+  // Daily Forecast Header Container
   dailyHeader: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)', // Semi-transparent background
-    borderRadius: 5,
-    padding: 5, // Reduced padding
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', // Semi-transparent white background
+    borderRadius: 5, // Rounded corners
+    padding: 5, // Padding inside the header
+    alignItems: 'center', // Centers child elements horizontally
   },
+
+  // Day of the Week Text
   dailyDay: {
-    color: '#000', // Black text for contrast
-    fontSize: 14, // Reduced font size
+    color: '#000', // Black color for readability
+    fontSize: 14, // Font size for day label
   },
+
+  // Weather Icon Style
   dailyIcon: {
-    width: 30, // Reduced size
-    height: 30,
-    marginVertical: 2, // Reduced margin
+    width: 30, // Width of the icon
+    height: 30, // Height of the icon
+    marginVertical: 2, // Vertical margin around the icon
   },
+
+  // Daily Temperature Text
   dailyTemp: {
-    color: '#000', // Black text for contrast
-    fontSize: 14, // Reduced font size
+    color: '#000', // Black color for readability
+    fontSize: 14, // Font size for temperature
   },
+
+  // Detailed Weather Information Container
   detailContainer: {
-    alignItems: 'center',
+    alignItems: 'center', // Centers child elements horizontally
   },
+
+  // Detailed Weather Information Text
   detailText: {
-    color: '#000', // Black text for contrast
-    fontSize: 12, // Reduced font size
-    textAlign: 'center',
+    color: '#000', // Black color for readability
+    fontSize: 12, // Font size for detailed info
+    textAlign: 'center', // Centers the text
   },
 
-  /* ------------------ WEATHER DISABLED STYLES ------------------ */
-
+  // Weather Disabled Container
   weatherDisabledContainer: {
-    backgroundColor: '#FAF4E4', // Light background to indicate disabled state
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 15,
-    alignItems: 'center',
+    backgroundColor: '#FAF4E4', // Light beige background
+    padding: 15, // Padding inside the container
+    borderRadius: 10, // Rounded corners
+    marginHorizontal: 15, // Horizontal margin
+    alignItems: 'center', // Centers child elements horizontally
   },
+
+  // Weather Disabled Text
   weatherDisabledText: {
-    fontSize: 16,
-    color: '#555', // Grey text to indicate informational message
-    textAlign: 'center',
+    fontSize: 16, // Font size for the message
+    color: '#555', // Dark gray color for subtlety
+    textAlign: 'center', // Centers the text
   },
 
-  /* ------------------ FARM INFORMATION STYLES ------------------ */
-
+  // Farm Information Container
   farmInfoContainer: {
-    // New style for animated farm information section
-    // Moved from title and address to a container for animation
+    // Additional styles can be added here if needed
   },
+
+  // Farm Title Text
   title: {
-    fontSize: 24, // Large font size for the farm name
-    fontWeight: 'bold',
-    color: '#FAF4E4', // Light color for contrast against the orange background
-    textAlign: 'center',
-    marginTop: 10,
-    textTransform: 'uppercase',
+    fontSize: 24, // Font size for the title
+    fontWeight: 'bold', // Bold font weight for emphasis
+    color: '#FAF4E4', // Light color for contrast
+    textAlign: 'center', // Centers the text
+    marginTop: 10, // Space above the title
+    textTransform: 'uppercase', // Transforms text to uppercase
   },
+
+  // Farm Address Text
   address: {
-    fontSize: 14,
-    color: '#666', // Dark grey color for better readability
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    marginVertical: 5,
+    fontSize: 14, // Font size for the address
+    color: '#666', // Dark gray color for readability
+    textAlign: 'center', // Centers the text
+    textTransform: 'uppercase', // Transforms text to uppercase
+    marginVertical: 5, // Vertical margin for spacing
   },
+
+  // Activity Box Highlighting Features
   activityBox: {
-    backgroundColor: '#FAF4E4', // Light background to highlight activities
-    padding: 10,
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginVertical: 10,
-    width: '90%',
-    shadowColor: '#000', // Shadow for depth
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: '#FAF4E4', // Light beige background
+    padding: 10, // Padding inside the box
+    borderRadius: 10, // Rounded corners
+    alignSelf: 'center', // Centers the box horizontally
+    marginVertical: 10, // Vertical margin for spacing
+    width: '90%', // Width relative to the parent container
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
+    shadowOpacity: 0.1, // Shadow opacity for iOS
+    shadowRadius: 2, // Shadow radius for iOS
+    elevation: 2, // Elevation for Android shadow
   },
+
+  // Activity Text Style
   activityText: {
-    fontSize: 14,
-    color: '#000', // Black text for contrast
-    textAlign: 'center',
-    textTransform: 'capitalize',
+    fontSize: 14, // Font size for the text
+    color: '#000', // Black color for readability
+    textAlign: 'center', // Centers the text
+    textTransform: 'capitalize', // Capitalizes the first letter
   },
 
-  /* ------------------ IMAGE SECTION STYLES ------------------ */
-
+  // Image Placeholder Container with Animations
   imagePlaceholder: {
-    width: '90%',
-    height: 200,
-    backgroundColor: '#e0e0e0', // Placeholder color while image loads
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginVertical: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden', // Ensure the image stays within bounds
+    width: '90%', // Width relative to the parent container
+    height: 200, // Height of the image container
+    backgroundColor: '#e0e0e0', // Light gray background as a placeholder
+    borderRadius: 10, // Rounded corners
+    alignSelf: 'center', // Centers the container horizontally
+    marginVertical: 15, // Vertical margin for spacing
+    justifyContent: 'center', // Centers child elements vertically
+    alignItems: 'center', // Centers child elements horizontally
+    position: 'relative', // Relative positioning for layering
+    overflow: 'hidden', // Clips any child content outside the container
   },
+
+  // Image Style
   image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 10,
+    width: '100%', // Full width of the container
+    height: '100%', // Full height of the container
+    borderRadius: 10, // Rounded corners matching the container
   },
 
-  /* ------------------ ABOUT THE FARM STYLES ------------------ */
-
+  // About Section Container with Animations
   aboutContainer: {
-    backgroundColor: '#FAF4E4', // Light background for readability
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 15,
-    shadowColor: '#000', // Shadow for depth
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    marginBottom: 15, // Added margin for spacing
+    backgroundColor: '#FAF4E4', // Light beige background
+    padding: 15, // Padding inside the container
+    borderRadius: 10, // Rounded corners
+    marginHorizontal: 15, // Horizontal margin
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
+    shadowOpacity: 0.1, // Shadow opacity for iOS
+    shadowRadius: 2, // Shadow radius for iOS
+    elevation: 2, // Elevation for Android shadow
+    marginBottom: 15, // Space below the container
   },
+
+  // About Text Style
   aboutText: {
-    fontSize: 16,
-    color: '#000', // Black text for contrast
-    textAlign: 'justify', // Justify text for a clean look
+    fontSize: 16, // Font size for the text
+    color: '#000', // Black color for readability
+    textAlign: 'justify', // Justifies the text for a neat appearance
   },
 
-  /* ------------------ USER'S CURRENT LOCATION STYLES ------------------ */
-
+  // Current Location Box Container
   currentLocationBox: {
-    backgroundColor: '#FAF4E4', // Light background to indicate information section
-    padding: 15,
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginVertical: 10,
-    width: '90%',
-    shadowColor: '#000', // Shadow for depth
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
+    backgroundColor: '#FAF4E4', // Light beige background
+    padding: 15, // Padding inside the container
+    borderRadius: 10, // Rounded corners
+    alignSelf: 'center', // Centers the container horizontally
+    marginVertical: 10, // Vertical margin for spacing
+    width: '90%', // Width relative to the parent container
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
+    shadowOpacity: 0.05, // Shadow opacity for iOS
+    shadowRadius: 1, // Shadow radius for iOS
+    elevation: 1, // Elevation for Android shadow
   },
+
+  // Location Display Container
   locationContainer: {
-    alignItems: 'center',
+    alignItems: 'center', // Centers child elements horizontally
   },
+
+  // Location Text Style
   locationText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333', // Dark grey text for readability
+    fontSize: 18, // Font size for the location label
+    fontWeight: 'bold', // Bold font weight for emphasis
+    marginBottom: 10, // Space below the label
+    color: '#333', // Dark gray color for readability
   },
+
+  // Coordinates Text Style
   coordsText: {
-    fontSize: 16,
-    marginVertical: 2,
-    color: '#555', // Grey text for contrast
+    fontSize: 16, // Font size for the coordinates
+    marginVertical: 2, // Vertical margin for spacing
+    color: '#555', // Medium gray color for readability
   },
+
+  // Location Disabled Message Container
   locationDisabledContainer: {
-    alignItems: 'center',
-    padding: 10,
+    alignItems: 'center', // Centers child elements horizontally
+    padding: 10, // Padding inside the container
   },
+
+  // Location Disabled Message Text
   locationDisabledText: {
-    fontSize: 16,
-    color: '#555', // Grey text to indicate informational message
-    textAlign: 'center',
+    fontSize: 16, // Font size for the message
+    color: '#555', // Medium gray color for readability
+    textAlign: 'center', // Centers the text
   },
 
-  /* ------------------ MAP SECTION STYLES ------------------ */
-
+  // Map Container with Animations
   mapContainer: {
-    backgroundColor: '#FAF4E4', // Light background for map section
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 15,
-    marginTop: 10,
-    shadowColor: '#000', // Shadow for depth
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: '#FAF4E4', // Light beige background
+    padding: 15, // Padding inside the container
+    borderRadius: 10, // Rounded corners
+    marginHorizontal: 15, // Horizontal margin
+    marginTop: 10, // Space above the container
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
+    shadowOpacity: 0.1, // Shadow opacity for iOS
+    shadowRadius: 2, // Shadow radius for iOS
+    elevation: 2, // Elevation for Android shadow
   },
+
+  // Map Header Text
   mapHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000', // Black text for contrast
-    textAlign: 'center',
-    marginBottom: 10,
+    fontSize: 18, // Font size for the header
+    fontWeight: 'bold', // Bold font weight for emphasis
+    color: '#000', // Black color for readability
+    textAlign: 'center', // Centers the text
+    marginBottom: 10, // Space below the header
   },
+
+  // Map Wrapper Container
   mapWrapper: {
-    width: '100%',
-    height: 200,
-    borderRadius: 10,
-    overflow: 'hidden',
+    width: '100%', // Full width of the container
+    height: 200, // Height of the map
+    borderRadius: 10, // Rounded corners
+    overflow: 'hidden', // Clips any child content outside the container
   },
+
+  // Map Style
   map: {
-    flex: 1,
+    flex: 1, // Takes up the full available space
   },
+
+  // Overlay Container when Location Services are Disabled on the Map
   mapDisabledOverlay: {
-    position: 'absolute',
+    position: 'absolute', // Positioned absolutely over the map
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(250, 244, 228, 0.8)', // Semi-transparent overlay
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(250, 244, 228, 0.8)', // Semi-transparent background
+    alignItems: 'center', // Centers child elements horizontally
+    justifyContent: 'center', // Centers child elements vertically
   },
+
+  // Map Disabled Message Text
   mapDisabledText: {
-    fontSize: 16,
-    color: '#555', // Grey text for contrast
-    textAlign: 'center',
-    paddingHorizontal: 20,
+    fontSize: 16, // Font size for the message
+    color: '#555', // Medium gray color for readability
+    textAlign: 'center', // Centers the text
+    paddingHorizontal: 20, // Horizontal padding for the text
   },
 
-  /* ------------------ ERROR TEXT STYLES ------------------ */
-
+  // Error Message Text Style
   errorText: {
     color: 'red', // Red color to indicate errors
-    fontSize: 16,
-    textAlign: 'center',
-    marginVertical: 10,
+    fontSize: 16, // Font size for the error message
+    textAlign: 'center', // Centers the text
+    marginVertical: 10, // Vertical margin for spacing
   },
 });

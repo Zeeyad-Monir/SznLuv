@@ -1,4 +1,8 @@
-// Import necessary modules and components from React and React Native
+// SpinTheWheel.js
+// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
+
+/* ================================ IMPORTS ================================ */
+// Importing necessary modules and components from React and React Native.
 import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View,
@@ -14,39 +18,46 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-// Import your external NavBar component
+// Importing external NavBar component.
 import NavBar from "../components/NavBar"; // Adjust the path based on your project structure
 
-// ASYNC STORAGE
+/* ================================ ASYNC STORAGE ================================ */
+// Importing AsyncStorage for persistent storage.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// SVG
+/* ================================ SVG IMPORTS ================================ */
+// Importing SVG components for rendering vector graphics.
 import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 
-// IMPORT LOTTIE
+/* ================================ LOTTIE IMPORTS ================================ */
+// Importing LottieView for animations.
 import LottieView from "lottie-react-native"; // Import LottieView
 
-// Import Lottie animations statically
+// Importing Lottie animations statically.
 import fallingLeavesAnimation from "../assets/fallingLeaves.json";
 import snowFallingAnimation from "../assets/snowFalling.json";
-import flowersFallingAnimation from "../assets/flowersFalling.json"; // Corrected filename
+import flowersFallingAnimation from "../assets/flowersFalling.json"; 
 import summerFallingAnimation from "../assets/summerFalling.json";
-import wheelFallingAnimation from "../assets/wheelFalling.json"; // Adjust the path if necessary
+import wheelFallingAnimation from "../assets/wheelFalling.json"; 
 
-// Import Icon library (optional for arrow indicators)
-import { Ionicons } from "@expo/vector-icons"; // If you're using Expo
-
-// Firestore Imports
-import { doc, getDoc } from "firebase/firestore"; // Added Firestore functions
+/* ================================ ICON IMPORTS ================================ */
+// Importing Ionicons for arrow indicators.
+import { Ionicons } from "@expo/vector-icons"; 
+/* ================================ FIRESTORE IMPORTS ================================ */
+// Importing Firestore functions and database instance.
+import { doc, getDoc } from "firebase/firestore"; 
 import { db } from "../firebaseConfig"; // Import Firestore database instance
 
-// Auth Context Import
+/* ================================ AUTH CONTEXT IMPORTS ================================ */
+// Importing AuthContext to get authenticated user.
 import { AuthContext } from "../App"; // Import AuthContext to get authenticated user
 
-// Get the width and height of the device screen for positioning elements
+/* ================================ DEVICE DIMENSIONS ================================ */
+// Getting the width and height of the device screen for positioning elements.
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
-// DATA: Season-specific date ideas
+/* ================================ DATA ================================ */
+// Season-specific date ideas categorized by season.
 const seasonDateOptions = {
   Fall: [
     "Aldor Acres Family Farm",
@@ -78,7 +89,8 @@ const seasonDateOptions = {
   ],
 };
 
-// COLORS
+/* ================================ COLORS ================================ */
+// Array of colors used for different sections of the wheel.
 const sectionColors = [
   "#FF9FD2",
   "#FF8657",
@@ -91,26 +103,38 @@ const sectionColors = [
   "#FF8657",
 ];
 
-// WHEEL COMPONENT
+/* ================================ COMPONENT DEFINITION ================================ */
+/* ================================ SPIN THE WHEEL COMPONENT ================================ */
+// Define the SpinTheWheel component which manages the spinning wheel functionality.
 const SpinTheWheel = () => {
-  // Context to get the authenticated user
+  /* ================================ CONTEXT AND STATE ================================ */
+  // Accessing the authenticated user from AuthContext.
   const { user } = useContext(AuthContext); // Access AuthContext
 
-  // STATE
+  // State to manage the spinning status of the wheel.
   const [isSpinning, setIsSpinning] = useState(false);
+
+  // State to hold the selected date idea after spinning.
   const [selectedDate, setSelectedDate] = useState(null);
+
+  // State to hold the currently selected season.
   const [selectedSeason, setSelectedSeason] = useState(""); // New state for selected season
+
+  // State to hold date options based on the selected season.
   const [dateOptions, setDateOptions] = useState([]); // Date options based on selected season
+
+  // State to manage the visibility of the season selection dropdown.
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
 
-  // NEW STATE: Background animation source and style
+  // State for background animation source and its corresponding style.
   const [backgroundAnimation, setBackgroundAnimation] = useState(null);
   const [backgroundAnimationStyle, setBackgroundAnimationStyle] = useState(null);
 
-  // NEW STATE: Background animation speed
+  // State for controlling the speed of background animations.
   const [backgroundAnimationSpeed, setBackgroundAnimationSpeed] = useState(1.0); // Default speed
 
-  // SPEED CONFIGURATION FOR BACKGROUND ANIMATIONS
+  /* ================================ BACKGROUND ANIMATION SPEED CONFIGURATION ================================ */
+  // Configuration object mapping each season to its corresponding background animation speed.
   const backgroundAnimationSpeeds = {
     Fall: 0.55, // Speed for Fall
     Winter: 0.2, // Speed for Winter
@@ -118,41 +142,47 @@ const SpinTheWheel = () => {
     Summer: 0.7, // Speed for Summer
   };
 
-  // REFS
+  /* ================================ REFS ================================ */
+  // Reference for managing the rotation animation of the wheel.
   const rotation = useRef(new Animated.Value(0)).current;
 
-  // Animated values for greeting text
+  // Animated values for controlling the greeting text's opacity and vertical position.
   const greetingOpacity = useRef(new Animated.Value(0)).current;
   const greetingTranslateY = useRef(new Animated.Value(-20)).current;
 
-  // Animated values for wheel
+  // Animated values for controlling the wheel's opacity, vertical position, and scale.
   const wheelOpacity = useRef(new Animated.Value(0)).current;
   const wheelTranslateY = useRef(new Animated.Value(30)).current;
   const wheelScale = useRef(new Animated.Value(0.9)).current;
 
-  // Animated values for spin button
+  // Animated values for controlling the spin button's opacity, vertical position, and scale.
   const spinButtonOpacity = useRef(new Animated.Value(0)).current;
   const spinButtonTranslateY = useRef(new Animated.Value(30)).current;
   const spinButtonScale = useRef(new Animated.Value(0.9)).current;
 
-  // Animated values for result box
+  // Animated values for controlling the result box's opacity, vertical position, and scale.
   const resultOpacity = useRef(new Animated.Value(0)).current;
   const resultTranslateY = useRef(new Animated.Value(30)).current;
   const resultScale = useRef(new Animated.Value(0.9)).current;
 
-  // Animated values for "Enjoy your date!" text
+  // Animated values for controlling the "Enjoy your date!" text's opacity and vertical position.
   const enjoyTextOpacity = useRef(new Animated.Value(0)).current;
   const enjoyTextTranslateY = useRef(new Animated.Value(20)).current;
 
-  // Animated value for Lottie animation (wheel falling)
+  // Reference for the Lottie animation (wheel falling).
   const lottieRef = useRef(null);
 
-  // STATE for username
+  /* ================================ USERNAME STATE ================================ */
+  // State to store the username fetched from Firestore.
   const [userName, setUserName] = useState(""); // Added state for username
-  // STATE for loading username
+
+  // State to manage the loading status while fetching the username.
   const [loadingUsername, setLoadingUsername] = useState(true); // Added state for loading
 
-  // EFFECTS
+  /* ================================ EFFECTS ================================ */
+
+  /* ---------------------------- LOAD DATE IDEA FROM ASYNC STORAGE ---------------------------- */
+  // Load the current date idea from AsyncStorage when the component mounts.
   useEffect(() => {
     const loadDateIdea = async () => {
       try {
@@ -169,7 +199,8 @@ const SpinTheWheel = () => {
     loadDateIdea();
   }, []);
 
-  // Fetch username when component mounts
+  /* ---------------------------- FETCH USERNAME FROM FIRESTORE ---------------------------- */
+  // Fetch the username from Firestore when the component mounts or when the user changes.
   useEffect(() => {
     const fetchUserName = async () => {
       if (!user) {
@@ -179,10 +210,14 @@ const SpinTheWheel = () => {
       }
 
       try {
+        // Reference to the user's document in Firestore.
         const userDocRef = doc(db, "users", user.uid); // Reference to the user's document
+
+        // Fetch the document snapshot.
         const userDocSnap = await getDoc(userDocRef); // Fetch the document snapshot
 
         if (userDocSnap.exists()) {
+          // If the document exists, extract the username.
           const data = userDocSnap.data();
           setUserName(data.username || "User"); // Set the username or default to 'User'
         } else {
@@ -200,7 +235,8 @@ const SpinTheWheel = () => {
     fetchUserName();
   }, [user]);
 
-  // Update date options and background animation when the selected season changes
+  /* ---------------------------- UPDATE DATE OPTIONS AND BACKGROUND ANIMATION ---------------------------- */
+  // Update date options and background animation when the selected season changes.
   useEffect(() => {
     if (selectedSeason && seasonDateOptions[selectedSeason]) {
       setDateOptions(seasonDateOptions[selectedSeason]);
@@ -208,7 +244,7 @@ const SpinTheWheel = () => {
       setDateOptions([]);
     }
 
-    // Update background animation, its style, and speed based on selected season
+    // Update background animation, its style, and speed based on selected season.
     switch (selectedSeason) {
       case "Fall":
         setBackgroundAnimation(fallingLeavesAnimation);
@@ -238,10 +274,11 @@ const SpinTheWheel = () => {
     }
   }, [selectedSeason]);
 
-  // Trigger animations when the component loads or selectedDate changes
+  /* ---------------------------- TRIGGER ANIMATIONS BASED ON SELECTED DATE ---------------------------- */
+  // Trigger animations when the component loads or when selectedDate changes.
   useEffect(() => {
     if (!selectedDate) {
-      // Reset animated values
+      // Reset animated values for initial load.
       greetingOpacity.setValue(0);
       greetingTranslateY.setValue(-20);
 
@@ -253,7 +290,7 @@ const SpinTheWheel = () => {
       spinButtonTranslateY.setValue(30);
       spinButtonScale.setValue(0.9);
 
-      // Animate the greeting text
+      // Animate the greeting text.
       Animated.parallel([
         Animated.timing(greetingOpacity, {
           toValue: 1,
@@ -268,7 +305,7 @@ const SpinTheWheel = () => {
         }),
       ]).start();
 
-      // Animate the wheel
+      // Animate the wheel.
       Animated.parallel([
         Animated.timing(wheelOpacity, {
           toValue: 1,
@@ -292,7 +329,7 @@ const SpinTheWheel = () => {
         }),
       ]).start();
 
-      // Animate the spin button
+      // Animate the spin button.
       Animated.parallel([
         Animated.timing(spinButtonOpacity, {
           toValue: 1,
@@ -316,7 +353,7 @@ const SpinTheWheel = () => {
         }),
       ]).start();
     } else {
-      // Reset result box animated values
+      // Reset result box animated values.
       resultOpacity.setValue(0);
       resultTranslateY.setValue(30);
       resultScale.setValue(0.9);
@@ -324,7 +361,7 @@ const SpinTheWheel = () => {
       enjoyTextOpacity.setValue(0);
       enjoyTextTranslateY.setValue(20);
 
-      // When a date is selected, animate the result box
+      // When a date is selected, animate the result box.
       Animated.parallel([
         Animated.timing(resultOpacity, {
           toValue: 1,
@@ -345,7 +382,7 @@ const SpinTheWheel = () => {
         }),
       ]).start();
 
-      // Animate the "Enjoy your date!" text
+      // Animate the "Enjoy your date!" text.
       Animated.parallel([
         Animated.timing(enjoyTextOpacity, {
           toValue: 1,
@@ -362,22 +399,23 @@ const SpinTheWheel = () => {
         }),
       ]).start();
 
-      // Play the Lottie animation when a date is selected
+      // Play the Lottie animation when a date is selected.
       if (lottieRef.current) {
         lottieRef.current.play();
       }
     }
   }, [selectedDate]);
 
-  // NEW EFFECT: Animate wheel when a season is selected
+  /* ---------------------------- ANIMATE WHEEL BASED ON SEASON SELECTION ---------------------------- */
+  // Animate the wheel when a season is selected or deselected.
   useEffect(() => {
     if (selectedSeason) {
-      // Reset wheel animated values
+      // Reset wheel animated values.
       wheelOpacity.setValue(0);
       wheelTranslateY.setValue(30);
       wheelScale.setValue(0.9);
 
-      // Animate the wheel appearance
+      // Animate the wheel's appearance.
       Animated.parallel([
         Animated.timing(wheelOpacity, {
           toValue: 1,
@@ -399,7 +437,7 @@ const SpinTheWheel = () => {
         }),
       ]).start();
     } else {
-      // If no season is selected, optionally hide the wheel
+      // If no season is selected, optionally hide the wheel.
       Animated.parallel([
         Animated.timing(wheelOpacity, {
           toValue: 0,
@@ -420,8 +458,10 @@ const SpinTheWheel = () => {
     }
   }, [selectedSeason]);
 
-  // FUNCTIONS
+  /* ================================ FUNCTIONS ================================ */
 
+  /* ---------------------------- SAVE DATE IDEA TO ASYNC STORAGE ---------------------------- */
+  // Function to save the selected date idea to AsyncStorage.
   const saveDateIdea = async (idea) => {
     try {
       await AsyncStorage.setItem("currentDateIdea", idea);
@@ -431,6 +471,8 @@ const SpinTheWheel = () => {
     }
   };
 
+  /* ---------------------------- RETRIEVE SAVED DATE IDEA FROM ASYNC STORAGE ---------------------------- */
+  // Function to retrieve the saved date idea from AsyncStorage.
   const retrieveSavedDateIdea = async () => {
     try {
       const storedDate = await AsyncStorage.getItem("currentDateIdea");
@@ -445,8 +487,10 @@ const SpinTheWheel = () => {
     }
   };
 
+  /* ---------------------------- START SPIN FUNCTION ---------------------------- */
+  // Function to handle the spin action when the spin button is pressed.
   const startSpin = () => {
-    // Handle case where no season is selected
+    // Handle case where no season is selected.
     if (!selectedSeason) {
       Alert.alert(
         "No Season Selected",
@@ -455,7 +499,7 @@ const SpinTheWheel = () => {
       return;
     }
 
-    // Handle case where no date options are available
+    // Handle case where no date options are available for the selected season.
     if (dateOptions.length === 0) {
       Alert.alert(
         "No Date Ideas",
@@ -464,19 +508,23 @@ const SpinTheWheel = () => {
       return;
     }
 
+    // Set spinning state to true and reset the selected date.
     setIsSpinning(true);
     setSelectedDate(null);
 
-    const spinDuration = 4000 + Math.random() * 2000;
-    const rotations = 5 + Math.random() * 2;
-    const randomRotation = rotations * 360;
+    // Determine spin duration and the number of rotations.
+    const spinDuration = 4000 + Math.random() * 2000; // Duration between 4s to 6s.
+    const rotations = 5 + Math.random() * 2; // Between 5 to 7 rotations.
+    const randomRotation = rotations * 360; // Total degrees to rotate.
 
+    // Start the rotation animation.
     Animated.timing(rotation, {
       toValue: randomRotation,
       duration: spinDuration,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
+      // Calculate the normalized rotation to determine the selected segment.
       const normalizedRotation = randomRotation % 360;
       const degreesPerSegment = 360 / dateOptions.length;
       const index =
@@ -488,15 +536,19 @@ const SpinTheWheel = () => {
       setSelectedDate(newDate);
       saveDateIdea(newDate);
       setIsSpinning(false);
-      rotation.setValue(0);
+      rotation.setValue(0); // Reset rotation value.
     });
   };
 
+  /* ---------------------------- WHEEL ROTATION INTERPOLATION ---------------------------- */
+  // Interpolate the rotation value for the wheel's rotation animation.
   const wheelRotation = rotation.interpolate({
     inputRange: [0, 360],
     outputRange: ["0deg", "360deg"],
   });
 
+  /* ---------------------------- RENDER WHEEL SECTIONS ---------------------------- */
+  // Function to render each section of the wheel based on dateOptions.
   const renderWheelSections = () => {
     const numSections = dateOptions.length;
     const angle = 360 / numSections;
@@ -507,23 +559,26 @@ const SpinTheWheel = () => {
       const endAngle = startAngle + angle;
       const largeArcFlag = angle > 180 ? 1 : 0;
 
+      // Calculate coordinates for the SVG Path.
       const x1 = radius + radius * Math.cos((Math.PI * startAngle) / 180);
       const y1 = radius + radius * Math.sin((Math.PI * startAngle) / 180);
 
       const x2 = radius + radius * Math.cos((Math.PI * endAngle) / 180);
       const y2 = radius + radius * Math.sin((Math.PI * endAngle) / 180);
 
+      // Calculate position for the text within the section.
       const textAngle = startAngle + angle / 2;
       const textRadius = radius * 0.7;
       const textX = radius + textRadius * Math.cos((Math.PI * textAngle) / 180);
       const textY = radius + textRadius * Math.sin((Math.PI * textAngle) / 180);
 
-      // Use "Mystery Spot" as the display text for each section
+      // Use "Mystery Spot" as the display text for each section.
       const displayText = "Mystery Spot";
       const words = displayText.split(" ");
       const lines = [];
       let line = "";
 
+      // Split the display text into multiple lines if necessary.
       words.forEach((word) => {
         const testLine = line + word + " ";
         if (testLine.length > 12) {
@@ -537,12 +592,14 @@ const SpinTheWheel = () => {
 
       return (
         <G key={`section-${index}`}>
+          {/* SVG Path for the wheel section */}
           <Path
             d={`M${radius},${radius} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`}
             fill={sectionColors[index % sectionColors.length]}
             stroke="#fff"
             strokeWidth="2"
           />
+          {/* SVG Text for the section */}
           <SvgText
             x={textX}
             y={textY - (lines.length - 1) * 6}
@@ -564,30 +621,36 @@ const SpinTheWheel = () => {
     });
   };
 
-  // RENDERING
+  /* ================================ RENDERING ================================ */
+  // Render the main UI of the SpinTheWheel component.
   return (
     <View style={styles.mainContainer}>
+      {/* ================================ BACKGROUND COLOR VIEW ================================ */}
       {/* Background Color View */}
       <View style={styles.backgroundColorView} />
 
+      {/* ================================ BACKGROUND LOTTIE ANIMATION ================================ */}
       {/* Background Lottie Animation */}
-      {/* Updated the conditional rendering to stop the animation when a date is selected */}
+      {/* Conditionally render the background animation only when no date is selected. */}
       {!selectedDate && backgroundAnimation && (
         <LottieView
           source={backgroundAnimation}
           autoPlay
           loop
           style={backgroundAnimationStyle}
-          speed={backgroundAnimationSpeed} // Added speed configuration
+          speed={backgroundAnimationSpeed} // Applied speed configuration.
         />
       )}
 
+      {/* ================================ NAVIGATION BAR ================================ */}
       {/* Integrate the external NavBar component */}
       <NavBar />
 
-      {/* Scrollable Content */}
+      {/* ================================ SCROLLABLE CONTENT ================================ */}
+      {/* Scrollable Content Container */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* GREETING */}
+        {/* ================================ GREETING TEXT ================================ */}
+        {/* Animated Greeting Text */}
         <Animated.View
           style={[
             {
@@ -601,10 +664,12 @@ const SpinTheWheel = () => {
           </Text>
         </Animated.View>
 
-        {/* CONDITIONAL RENDERING */}
+        {/* ================================ CONDITIONAL RENDERING ================================ */}
+        {/* Conditional Rendering Based on Whether a Date is Selected */}
         {!selectedDate ? (
           <>
-            {/* SEASON SELECTION DROPDOWN */}
+            {/* ================================ SEASON SELECTION DROPDOWN ================================ */}
+            {/* Season Selection Dropdown */}
             <View style={styles.dropdownContainer}>
               <TouchableOpacity
                 style={styles.dropdownHeader}
@@ -638,15 +703,18 @@ const SpinTheWheel = () => {
               )}
             </View>
 
-            {/* SUBTITLE */}
+            {/* ================================ SUBTITLE TEXT ================================ */}
+            {/* Subtitle Prompting User to Spin the Wheel */}
             <Text style={styles.subtitle}>
               Let’s spin to find the perfect date!
             </Text>
-            {/* WHEEL */}
+
+            {/* ================================ WHEEL CONTAINER ================================ */}
+            {/* Container for the Spinning Wheel */}
             <View style={styles.wheelContainer}>
-              {/* Pointer indicating the selected section */}
+              {/* Pointer indicating the selected section of the wheel */}
               <View style={styles.wheelPointer} />
-              {/* Animated wheel that rotates based on the `wheelRotation` value */}
+              {/* Animated Wheel that rotates based on the `wheelRotation` value */}
               <Animated.View
                 style={[
                   styles.wheel,
@@ -658,12 +726,12 @@ const SpinTheWheel = () => {
                       { scale: wheelScale },
                     ],
                   },
-                  isSpinning && styles.wheelShadow,
+                  isSpinning && styles.wheelShadow, // Apply shadow if spinning.
                 ]}
               >
-                {/* SVG element representing the wheel */}
+                {/* SVG Element Representing the Wheel */}
                 <Svg width={300} height={300}>
-                  {/* Render each section of the wheel */}
+                  {/* Render each section of the wheel if date options are available */}
                   {dateOptions.length > 0 ? (
                     renderWheelSections()
                   ) : (
@@ -683,7 +751,8 @@ const SpinTheWheel = () => {
               </Animated.View>
             </View>
 
-            {/* BUTTONS */}
+            {/* ================================ SPIN BUTTON ================================ */}
+            {/* Animated Spin Button */}
             <Animated.View
               style={{
                 opacity: spinButtonOpacity,
@@ -709,6 +778,8 @@ const SpinTheWheel = () => {
               </TouchableOpacity>
             </Animated.View>
 
+            {/* ================================ PREVIOUS DATE BUTTON ================================ */}
+            {/* Button to Retrieve Previous Date Idea */}
             <TouchableOpacity
               style={styles.backButton}
               onPress={retrieveSavedDateIdea}
@@ -718,9 +789,12 @@ const SpinTheWheel = () => {
           </>
         ) : (
           <>
-            {/* SUBTITLE */}
+            {/* ================================ RESULT SUBTITLE ================================ */}
+            {/* Subtitle Indicating the Result of the Spin */}
             <Text style={styles.subtitle}>You’ve spun:</Text>
-            {/* RESULT */}
+
+            {/* ================================ RESULT BOX ================================ */}
+            {/* Animated Result Box Displaying the Selected Date Idea */}
             <Animated.View
               style={{
                 opacity: resultOpacity,
@@ -732,10 +806,12 @@ const SpinTheWheel = () => {
             >
               <View style={styles.resultBox}>
                 <Text style={styles.resultText}>{selectedDate}</Text>
-                {/* You can dynamically set additional info based on the selectedDate */}
+                {/* Additional information based on the selectedDate can be added here */}
               </View>
             </Animated.View>
-            {/* LOTTIE ANIMATION */}
+
+            {/* ================================ LOTTIE ANIMATION ================================ */}
+            {/* Lottie Animation for Wheel Falling Effect */}
             <LottieView
               ref={lottieRef}
               source={wheelFallingAnimation} // Adjust the path based on your project structure
@@ -744,7 +820,9 @@ const SpinTheWheel = () => {
               style={styles.lottie}
               speed={0.8}
             />
-            {/* ENCOURAGEMENT */}
+
+            {/* ================================ ENCOURAGEMENT TEXT ================================ */}
+            {/* Animated "Enjoy your date!" Encouragement Text */}
             <Animated.View
               style={{
                 opacity: enjoyTextOpacity,
@@ -753,7 +831,9 @@ const SpinTheWheel = () => {
             >
               <Text style={styles.enjoyText}>Enjoy your date!</Text>
             </Animated.View>
-            {/* BUTTON */}
+
+            {/* ================================ BACK TO WHEEL BUTTON ================================ */}
+            {/* Button to Return to the Wheel for Another Spin */}
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => setSelectedDate(null)}
@@ -767,18 +847,24 @@ const SpinTheWheel = () => {
   );
 };
 
-// STYLES
+/* ================================ STYLES ================================ */
+// Define the styles for the SpinTheWheel component and its subcomponents.
 const styles = StyleSheet.create({
+  /* ================================ MAIN CONTAINER ================================ */
   mainContainer: {
     flex: 1,
-    position: "relative", // Ensure positioning context
+    position: "relative", // Ensure positioning context.
   },
-  // Added background color view
+
+  /* ================================ BACKGROUND COLOR VIEW ================================ */
+  // Background Color View covering the entire screen.
   backgroundColorView: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#faf4e4",
   },
-  // Adjusted styles for background Lottie animations
+
+  /* ================================ BACKGROUND LOTTIE ANIMATIONS ================================ */
+  // Styles for Falling Leaves Background Animation.
   fallingLeavesAnimation: {
     position: "absolute",
     width: Dimensions.get("window").width * 1.2,
@@ -786,9 +872,11 @@ const styles = StyleSheet.create({
     top: -Dimensions.get("window").height * 0.2,
     left: -Dimensions.get("window").width * 0.25,
     transform: [{ scale: 1.65 }],
-    opacity: 0.10, // Adjusted opacity
-    zIndex: 0, // Adjusted zIndex
+    opacity: 0.10, // Adjusted opacity for subtle effect.
+    zIndex: 0, // Positioned behind other elements.
   },
+
+  // Styles for Snow Falling Background Animation.
   snowFallingAnimation: {
     position: "absolute",
     width: Dimensions.get("window").width * 1.3,
@@ -796,9 +884,11 @@ const styles = StyleSheet.create({
     top: -Dimensions.get("window").height * 0.25,
     left: -Dimensions.get("window").width * 0.3,
     transform: [{ scale: 1.5 }],
-    opacity: 0.6, // Adjusted opacity
+    opacity: 0.6, // Increased opacity for visibility.
     zIndex: 0,
   },
+
+  // Styles for Flowers Falling Background Animation.
   flowersFallingAnimation: {
     position: "absolute",
     width: Dimensions.get("window").width * 1.2,
@@ -806,9 +896,11 @@ const styles = StyleSheet.create({
     top: -Dimensions.get("window").height * 0.18,
     left: -Dimensions.get("window").width * 0.22,
     transform: [{ scale: 2.3 }],
-    opacity: 0.20, // Adjusted opacity
+    opacity: 0.20, // Adjusted opacity for balance.
     zIndex: 0,
   },
+
+  // Styles for Summer Falling Background Animation.
   summerFallingAnimation: {
     position: "absolute",
     width: Dimensions.get("window").width * 1.25,
@@ -816,15 +908,21 @@ const styles = StyleSheet.create({
     top: -Dimensions.get("window").height * 0.2,
     left: -Dimensions.get("window").width * 0.24,
     transform: [{ scale: 1.6 }],
-    opacity: 0.25, // Adjusted opacity
+    opacity: 0.25, // Adjusted opacity for subtle effect.
     zIndex: 0,
   },
+
+  /* ================================ SCROLL CONTAINER ================================ */
+  // Container for scrollable content ensuring alignment and padding.
   scrollContainer: {
     alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 10,
-    zIndex: 1, // Ensure content is above background animations
+    zIndex: 1, // Ensure content is above background animations.
   },
+
+  /* ================================ GREETING TEXT ================================ */
+  // Styling for the greeting text displayed to the user.
   helloText: {
     fontSize: 36,
     fontWeight: "bold",
@@ -832,6 +930,9 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
   },
+
+  /* ================================ SUBTITLE TEXT ================================ */
+  // Styling for the subtitle text providing additional context.
   subtitle: {
     marginTop: 10,
     fontSize: 20,
@@ -840,6 +941,9 @@ const styles = StyleSheet.create({
     marginBottom: -5,
     fontWeight: "bold",
   },
+
+  /* ================================ DROPDOWN CONTAINER ================================ */
+  // Container styling for the season selection dropdown.
   dropdownContainer: {
     width: "80%",
     marginVertical: 20,
@@ -848,49 +952,73 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
     overflow: "hidden",
-    // Add shadow for iOS
+    // Add shadow for iOS.
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    // Add elevation for Android
+    // Add elevation for Android.
     elevation: 3,
   },
+
+  /* ================================ DROPDOWN HEADER ================================ */
+  // Header of the dropdown displaying the selected season or prompt.
   dropdownHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 15,
   },
+
+  /* ================================ DROPDOWN HEADER TEXT ================================ */
+  // Text styling for the dropdown header.
   dropdownHeaderText: {
     fontSize: 16,
     color: "#333",
   },
+
+  /* ================================ DROPDOWN OPTIONS ================================ */
+  // Container for the dropdown options when expanded.
   dropdownOptions: {
     backgroundColor: "#fff",
   },
+
+  /* ================================ DROPDOWN OPTION ================================ */
+  // Styling for each individual dropdown option.
   dropdownOption: {
     paddingVertical: 12,
     paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: "#eee",
   },
+
+  /* ================================ DROPDOWN OPTION TEXT ================================ */
+  // Text styling for the dropdown options.
   dropdownOptionText: {
     fontSize: 16,
     color: "#555",
   },
+
+  /* ================================ WHEEL CONTAINER ================================ */
+  // Container for the spinning wheel ensuring proper alignment and positioning.
   wheelContainer: {
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 30,
   },
+
+  /* ================================ WHEEL ================================ */
+  // Styling for the wheel component.
   wheel: {
     width: 300,
     height: 300,
     borderRadius: 150,
     overflow: "hidden",
   },
+
+  /* ================================ WHEEL POINTER ================================ */
+  // Pointer indicating the selected section of the wheel.
   wheelPointer: {
     position: "absolute",
     bottom: 275,
@@ -906,12 +1034,18 @@ const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderTopColor: "#FF0000",
   },
+
+  /* ================================ WHEEL SHADOW ================================ */
+  // Shadow styling for the wheel when it is spinning.
   wheelShadow: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
   },
+
+  /* ================================ SPIN BUTTON ================================ */
+  // Styling for the spin button that initiates the wheel spin.
   spinButton: {
     backgroundColor: "#FAD02E",
     borderRadius: 25,
@@ -920,14 +1054,23 @@ const styles = StyleSheet.create({
     marginTop: 20,
     elevation: 2,
   },
+
+  /* ================================ DISABLED BUTTON ================================ */
+  // Styling for the spin button when it is disabled.
   disabledButton: {
     opacity: 0.5,
   },
+
+  /* ================================ SPIN BUTTON TEXT ================================ */
+  // Text styling for the spin button.
   spinButtonText: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFF",
   },
+
+  /* ================================ RESULT BOX ================================ */
+  // Styling for the result box displaying the selected date idea.
   resultBox: {
     backgroundColor: "#F47B5E",
     padding: 20,
@@ -936,12 +1079,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 5,
   },
+
+  /* ================================ RESULT TEXT ================================ */
+  // Text styling for the selected date idea within the result box.
   resultText: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FFF",
     textAlign: "center",
   },
+
+  /* ================================ ENJOY TEXT ================================ */
+  // Styling for the encouragement text displayed after selecting a date.
   enjoyText: {
     fontSize: 30,
     fontWeight: "bold",
@@ -949,6 +1098,9 @@ const styles = StyleSheet.create({
     marginTop: 40,
     textAlign: "center",
   },
+
+  /* ================================ BACK BUTTON ================================ */
+  // Styling for the back button allowing users to return to the wheel.
   backButton: {
     marginTop: 20,
     paddingHorizontal: 20,
@@ -956,12 +1108,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#a59f90",
     borderRadius: 25,
   },
+
+  /* ================================ BACK BUTTON TEXT ================================ */
+  // Text styling for the back button.
   backButtonText: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#faf4e4",
   },
-  // Existing style for Lottie animation (wheelFalling.json)
+
+  /* ================================ LOTTIE ANIMATION ================================ */
+  // Styling for the Lottie animation (wheel falling effect).
   lottie: {
     position: "absolute",
     width: Dimensions.get("window").width * 1.2,
@@ -973,4 +1130,6 @@ const styles = StyleSheet.create({
   },
 });
 
+/* ================================ EXPORT ================================ */
+// Export the SpinTheWheel component as the default export.
 export default SpinTheWheel;

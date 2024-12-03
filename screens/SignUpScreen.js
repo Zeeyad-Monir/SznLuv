@@ -1,4 +1,6 @@
 // screens/SignUpScreen.js
+// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
+
 // STYLING DONE
 
 import React, { useState } from 'react';

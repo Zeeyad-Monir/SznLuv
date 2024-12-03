@@ -1,6 +1,14 @@
-// screens/FallDatesScreen.js
+// SCREENS/FALLDATESSCREEN.JS
+// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
 
+// =========================
+// IMPORTS SECTION
+// =========================
+
+// Importing necessary modules and hooks from React
 import React, { useState, useContext, useEffect, useRef } from 'react';
+
+// Importing React Native components and APIs
 import {
   View,
   Text,
@@ -12,25 +20,78 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
-import { AuthContext } from '../App';
-import NavBar from '../components/NavBar';
-import LottieView from 'lottie-react-native';
-import fallingLeaves from '../assets/fallingLeaves.json'; // Ensure this file exists
 
+// Importing Material Icons for icon usage in the UI
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// Importing Firestore functions for database interactions
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+// Importing Firebase authentication and database configurations
+import { auth, db } from '../firebaseConfig';
+
+// Importing AuthContext to access authenticated user information
+import { AuthContext } from '../App';
+
+// Importing a custom navigation bar component
+import NavBar from '../components/NavBar';
+
+// Importing LottieView for animations
+import LottieView from 'lottie-react-native';
+
+// Importing the falling leaves animation JSON file
+import fallingLeaves from '../assets/fallingLeaves.json';
+
+// =========================
+// COMPONENT DEFINITION
+// =========================
+
+/**
+ * FallDatesScreen Component
+ * 
+ * This component displays a list of fall date spots categorized under different activities.
+ * It includes animations for a visually appealing UI and allows users to favorite spots.
+ * Favorites are synchronized with Firestore for persistence.
+ */
 export default function FallDatesScreen({ navigation }) {
+  
+  // =========================
+  // CONTEXT USAGE
+  // =========================
+
+  // Accessing the authenticated user from AuthContext
   const { user } = useContext(AuthContext);
+
+  // =========================
+  // STATE VARIABLES
+  // =========================
+
+  // State to manage user's favorite spots
   const [favorites, setFavorites] = useState({});
 
+  // =========================
+  // DEVICE DIMENSIONS
+  // =========================
+
+  // Getting device screen dimensions for responsive design
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
 
-  // Animated values for title and icons
+  // =========================
+  // ANIMATED VALUES SECTION
+  // =========================
+
+  // Animated value for the opacity of the title
   const titleOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animated value for the vertical translation of the title
   const titleTranslateY = useRef(new Animated.Value(-50)).current;
 
+  // =========================
+  // DATA SECTION
+  // =========================
+
+  // Defining categories and their respective spots
   const categories = [
     {
       title: 'Pumpkin Patches',
@@ -77,12 +138,13 @@ export default function FallDatesScreen({ navigation }) {
     },
   ];
 
-  // Animated values for categories and cards
+  // Creating animated values for each category's entrance animation
   const categoryAnimations = categories.map(() => ({
     translateX: useRef(new Animated.Value(-50)).current,
     opacity: useRef(new Animated.Value(0)).current,
   }));
 
+  // Creating animated values for each card within the categories
   const cardAnimations = categories.map((category) =>
     category.spots.map(() => ({
       translateY: useRef(new Animated.Value(20)).current,
@@ -91,7 +153,16 @@ export default function FallDatesScreen({ navigation }) {
     }))
   );
 
-  // Fetch and synchronize user's favorites from Firestore on component mount
+  // =========================
+  // EFFECTS SECTION
+  // =========================
+
+  /**
+   * useEffect Hook: Fetch and synchronize user's favorites from Firestore on component mount
+   * 
+   * This effect runs once when the component mounts. It retrieves the user's favorites from Firestore
+   * and initializes the favorites state. It also triggers animations for the title, categories, and cards.
+   */
   useEffect(() => {
     if (user) {
       const fetchFavorites = async () => {
@@ -109,26 +180,25 @@ export default function FallDatesScreen({ navigation }) {
       fetchFavorites();
     }
 
-    // Animate the title and icons
+    // Animate the title
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 1,
-        duration: 1000, // Increased to match WinterDatesScreen.js
+        duration: 1000,
         useNativeDriver: true,
       }),
       Animated.timing(titleTranslateY, {
         toValue: 0,
-        duration: 1000, // Increased to match WinterDatesScreen.js
+        duration: 1000,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Initialize cumulative delay with title animation duration
+    // Animate categories and cards with consistent timing
     let currentDelay = 500;
 
     categories.forEach((category, categoryIndex) => {
-      // Set category animation delay after previous animations
       const categoryDelay = currentDelay + categoryIndex * 400;
 
       // Animate category slide-in and fade-in
@@ -175,18 +245,28 @@ export default function FallDatesScreen({ navigation }) {
           }),
         ]).start();
 
-        // Update currentDelay to ensure next category starts after this spot
-        const spotAnimationEnd = spotDelay + 1; // spotDelay + duration
+        const spotAnimationEnd = spotDelay + 1;
         if (spotAnimationEnd > currentDelay) {
           currentDelay = spotAnimationEnd;
         }
       });
 
-      // Add inter-category delay after the last spot of the current category
-      currentDelay += 1; // Adjust as needed
+      currentDelay += 1;
     });
   }, []);
 
+  // =========================
+  // FUNCTIONS SECTION
+  // =========================
+
+  /**
+   * toggleFavorite Function
+   * 
+   * This asynchronous function toggles the favorite status of a given spot.
+   * It updates the favorites state and synchronizes the change with Firestore.
+   * 
+   * @param {string} spotName - The name of the spot to toggle as favorite
+   */
   const toggleFavorite = async (spotName) => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to add favorites.');
@@ -215,6 +295,15 @@ export default function FallDatesScreen({ navigation }) {
     }
   };
 
+  /**
+   * handleSpotPress Function
+   * 
+   * This function handles the navigation when a user presses on a spot card.
+   * Depending on the spot's name, it navigates to the corresponding detail screen
+   * or shows a "Coming Soon" alert.
+   * 
+   * @param {Object} spot - The spot object containing name and address
+   */
   const handleSpotPress = (spot) => {
     if (spot.name === 'Aldor Family Farm') {
       navigation.navigate('AldorFamilyFarmScreen');
@@ -227,6 +316,10 @@ export default function FallDatesScreen({ navigation }) {
     }
   };
 
+  // =========================
+  // RENDERING SECTION
+  // =========================
+
   return (
     <View style={styles.container}>
       {/* Falling Leaves Animation */}
@@ -238,7 +331,7 @@ export default function FallDatesScreen({ navigation }) {
         speed={0.6}
       />
 
-      {/* Animated Title and Icons */}
+      {/* Animated Header */}
       <Animated.View
         style={[
           styles.headerContainer,
@@ -248,13 +341,13 @@ export default function FallDatesScreen({ navigation }) {
           },
         ]}
       >
-        {/* Integrated Navigation Bar */}
+        {/* Navigation Bar */}
         <NavBar />
-        {/* Screen Title */}
+        {/* Main Title */}
         <Text style={styles.mainTitle}>Fall Dates</Text>
       </Animated.View>
 
-      {/* Main Content */}
+      {/* Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
         {categories.map((category, index) => (
           <Animated.View
@@ -269,6 +362,7 @@ export default function FallDatesScreen({ navigation }) {
               },
             ]}
           >
+            {/* Category Title */}
             <Text style={styles.categoryTitle}>{category.title}</Text>
             {category.spots.map((spot, idx) => (
               <Animated.View
@@ -284,6 +378,7 @@ export default function FallDatesScreen({ navigation }) {
                   },
                 ]}
               >
+                {/* Spot Card */}
                 <TouchableOpacity
                   style={styles.dateSpotCardContent}
                   onPress={() => handleSpotPress(spot)}
@@ -312,7 +407,7 @@ export default function FallDatesScreen({ navigation }) {
                     <Text style={styles.addressText}>{spot.address}</Text>
                   </View>
 
-                  {/* Navigation Arrow Icon */}
+                  {/* Navigation Arrow */}
                   <TouchableOpacity
                     style={styles.cardArrowIcon}
                     onPress={() => handleSpotPress(spot)}
@@ -331,11 +426,18 @@ export default function FallDatesScreen({ navigation }) {
   );
 }
 
+// =========================
+// STYLESHEET SECTION
+// =========================
+
 const styles = StyleSheet.create({
+  // Main container covering the entire screen
   container: {
     flex: 1,
-    backgroundColor: '#F4A460', // Warm autumn background
+    backgroundColor: '#F4A460',
   },
+
+  // Styling for the falling leaves animation
   leavesAnimation: {
     position: 'absolute',
     width: Dimensions.get('window').width * 1.2,
@@ -345,30 +447,42 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.65 }],
     opacity: 0.6,
   },
+
+  // Header container
   headerContainer: {
-    // Optional: Adjust margin or padding if needed
+    // Empty as of now, can add styles if needed
   },
+
+  // Main title text style
   mainTitle: {
-    color: '#F5F5DC',
+    color: '#F5F5DC', // Beige color
     fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,
   },
+
+  // Content container within the ScrollView
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingTop: 20,
   },
+
+  // Category section style
   categorySection: {
     marginBottom: 40,
   },
+
+  // Category title text style
   categoryTitle: {
     color: '#F5F5DC',
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 15,
   },
+
+  // Date spot card style
   dateSpotCard: {
     backgroundColor: '#FFF8DC',
     borderRadius: 14,
@@ -382,27 +496,39 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+
+  // Content inside the date spot card
   dateSpotCardContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
+
+  // Favorite icon style
   cardHeartIcon: {
     marginRight: 16,
   },
+
+  // Text container inside the card
   cardTextContainer: {
     flex: 1,
   },
+
+  // Spot name text style
   dateSpotName: {
     color: '#000',
     fontSize: 22,
     fontWeight: 'bold',
   },
+
+  // Address text style
   addressText: {
     color: '#696969',
     fontSize: 16,
     marginTop: 4,
   },
+
+  // Navigation arrow icon style
   cardArrowIcon: {
     marginLeft: 16,
   },
