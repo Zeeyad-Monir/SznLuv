@@ -20,9 +20,9 @@ import SummerDatesScreen from './screens/SummerDatesScreen';
 import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
 import SpinTheWheel from './screens/SpinTheWheel';
 import Favourites from './screens/Favourites';
-import ProfileSettings from './screens/ProfileSettings'; // Import the new ProfileSettings
-import LaityPumpkinPatch from './screens/LaityPumpkinPatch'; // Import the new ProfileSettings
-import EagleAcresDairy from './screens/EagleAcresDairy'; // Import the new ProfileSettings
+import ProfileSettings from './screens/ProfileSettings'; 
+import LaityPumpkinPatch from './screens/LaityPumpkinPatch';
+import EagleAcresDairy from './screens/EagleAcresDairy'; 
 
 // Import SettingsProvider
 import { SettingsProvider } from './screens/SettingsContext';
