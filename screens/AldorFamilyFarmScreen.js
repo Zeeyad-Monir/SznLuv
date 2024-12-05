@@ -54,6 +54,7 @@ const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
 
+
 // ==================================================
 // MAIN COMPONENT: AldorFamilyFarmScreen
 // ==================================================
@@ -101,6 +102,9 @@ const AldorFamilyFarmScreen = () => {
     '#800080', // Purple
   ]; // Array of 8 basic colors
   const [selectedColor, setSelectedColor] = useState(colors[0]); // Default to the first color
+
+  // State for description expansion
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // ==================================================
   // FARM LOCATION COORDINATES
@@ -640,11 +644,34 @@ const AldorFamilyFarmScreen = () => {
                     },
                   ]}
                 >
-                  <Text style={styles.aboutText}>
+                  <Text
+                    style={styles.aboutText}
+                    numberOfLines={isDescriptionExpanded ? null : 5}
+                  >
                     Aldor Acres Family Farm offers an authentic farm experience with a
                     petting zoo, pumpkin patch, and more! Enjoy a day filled with
                     family-friendly activities in the heart of Langley.
+
+                    {'\n\n'}
+                    Take a scenic hayride through the beautiful countryside, explore the rustic barn filled with friendly animals, 
+                    or browse the farm stand for fresh local produce and handmade goods. Whether you’re visiting to pick the perfect 
+                    pumpkin, enjoy a picnic surrounded by nature, or simply soak in the peaceful farm atmosphere, Aldor Acres promises 
+                    a day of fun, laughter, and cherished memories in the heart of Langley.
+
+                    {'\n\n'}For those who love shopping local, the farm stand is a treasure trove of fresh produce, homemade jams, baked 
+                    goods, and artisanal products. It’s the perfect place to take home a little piece of the farm with you. Beyond the activities, 
+                    the farm exudes a warm and welcoming atmosphere that makes it feel like a home away from home.
                   </Text>
+
+                  {/* Read More / Read Less Button */}
+                  <TouchableOpacity
+                    style={styles.readMoreButton}
+                    onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  >
+                    <Text style={styles.readMoreButtonText}>
+                      {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+                    </Text>
+                  </TouchableOpacity>
                 </Animated.View>
 
                 {/* Current Location Information */}
@@ -804,6 +831,7 @@ const AldorFamilyFarmScreen = () => {
 
 // Export the component as the default export
 export default AldorFamilyFarmScreen;
+
 // ==================================================
 // STYLESHEET
 // ==================================================
@@ -978,13 +1006,25 @@ const styles = StyleSheet.create({
     shadowRadius: 2, // Shadow radius
     elevation: 2, // Elevation for Android shadow
     marginBottom: 15, // Margin below the container
+    overflow: 'hidden', // Ensure content is clipped
   },
   // About text style
   aboutText: {
     fontSize: 16, // Font size
     color: '#000', // Text color
-    textAlign: 'justify', // Justify text
+   // textAlign: 'justify', // Justify text
   },
+  // Read More / Read Less button style
+  readMoreButton: {
+    alignSelf: 'flex-end',
+    marginTop: 5,
+  },
+  readMoreButtonText: {
+    fontSize: 14,
+    color: '#1E90FF', // Dodger Blue
+    textDecorationLine: 'underline',
+  },
+
   // Current location box style
   currentLocationBox: {
     backgroundColor: '#FAF4E4', // Background color
