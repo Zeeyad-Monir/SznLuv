@@ -11,15 +11,15 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
   TouchableOpacity,
   Image,
   Switch,
-  FlatList,
+  SectionList,
+  FlatList, // Added FlatList here
   Alert,
   Animated,
   Easing,
-  TextInput, // Added TextInput for review input
+  TextInput,
 } from 'react-native';
 
 // Import location services from Expo
@@ -47,6 +47,7 @@ import {
 // ==================================================
 // CONSTANTS AND API KEYS
 // ==================================================
+
 // API key for OpenWeatherMap to fetch weather data
 const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
@@ -420,6 +421,18 @@ const AldorFamilyFarmScreen = () => {
   // RENDER LOGIC
   // ==================================================
 
+  // Prepare sections for SectionList
+  const sections = [
+    {
+      title: 'Main',
+      data: ['main'], // Dummy data to render Main content
+    },
+    {
+      title: 'Reviews',
+      data: ['review'], // Dummy data to render Review section
+    },
+  ];
+
   // Variable to hold the content to be displayed based on the state
   let content;
 
@@ -457,281 +470,298 @@ const AldorFamilyFarmScreen = () => {
       {/* Navigation Bar */}
       <NavBar />
 
-      {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Weather Information */}
-        {isLocationEnabled && weatherData ? (
-          // If location is enabled and weather data is available, display the weather container
-          <Animated.View
-            style={[
-              styles.weatherContainer,
-              {
-                opacity: weatherOpacity, // Bind opacity to animated value
-                transform: [{ translateX: weatherTranslateX }], // Bind horizontal translation to animated value
-              },
-            ]}
-          >
-            {/* Unit Toggle Switch */}
-            <View style={styles.unitToggle}>
-              <Text style={styles.unitText}>°C</Text>
-              <Switch
-                value={!isMetric} // Switch is on when units are imperial
-                onValueChange={() => setIsMetric((prev) => !prev)} // Toggle the unit state
-              />
-              <Text style={styles.unitText}>°F</Text>
-            </View>
-
-            {/* Location Name */}
-            <View style={styles.locationNameContainer}>
-              <Text style={styles.locationName}>
-                {weatherData.city.name}, {weatherData.city.country}
-              </Text>
-            </View>
-
-            {/* Daily Weather Forecast */}
-            <View style={styles.dailyContainer}>
-              <FlatList
-                data={dailyData.slice(0, 5)} // Display the first 5 days of data
-                horizontal // Render items horizontally
-                showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
-                keyExtractor={(item, index) => index.toString()} // Key extractor for list items
-                renderItem={({ item, index }) => (
-                  // Render each day in the forecast
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedDayIndex(selectedDayIndex === index ? null : index)
-                    } // Toggle detailed view on press
+      {/* Main Content with SectionList */}
+      <SectionList
+        sections={sections}
+        keyExtractor={(item, index) => item + index}
+        renderSectionHeader={({ section: { title } }) =>
+          title === 'Main' ? null : null // No header titles needed
+        }
+        renderItem={({ item, section }) => {
+          if (section.title === 'Main') {
+            // Render Main content
+            return (
+              <>
+                {/* Weather Information */}
+                {isLocationEnabled && weatherData ? (
+                  <Animated.View
+                    style={[
+                      styles.weatherContainer,
+                      {
+                        opacity: weatherOpacity,
+                        transform: [{ translateX: weatherTranslateX }],
+                      },
+                    ]}
                   >
-                    <View style={styles.dailyItem}>
-                      <View style={styles.dailyHeader}>
-                        {/* Day of the Week */}
-                        <Text style={styles.dailyDay}>
-                          {new Date(item.dt * 1000).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                          })}
-                        </Text>
+                    {/* Unit Toggle Switch */}
+                    <View style={styles.unitToggle}>
+                      <Text style={styles.unitText}>°C</Text>
+                      <Switch
+                        value={!isMetric}
+                        onValueChange={() => setIsMetric((prev) => !prev)}
+                      />
+                      <Text style={styles.unitText}>°F</Text>
+                    </View>
 
-                        {/* Weather Icon */}
-                        <Image
-                          source={{
-                            uri: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`,
-                          }}
-                          style={styles.dailyIcon}
-                        />
+                    {/* Location Name */}
+                    <View style={styles.locationNameContainer}>
+                      <Text style={styles.locationName}>
+                        {weatherData.city.name}, {weatherData.city.country}
+                      </Text>
+                    </View>
 
-                        {/* Detailed View or Temperature */}
-                        {selectedDayIndex === index ? (
-                          // If the day is selected, show detailed weather information
-                          <View style={styles.detailContainer}>
-                            <Text style={styles.detailText}>
-                              Wind: {item.wind.speed} m/s
-                            </Text>
-                            <Text style={styles.detailText}>
-                              Humidity: {item.main.humidity}%
-                            </Text>
-                            <Text style={styles.detailText}>
-                              {item.weather[0].description}
-                            </Text>
-                          </View>
-                        ) : (
-                          // If not selected, show the temperature
-                          <Text style={styles.dailyTemp}>
-                            {convertTemp(item.main.temp)}
-                            {getUnit()}
-                          </Text>
+                    {/* Daily Weather Forecast */}
+                    <View style={styles.dailyContainer}>
+                      <FlatList
+                        data={dailyData.slice(0, 5)}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item, index) => index.toString()}
+                        renderItem={({ item, index }) => (
+                          <TouchableOpacity
+                            onPress={() =>
+                              setSelectedDayIndex(selectedDayIndex === index ? null : index)
+                            }
+                          >
+                            <View style={styles.dailyItem}>
+                              <View style={styles.dailyHeader}>
+                                {/* Day of the Week */}
+                                <Text style={styles.dailyDay}>
+                                  {new Date(item.dt * 1000).toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                  })}
+                                </Text>
+
+                                {/* Weather Icon */}
+                                <Image
+                                  source={{
+                                    uri: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`,
+                                  }}
+                                  style={styles.dailyIcon}
+                                />
+
+                                {/* Detailed View or Temperature */}
+                                {selectedDayIndex === index ? (
+                                  <View style={styles.detailContainer}>
+                                    <Text style={styles.detailText}>
+                                      Wind: {item.wind.speed} m/s
+                                    </Text>
+                                    <Text style={styles.detailText}>
+                                      Humidity: {item.main.humidity}%
+                                    </Text>
+                                    <Text style={styles.detailText}>
+                                      {item.weather[0].description}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <Text style={styles.dailyTemp}>
+                                    {convertTemp(item.main.temp)}
+                                    {getUnit()}
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                          </TouchableOpacity>
                         )}
+                      />
+                    </View>
+                  </Animated.View>
+                ) : !isLocationEnabled ? (
+                  <View style={styles.weatherDisabledContainer}>
+                    <Text style={styles.weatherDisabledText}>
+                      Weather information is unavailable because location services are disabled.
+                    </Text>
+                  </View>
+                ) : weatherError ? (
+                  <Text style={styles.errorText}>{weatherError}</Text>
+                ) : (
+                  <ActivityIndicator size="large" color="#0000ff" />
+                )}
+
+                {/* Farm Information */}
+                <Animated.View
+                  style={[
+                    styles.farmInfoContainer,
+                    {
+                      opacity: farmInfoOpacity,
+                      transform: [{ translateX: farmInfoTranslateX }],
+                    },
+                  ]}
+                >
+                  {/* Farm Title */}
+                  <Text style={styles.title}>Aldor Acres Family Farm</Text>
+
+                  {/* Farm Address */}
+                  <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
+
+                  {/* Activities Offered at the Farm */}
+                  <View style={styles.activityBox}>
+                    <Text style={styles.activityText}>
+                      Petting zoo, pumpkins, and more!
+                    </Text>
+                  </View>
+                </Animated.View>
+
+                {/* Image of the Farm */}
+                <Animated.View
+                  style={[
+                    styles.imagePlaceholder,
+                    {
+                      opacity: imageOpacity,
+                      transform: [{ scale: imageScale }],
+                    },
+                  ]}
+                >
+                  <Image
+                    source={require('../assets/FamilyFarm.jpg')}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                </Animated.View>
+
+                {/* About the Farm */}
+                <Animated.View
+                  style={[
+                    styles.aboutContainer,
+                    {
+                      opacity: descriptionOpacity,
+                      transform: [{ translateY: descriptionTranslateY }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.aboutText}>
+                    Aldor Acres Family Farm offers an authentic farm experience with a
+                    petting zoo, pumpkin patch, and more! Enjoy a day filled with
+                    family-friendly activities in the heart of Langley.
+                  </Text>
+                </Animated.View>
+
+                {/* Current Location Information */}
+                <View style={styles.currentLocationBox}>{content}</View>
+
+                {/* Map and Directions */}
+                <Animated.View
+                  style={[
+                    styles.mapContainer,
+                    {
+                      opacity: mapOpacity,
+                      transform: [{ translateX: mapTranslateX }],
+                    },
+                  ]}
+                >
+                  {/* Map Header */}
+                  <Text style={styles.mapHeader}>How to get there?</Text>
+
+                  {/* Map Wrapper */}
+                  <View style={styles.mapWrapper}>
+                    <MapView
+                      style={styles.map}
+                      initialRegion={{
+                        latitude: farmLatitude,
+                        longitude: farmLongitude,
+                        latitudeDelta: 0.25,
+                        longitudeDelta: 0.25,
+                      }}
+                      showsUserLocation={isLocationEnabled}
+                    >
+                      {/* Marker for the Farm Location */}
+                      <Marker
+                        coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
+                        title="Aldor Acres Family Farm"
+                        description="Farm location"
+                      />
+
+                      {/* Directions from User Location to Farm */}
+                      {isLocationEnabled && location && (
+                        <MapViewDirections
+                          origin={{
+                            latitude: location.coords.latitude,
+                            longitude: location.coords.longitude,
+                          }}
+                          destination={{ latitude: farmLatitude, longitude: farmLongitude }}
+                          apikey={GOOGLE_MAPS_APIKEY}
+                          strokeWidth={4}
+                          strokeColor="hotpink"
+                        />
+                      )}
+                    </MapView>
+
+                    {/* Overlay if Location Services are Disabled */}
+                    {!isLocationEnabled && (
+                      <View style={styles.mapDisabledOverlay}>
+                        <Text style={styles.mapDisabledText}>
+                          Location services are disabled. Enable them to see your route on the
+                          map.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </Animated.View>
+              </>
+            );
+          } else if (section.title === 'Reviews') {
+            // Render Review section
+            return (
+              <View style={styles.reviewSectionContainer}>
+                {/* Review Input Area */}
+                <View style={styles.reviewContainer}>
+                  <Text style={styles.reviewHeader}>Reviews of this Date!</Text>
+
+                  {user ? (
+                    <View style={styles.reviewInputArea}>
+                      <TextInput
+                        style={styles.reviewInput}
+                        placeholder="Write your review here..."
+                        value={comment}
+                        onChangeText={setComment}
+                        multiline
+                      />
+                      <TouchableOpacity style={styles.submitButton} onPress={submitReview}>
+                        <Text style={styles.submitButtonText}>Submit</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <Text style={styles.loginPrompt}>Please log in to submit a review.</Text>
+                  )}
+                </View>
+
+                {/* Separator Line */}
+                <View style={styles.separator} />
+
+                {/* Reviews List */}
+                {reviews.length > 0 ? (
+                  reviews.map((item) => (
+                    <View key={item.id} style={styles.reviewItem}>
+                      <Image source={{ uri: item.profilePic }} style={styles.profilePic} />
+                      <View style={styles.reviewContent}>
+                        <Text style={styles.reviewUsername}>{item.username}</Text>
+                        <Text style={styles.reviewEmail}>{item.email}</Text>
+                        <Text style={styles.reviewText}>{item.comment}</Text>
+                        <Text style={styles.reviewTimestamp}>
+                          {item.timestamp.toDate
+                            ? item.timestamp.toDate().toLocaleString()
+                            : new Date(item.timestamp).toLocaleString()}
+                        </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
                 )}
-              />
-            </View>
-          </Animated.View>
-        ) : !isLocationEnabled ? (
-          // If location services are disabled, display a message
-          <View style={styles.weatherDisabledContainer}>
-            <Text style={styles.weatherDisabledText}>
-              Weather information is unavailable because location services are disabled.
-            </Text>
-          </View>
-        ) : weatherError ? (
-          // If there is a weather error, display it
-          <Text style={styles.errorText}>{weatherError}</Text>
-        ) : (
-          // If none of the above, display a loading spinner
-          <ActivityIndicator size="large" color="#0000ff" />
-        )}
-
-        {/* Farm Information */}
-        <Animated.View
-          style={[
-            styles.farmInfoContainer,
-            {
-              opacity: farmInfoOpacity, // Bind opacity to animated value
-              transform: [{ translateX: farmInfoTranslateX }], // Bind horizontal translation to animated value
-            },
-          ]}
-        >
-          {/* Farm Title */}
-          <Text style={styles.title}>Aldor Acres Family Farm</Text>
-
-          {/* Farm Address */}
-          <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
-
-          {/* Activities Offered at the Farm */}
-          <View style={styles.activityBox}>
-            <Text style={styles.activityText}>Petting zoo, pumpkins, and more!</Text>
-          </View>
-        </Animated.View>
-
-        {/* Image of the Farm */}
-        <Animated.View
-          style={[
-            styles.imagePlaceholder,
-            {
-              opacity: imageOpacity, // Bind opacity to animated value
-              transform: [{ scale: imageScale }], // Bind scale to animated value
-            },
-          ]}
-        >
-          <Image
-            source={require('../assets/FamilyFarm.jpg')} // Image source (local asset)
-            style={styles.image}
-            resizeMode="cover" // Resize mode to cover the container
-          />
-        </Animated.View>
-
-        {/* About the Farm */}
-        <Animated.View
-          style={[
-            styles.aboutContainer,
-            {
-              opacity: descriptionOpacity, // Bind opacity to animated value
-              transform: [{ translateY: descriptionTranslateY }], // Bind vertical translation to animated value
-            },
-          ]}
-        >
-          <Text style={styles.aboutText}>
-            Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin
-            patch, and more! Enjoy a day filled with family-friendly activities in the heart of
-            Langley.
-          </Text>
-        </Animated.View>
-
-        {/* Current Location Information */}
-        <View style={styles.currentLocationBox}>{content}</View>
-
-        {/* Map and Directions */}
-        <Animated.View
-          style={[
-            styles.mapContainer,
-            {
-              opacity: mapOpacity, // Bind opacity to animated value
-              transform: [{ translateX: mapTranslateX }], // Bind horizontal translation to animated value
-            },
-          ]}
-        >
-          {/* Map Header */}
-          <Text style={styles.mapHeader}>How to get there?</Text>
-
-          {/* Map Wrapper */}
-          <View style={styles.mapWrapper}>
-            <MapView
-              style={styles.map}
-              initialRegion={{
-                latitude: farmLatitude, // Initial latitude
-                longitude: farmLongitude, // Initial longitude
-                latitudeDelta: 0.25, // Latitude zoom level
-                longitudeDelta: 0.25, // Longitude zoom level
-              }}
-              showsUserLocation={isLocationEnabled} // Show user location if enabled
-            >
-              {/* Marker for the Farm Location */}
-              <Marker
-                coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
-                title="Aldor Acres Family Farm" // Marker title
-                description="Farm location" // Marker description
-              />
-
-              {/* Directions from User Location to Farm */}
-              {isLocationEnabled && location && (
-                <MapViewDirections
-                  origin={{
-                    latitude: location.coords.latitude, // User's latitude
-                    longitude: location.coords.longitude, // User's longitude
-                  }}
-                  destination={{ latitude: farmLatitude, longitude: farmLongitude }} // Destination coordinates
-                  apikey={GOOGLE_MAPS_APIKEY} // Google Maps API key
-                  strokeWidth={4} // Width of the direction line
-                  strokeColor="hotpink" // Color of the direction line
-                />
-              )}
-            </MapView>
-
-            {/* Overlay if Location Services are Disabled */}
-            {!isLocationEnabled && (
-              <View style={styles.mapDisabledOverlay}>
-                <Text style={styles.mapDisabledText}>
-                  Location services are disabled. Enable them to see your route on the map.
-                </Text>
               </View>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* Review Section */}
-        <View style={styles.reviewContainer}>
-          <Text style={styles.reviewHeader}>Reviews of this Date!</Text>
-
-          {/* Review Input Area */}
-          {user ? (
-            <View style={styles.reviewInputArea}>
-              <TextInput
-                style={styles.reviewInput}
-                placeholder="Write your review here..."
-                value={comment}
-                onChangeText={setComment}
-                multiline
-              />
-              <TouchableOpacity style={styles.submitButton} onPress={submitReview}>
-                <Text style={styles.submitButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <Text style={styles.loginPrompt}>Please log in to submit a review.</Text>
-          )}
-
-          {/* Review Feed */}
-          <FlatList
-            data={reviews}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.reviewItem}>
-                <Image
-                  source={{ uri: item.profilePic }}
-                  style={styles.profilePic}
-                />
-                <View style={styles.reviewContent}>
-                  <Text style={styles.reviewUsername}>{item.username}</Text>
-                  <Text style={styles.reviewEmail}>{item.email}</Text>
-                  <Text style={styles.reviewText}>{item.comment}</Text>
-                  <Text style={styles.reviewTimestamp}>
-                    {item.timestamp.toDate
-                      ? item.timestamp.toDate().toLocaleString()
-                      : new Date(item.timestamp).toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
-        </View>
-      </ScrollView>
+            );
+          }
+        }}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.scrollContent}
+      />
     </View>
   );
 };
 
 // Export the component as the default export
 export default AldorFamilyFarmScreen;
+
 
 // ==================================================
 // STYLESHEET
@@ -1018,9 +1048,9 @@ const styles = StyleSheet.create({
   // REVIEW SECTION STYLES
   // ==================================================
 
-  // Review Section Styles
-  reviewContainer: {
-    backgroundColor: '#FAF4E4',
+  // Review Section Container with Light Beige Background
+  reviewSectionContainer: {
+    backgroundColor: '#FAF4E4', // Light beige background
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
@@ -1030,6 +1060,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    marginBottom: 15,
   },
   reviewHeader: {
     fontSize: 18,
@@ -1070,9 +1101,11 @@ const styles = StyleSheet.create({
   },
   reviewItem: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 15,
+    borderRadius: 10, // Consistent rounded corners
+    padding: 8, // Adjusted padding for a more compact look
+    marginBottom: 10, // Spacing between reviews
+    width: '100%', // Full width within the container
+    alignSelf: 'center', // Centers the review item
     flexDirection: 'row',
     alignItems: 'flex-start',
     shadowColor: '#000',
@@ -1082,32 +1115,46 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   profilePic: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
+    width: 40, // Reduced from 50 to 40
+    height: 40, // Reduced from 50 to 40
+    borderRadius: 20, // Reduced from 25 to 20
+    marginRight: 8, // Reduced from 10 to 8
   },
   reviewContent: {
     flex: 1,
   },
   reviewUsername: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16 to 14
     fontWeight: 'bold',
     color: '#000',
   },
   reviewEmail: {
-    fontSize: 14,
+    fontSize: 12, // Reduced from 14 to 12
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 3, // Reduced from 5 to 3
   },
   reviewText: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16 to 14
     color: '#333',
-    marginBottom: 5,
+    marginBottom: 3, // Reduced from 5 to 3
   },
   reviewTimestamp: {
-    fontSize: 12,
+    fontSize: 10, // Reduced from 12 to 10
     color: '#999',
     textAlign: 'right',
+  },
+  // Separator Line between Input and Reviews
+  separator: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 10,
+    marginBottom:20,
+  },
+  // No Reviews Text Style
+  noReviewsText: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 10,
   },
 });
