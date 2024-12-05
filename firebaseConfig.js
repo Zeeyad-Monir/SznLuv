@@ -1,14 +1,22 @@
 // firebaseConfig.js
 
+// Import Firebase modules
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage'; // Import Firebase Storage
 
+// Your Firebase configuration object
 const firebaseConfig = {
   apiKey: "AIzaSyC5v8gFGRT4Fcuts0oGAxr6_lwShNhT71g",
   authDomain: "sznluv.firebaseapp.com",
   projectId: "sznluv",
-  storageBucket: "sznluv.firebasestorage.app",
+  storageBucket: "sznluv.appspot.com", // Ensure this is correctly set
   messagingSenderId: "835641463462",
   appId: "1:835641463462:web:81e6f18af7a605cabfda67",
   measurementId: "G-98B5GBKKB7"
@@ -20,6 +28,7 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app); // Initialize and export Firebase Storage
 
 // Authentication functions
 export const login = (email, password) => {

@@ -12,10 +12,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Image,
   Switch,
+  Image,
   SectionList,
-  FlatList, // Added FlatList here
+  FlatList,
   Alert,
   Animated,
   Easing,
@@ -88,6 +88,19 @@ const AldorFamilyFarmScreen = () => {
   const [reviews, setReviews] = useState([]); // Array to hold reviews fetched from Firestore
   const [comment, setComment] = useState(''); // User's comment input
   const [user, setUser] = useState(null); // Current authenticated user
+
+  // State variables for color selection
+  const colors = [
+    '#FF0000', // Red
+    '#00FF00', // Lime
+    '#0000FF', // Blue
+    '#FFFF00', // Yellow
+    '#FF00FF', // Magenta
+    '#00FFFF', // Cyan
+    '#FFA500', // Orange
+    '#800080', // Purple
+  ]; // Array of 8 basic colors
+  const [selectedColor, setSelectedColor] = useState(colors[0]); // Default to the first color
 
   // ==================================================
   // FARM LOCATION COORDINATES
@@ -400,10 +413,7 @@ const AldorFamilyFarmScreen = () => {
     }
     const newReview = {
       username: user.displayName || user.email.split('@')[0], // Use displayName or derive from email
-      email: user.email,
-      profilePic:
-        user.photoURL ||
-        'https://example.com/default-profile-pic.png', // Replace with default image URL
+      profileColor: selectedColor, // Include selected color
       comment,
       timestamp: new Date(),
       placeID: 'aldor_farm',
@@ -411,6 +421,7 @@ const AldorFamilyFarmScreen = () => {
     try {
       await addDoc(collection(db, 'reviews'), newReview);
       setComment('');
+      setSelectedColor(colors[0]); // Reset to default color
       Alert.alert('Success', 'Review submitted!');
     } catch (error) {
       Alert.alert('Error', 'Could not submit the review.');
@@ -716,6 +727,27 @@ const AldorFamilyFarmScreen = () => {
                         onChangeText={setComment}
                         multiline
                       />
+
+                      {/* Color Picker */}
+                      <View style={styles.colorPickerContainer}>
+                        <FlatList
+                          data={colors}
+                          horizontal
+                          keyExtractor={(item) => item}
+                          renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => setSelectedColor(item)}>
+                              <View
+                                style={[
+                                  styles.colorCircle,
+                                  { backgroundColor: item },
+                                  selectedColor === item && styles.selectedColorCircle,
+                                ]}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        />
+                      </View>
+
                       <TouchableOpacity style={styles.submitButton} onPress={submitReview}>
                         <Text style={styles.submitButtonText}>Submit</Text>
                       </TouchableOpacity>
@@ -732,10 +764,21 @@ const AldorFamilyFarmScreen = () => {
                 {reviews.length > 0 ? (
                   reviews.map((item) => (
                     <View key={item.id} style={styles.reviewItem}>
-                      <Image source={{ uri: item.profilePic }} style={styles.profilePic} />
+                      {/* Profile Color Circle */}
+                      <View
+                        style={[
+                          styles.profilePic,
+                          { backgroundColor: item.profileColor || '#ccc' },
+                        ]}
+                      >
+                        <Text style={styles.profilePicText}>
+                          {item.username.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
                       <View style={styles.reviewContent}>
                         <Text style={styles.reviewUsername}>{item.username}</Text>
-                        <Text style={styles.reviewEmail}>{item.email}</Text>
+                        {/* Removed the email display here */}
+                        {/* <Text style={styles.reviewEmail}>{item.email}</Text> */}
                         <Text style={styles.reviewText}>{item.comment}</Text>
                         <Text style={styles.reviewTimestamp}>
                           {item.timestamp.toDate
@@ -761,8 +804,6 @@ const AldorFamilyFarmScreen = () => {
 
 // Export the component as the default export
 export default AldorFamilyFarmScreen;
-
-
 // ==================================================
 // STYLESHEET
 // ==================================================
@@ -1054,7 +1095,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
-    marginTop: 10,
+    marginTop: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1110,15 +1151,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 1,
-  },
-  profilePic: {
-    width: 40, // Reduced from 50 to 40
-    height: 40, // Reduced from 50 to 40
-    borderRadius: 20, // Reduced from 25 to 20
-    marginRight: 8, // Reduced from 10 to 8
   },
   reviewContent: {
     flex: 1,
@@ -1126,6 +1161,8 @@ const styles = StyleSheet.create({
   reviewUsername: {
     fontSize: 14, // Reduced from 16 to 14
     fontWeight: 'bold',
+    marginTop: 6,
+    marginBottom: 10,
     color: '#000',
   },
   reviewEmail: {
@@ -1142,6 +1179,7 @@ const styles = StyleSheet.create({
     fontSize: 10, // Reduced from 12 to 10
     color: '#999',
     textAlign: 'right',
+    marginTop: 8,
   },
   // Separator Line between Input and Reviews
   separator: {
@@ -1156,5 +1194,42 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     marginTop: 10,
+  },
+   // Color Picker Container
+   colorPickerContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  // Color Circle
+  colorCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginTop: 8,
+  },
+  // Selected Color Circle
+  selectedColorCircle: {
+    borderWidth: 2,
+    borderColor: '#000',
+  },
+  // Profile Picture Text (Initials)
+  profilePicText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  // Update profilePic style to center content
+  profilePic: {
+    width: 40, // Width of the circle
+    height: 40, // Height of the circle
+    borderRadius: 20, // Makes it a circle
+    marginRight: 8, // Spacing to the right
+    alignItems: 'center', // Center content horizontally
+    justifyContent: 'center', // Center content vertically
   },
 });
