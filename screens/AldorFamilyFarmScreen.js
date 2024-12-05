@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
     width: '90%', // Width relative to the parent
     shadowColor: '#000', // Shadow color
     shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
+    shadowOpacity: 0.2, // Shadow opacity
     shadowRadius: 2, // Shadow radius
     elevation: 2, // Elevation for Android shadow
   },
@@ -1103,14 +1103,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10, // Consistent rounded corners
     padding: 8, // Adjusted padding for a more compact look
-    marginBottom: 10, // Spacing between reviews
+    marginBottom: 12, // Spacing between reviews
     width: '100%', // Full width within the container
     alignSelf: 'center', // Centers the review item
     flexDirection: 'row',
     alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 1,
   },
