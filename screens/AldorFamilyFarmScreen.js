@@ -2,10 +2,7 @@
 // IMPORTS
 // ==================================================
 
-// Import core React library and hooks
 import React, { useState, useEffect, useContext, useRef } from 'react';
-
-// Import components and APIs from React Native
 import {
   View,
   Text,
@@ -22,6 +19,8 @@ import {
   TextInput,
 } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for dropdown icons
+
 // Import location services from Expo
 import * as Location from 'expo-location';
 
@@ -30,8 +29,8 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
-import NavBar from '../components/NavBar'; // Custom navigation bar
-import { SettingsContext } from './SettingsContext'; // Context for app settings
+import NavBar from '../components/NavBar';
+import { SettingsContext } from './SettingsContext';
 
 // Import Firebase authentication and Firestore
 import { auth, db } from '../firebaseConfig';
@@ -42,18 +41,34 @@ import {
   where,
   orderBy,
   onSnapshot,
+  getDoc,
+  runTransaction,
+  doc,
 } from 'firebase/firestore';
 
 // ==================================================
 // CONSTANTS AND API KEYS
 // ==================================================
 
-// API key for OpenWeatherMap to fetch weather data
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
+const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316';
+const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
 
-// Google Maps API key for accessing directions and geolocation services
-const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
+// Sorting and filtering options arrays
+const sortOptions = [
+  { label: 'Most Recent', value: 'mostRecent' },
+  { label: 'Most Popular', value: 'mostPopular' },
+  { label: 'Highest Rated', value: 'highestRated' },
+  { label: 'Lowest Rated', value: 'lowestRated' },
+];
 
+const filterOptions = [
+  { label: 'All Reviews', value: '0' },
+  { label: '5 Stars', value: '5' },
+  { label: '4 Stars', value: '4' },
+  { label: '3 Stars', value: '3' },
+  { label: '2 Stars', value: '2' },
+  { label: '1 Star', value: '1' },
+];
 
 // ==================================================
 // MAIN COMPONENT: AldorFamilyFarmScreen
@@ -64,83 +79,70 @@ const AldorFamilyFarmScreen = () => {
   // CONTEXT AND STATE HOOKS
   // ==================================================
 
-  // Access 'isLocationEnabled' from SettingsContext to determine if location services are enabled
   const { isLocationEnabled } = useContext(SettingsContext);
 
-  // State variables for user location and potential error messages
-  const [location, setLocation] = useState(null); // User's current location
-  const [errorMsg, setErrorMsg] = useState(null); // Error message for location fetching
-  const [loading, setLoading] = useState(true); // Loading state for location data
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // State variables for weather data and errors
-  const [weatherData, setWeatherData] = useState(null); // Weather data fetched from API
-  const [weatherError, setWeatherError] = useState(null); // Error message for weather fetching
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherError, setWeatherError] = useState(null);
 
-  // State for unit toggle (Metric or Imperial units)
-  const [isMetric, setIsMetric] = useState(true); // True for metric units, false for imperial
+  const [isMetric, setIsMetric] = useState(true);
 
-  // State for selected day in the weather forecast (used for displaying detailed info)
-  const [selectedDayIndex, setSelectedDayIndex] = useState(null); // Index of the selected day
+  const [selectedDayIndex, setSelectedDayIndex] = useState(null);
+  const [dailyData, setDailyData] = useState([]);
 
-  // State for processed daily weather data
-  const [dailyData, setDailyData] = useState([]); // Array of daily weather data objects
+  const [reviews, setReviews] = useState([]);
+  const [comment, setComment] = useState('');
+  const [user, setUser] = useState(null);
 
-  // State variables for reviews
-  const [reviews, setReviews] = useState([]); // Array to hold reviews fetched from Firestore
-  const [comment, setComment] = useState(''); // User's comment input
-  const [user, setUser] = useState(null); // Current authenticated user
-
-  // State variables for color selection
   const colors = [
-    '#FF0000', // Red
-    '#00FF00', // Lime
-    '#0000FF', // Blue
-    '#FFFF00', // Yellow
-    '#FF00FF', // Magenta
-    '#00FFFF', // Cyan
-    '#FFA500', // Orange
-    '#800080', // Purple
-  ]; // Array of 8 basic colors
-  const [selectedColor, setSelectedColor] = useState(colors[0]); // Default to the first color
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
+    '#FF00FF', '#00FFFF', '#FFA500', '#800080',
+  ];
+  const [selectedColor, setSelectedColor] = useState(colors[0]);
 
-  // State for description expansion
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [starRating, setStarRating] = useState(0);
+
+  // ADDING STATE FOR SORTING AND FILTERING
+  const [sortOption, setSortOption] = useState('mostRecent'); // Default sorting
+  const [minStarRating, setMinStarRating] = useState(0); // Default filter: Show all
+
+  // Dropdown states
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   // ==================================================
   // FARM LOCATION COORDINATES
   // ==================================================
 
-  // Latitude and longitude of Aldor Acres Family Farm
-  const farmLatitude = 49.1706; // Farm's latitude coordinate
-  const farmLongitude = -122.6076; // Farm's longitude coordinate
+  const farmLatitude = 49.1706;
+  const farmLongitude = -122.6076;
 
   // ==================================================
   // ANIMATION REFERENCES
   // ==================================================
 
-  // Create animated values for various UI components to control their opacity and position
-  const weatherOpacity = useRef(new Animated.Value(0)).current; // Opacity for weather container
-  const weatherTranslateX = useRef(new Animated.Value(50)).current; // Horizontal translation for weather container
+  const weatherOpacity = useRef(new Animated.Value(0)).current;
+  const weatherTranslateX = useRef(new Animated.Value(50)).current;
 
-  const farmInfoOpacity = useRef(new Animated.Value(0)).current; // Opacity for farm info container
-  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current; // Horizontal translation for farm info container
+  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
+  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current;
 
-  const imageOpacity = useRef(new Animated.Value(0)).current; // Opacity for farm image
-  const imageScale = useRef(new Animated.Value(0.95)).current; // Scale for farm image
+  const imageOpacity = useRef(new Animated.Value(0)).current;
+  const imageScale = useRef(new Animated.Value(0.95)).current;
 
-  const mapOpacity = useRef(new Animated.Value(0)).current; // Opacity for map container
-  const mapTranslateX = useRef(new Animated.Value(50)).current; // Horizontal translation for map container
+  const mapOpacity = useRef(new Animated.Value(0)).current;
+  const mapTranslateX = useRef(new Animated.Value(50)).current;
 
-  const descriptionOpacity = useRef(new Animated.Value(0)).current; // Opacity for description text
-  const descriptionTranslateY = useRef(new Animated.Value(30)).current; // Vertical translation for description text
+  const descriptionOpacity = useRef(new Animated.Value(0)).current;
+  const descriptionTranslateY = useRef(new Animated.Value(30)).current;
 
   // ==================================================
   // USE EFFECT HOOKS
   // ==================================================
-
-  // --------------------------------------------
-  // Effect Hook: Location Tracking
-  // --------------------------------------------
 
   useEffect(() => {
     let locationSubscription;
@@ -183,10 +185,6 @@ const AldorFamilyFarmScreen = () => {
       if (locationSubscription) locationSubscription.remove();
     };
   }, [isLocationEnabled]);
-
-  // --------------------------------------------
-  // Effect Hook: Fetch Weather Data
-  // --------------------------------------------
 
   useEffect(() => {
     const fetchWeatherData = async () => {
@@ -250,13 +248,8 @@ const AldorFamilyFarmScreen = () => {
     fetchWeatherData();
   }, [location, isLocationEnabled]);
 
-  // --------------------------------------------
-  // Effect Hook: Animations
-  // --------------------------------------------
-
   useEffect(() => {
     if (!loading) {
-      // Animate the weather container (opacity and horizontal translation)
       Animated.parallel([
         Animated.timing(weatherOpacity, {
           toValue: 1,
@@ -272,7 +265,6 @@ const AldorFamilyFarmScreen = () => {
         }),
       ]).start();
 
-      // Animate the farm info container (opacity and horizontal translation)
       Animated.parallel([
         Animated.timing(farmInfoOpacity, {
           toValue: 1,
@@ -288,7 +280,6 @@ const AldorFamilyFarmScreen = () => {
         }),
       ]).start();
 
-      // Animate the image (opacity and scale)
       Animated.parallel([
         Animated.timing(imageOpacity, {
           toValue: 1,
@@ -306,7 +297,6 @@ const AldorFamilyFarmScreen = () => {
         }),
       ]).start();
 
-      // Animate the map container (opacity and horizontal translation)
       Animated.parallel([
         Animated.timing(mapOpacity, {
           toValue: 1,
@@ -324,7 +314,6 @@ const AldorFamilyFarmScreen = () => {
         }),
       ]).start();
 
-      // Animate the description text (opacity and vertical translation)
       Animated.parallel([
         Animated.timing(descriptionOpacity, {
           toValue: 1,
@@ -356,11 +345,6 @@ const AldorFamilyFarmScreen = () => {
     descriptionTranslateY,
   ]);
 
-  // --------------------------------------------
-  // Effect Hook: Auth State Listener
-  // --------------------------------------------
-
-  // Listen for authentication state changes
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
@@ -368,17 +352,30 @@ const AldorFamilyFarmScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // --------------------------------------------
-  // Effect Hook: Fetch Reviews
-  // --------------------------------------------
-
+  // Updated useEffect to handle Sorting and Filtering
   useEffect(() => {
     const reviewsRef = collection(db, 'reviews');
-    const q = query(
-      reviewsRef,
-      where('placeID', '==', 'aldor_farm'),
-      orderBy('timestamp', 'desc')
-    );
+
+    let constraints = [where('placeID', '==', 'aldor_farm')];
+
+    // Filtering by minStarRating
+    if (minStarRating > 0) {
+      constraints.push(where('starRating', '>=', minStarRating));
+    }
+
+    // Sorting
+    if (sortOption === 'mostPopular') {
+      constraints.push(orderBy('thumbsUpCount', 'desc'));
+    } else if (sortOption === 'highestRated') {
+      constraints.push(orderBy('starRating', 'desc'));
+    } else if (sortOption === 'lowestRated') {
+      constraints.push(orderBy('starRating', 'asc'));
+    } else {
+      // mostRecent
+      constraints.push(orderBy('timestamp', 'desc'));
+    }
+
+    const q = query(reviewsRef, ...constraints);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const updatedReviews = snapshot.docs.map((doc) => ({
@@ -389,75 +386,124 @@ const AldorFamilyFarmScreen = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [sortOption, minStarRating]);
 
-  // ==================================================
-  // HELPER FUNCTIONS
-  // ==================================================
-
-  // Converts temperature from metric to imperial units if needed
   const convertTemp = (temp) => {
     return isMetric ? temp.toFixed(1) : ((temp * 9) / 5 + 32).toFixed(1);
   };
 
-  // Returns the unit symbol based on the selected measurement system
   const getUnit = () => {
     return isMetric ? '°C' : '°F';
   };
 
-  // Function to submit a new review
   const submitReview = async () => {
     if (!comment.trim()) {
       Alert.alert('Error', 'Comment cannot be empty.');
+      return;
+    }
+    if (starRating === 0) {
+      Alert.alert('Error', 'Please select a star rating.');
       return;
     }
     if (!user) {
       Alert.alert('Error', 'You must be logged in to submit a review.');
       return;
     }
+
     const newReview = {
-      username: user.displayName || user.email.split('@')[0], // Use displayName or derive from email
-      profileColor: selectedColor, // Include selected color
+      username: user.displayName || user.email.split('@')[0],
+      profileColor: selectedColor,
       comment,
+      starRating,
       timestamp: new Date(),
       placeID: 'aldor_farm',
+      thumbsUpCount: 0,
     };
     try {
       await addDoc(collection(db, 'reviews'), newReview);
       setComment('');
-      setSelectedColor(colors[0]); // Reset to default color
+      setStarRating(0);
+      setSelectedColor(colors[0]);
       Alert.alert('Success', 'Review submitted!');
     } catch (error) {
       Alert.alert('Error', 'Could not submit the review.');
     }
   };
 
-  // ==================================================
-  // RENDER LOGIC
-  // ==================================================
+  const checkUserVote = async (reviewId) => {
+    if (!user) return false;
+    const voteDocRef = doc(db, 'users', user.uid, 'votes', reviewId);
+    const voteSnapshot = await getDoc(voteDocRef);
+    return voteSnapshot.exists();
+  };
 
-  // Prepare sections for SectionList
+  const handleThumbsUp = async (reviewId) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to upvote reviews.');
+      return;
+    }
+
+    try {
+      const userHasVoted = await checkUserVote(reviewId);
+
+      if (userHasVoted) {
+        Alert.alert('Error', 'You have already upvoted this review.');
+        return;
+      }
+
+      const reviewRef = doc(db, 'reviews', reviewId);
+      const voteDocRef = doc(db, 'users', user.uid, 'votes', reviewId);
+
+      await runTransaction(db, async (transaction) => {
+        const reviewDoc = await transaction.get(reviewRef);
+        if (!reviewDoc.exists()) {
+          throw 'Review does not exist!';
+        }
+
+        const currentThumbsUp = reviewDoc.data().thumbsUpCount || 0;
+        transaction.update(reviewRef, {
+          thumbsUpCount: currentThumbsUp + 1,
+        });
+
+        transaction.set(voteDocRef, { reviewId });
+      });
+
+      Alert.alert('Success', 'You upvoted the review!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upvote the review.');
+      console.error('Thumbs-Up Error:', error);
+    }
+  };
+
+  const averageRating = reviews.length
+    ? (
+        reviews.reduce((sum, review) => {
+          const rating = review.starRating ? Number(review.starRating) : 0;
+          return sum + (isNaN(rating) ? 0 : rating);
+        }, 0) / reviews.length
+      ).toFixed(1)
+    : 0;
+
+  console.log('Calculated Average Rating:', averageRating);
+
   const sections = [
     {
       title: 'Main',
-      data: ['main'], // Dummy data to render Main content
+      data: ['main'],
     },
     {
       title: 'Reviews',
-      data: ['review'], // Dummy data to render Review section
+      data: ['review'],
     },
   ];
 
-  // Variable to hold the content to be displayed based on the state
   let content;
-
   if (loading) {
     content = <ActivityIndicator size="large" color="#0000ff" />;
   } else if (errorMsg) {
     content = <Text style={styles.errorText}>{errorMsg}</Text>;
   } else if (location) {
     const { latitude, longitude } = location.coords;
-
     content = (
       <View style={styles.locationContainer}>
         <Text style={styles.locationText}>Your Current Location:</Text>
@@ -469,35 +515,27 @@ const AldorFamilyFarmScreen = () => {
     content = (
       <View style={styles.locationDisabledContainer}>
         <Text style={styles.locationDisabledText}>
-          Location services are disabled. Enable them in settings to see your current location and
-          directions.
+          Location services are disabled. Enable them in settings to see your current location and directions.
         </Text>
       </View>
     );
   }
 
-  // ==================================================
-  // RETURN JSX
-  // ==================================================
-
   return (
     <View style={styles.container}>
-      {/* Navigation Bar */}
       <NavBar />
 
-      {/* Main Content with SectionList */}
       <SectionList
         sections={sections}
         keyExtractor={(item, index) => item + index}
         renderSectionHeader={({ section: { title } }) =>
-          title === 'Main' ? null : null // No header titles needed
+          title === 'Main' ? null : null
         }
         renderItem={({ item, section }) => {
           if (section.title === 'Main') {
-            // Render Main content
             return (
               <>
-                {/* Weather Information */}
+                {/* Main Section */}
                 {isLocationEnabled && weatherData ? (
                   <Animated.View
                     style={[
@@ -508,7 +546,6 @@ const AldorFamilyFarmScreen = () => {
                       },
                     ]}
                   >
-                    {/* Unit Toggle Switch */}
                     <View style={styles.unitToggle}>
                       <Text style={styles.unitText}>°C</Text>
                       <Switch
@@ -518,14 +555,12 @@ const AldorFamilyFarmScreen = () => {
                       <Text style={styles.unitText}>°F</Text>
                     </View>
 
-                    {/* Location Name */}
                     <View style={styles.locationNameContainer}>
                       <Text style={styles.locationName}>
                         {weatherData.city.name}, {weatherData.city.country}
                       </Text>
                     </View>
 
-                    {/* Daily Weather Forecast */}
                     <View style={styles.dailyContainer}>
                       <FlatList
                         data={dailyData.slice(0, 5)}
@@ -540,14 +575,12 @@ const AldorFamilyFarmScreen = () => {
                           >
                             <View style={styles.dailyItem}>
                               <View style={styles.dailyHeader}>
-                                {/* Day of the Week */}
                                 <Text style={styles.dailyDay}>
                                   {new Date(item.dt * 1000).toLocaleDateString('en-US', {
                                     weekday: 'short',
                                   })}
                                 </Text>
 
-                                {/* Weather Icon */}
                                 <Image
                                   source={{
                                     uri: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`,
@@ -555,7 +588,6 @@ const AldorFamilyFarmScreen = () => {
                                   style={styles.dailyIcon}
                                 />
 
-                                {/* Detailed View or Temperature */}
                                 {selectedDayIndex === index ? (
                                   <View style={styles.detailContainer}>
                                     <Text style={styles.detailText}>
@@ -593,7 +625,6 @@ const AldorFamilyFarmScreen = () => {
                   <ActivityIndicator size="large" color="#0000ff" />
                 )}
 
-                {/* Farm Information */}
                 <Animated.View
                   style={[
                     styles.farmInfoContainer,
@@ -603,13 +634,9 @@ const AldorFamilyFarmScreen = () => {
                     },
                   ]}
                 >
-                  {/* Farm Title */}
                   <Text style={styles.title}>Aldor Acres Family Farm</Text>
-
-                  {/* Farm Address */}
                   <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
 
-                  {/* Activities Offered at the Farm */}
                   <View style={styles.activityBox}>
                     <Text style={styles.activityText}>
                       Petting zoo, pumpkins, and more!
@@ -617,7 +644,6 @@ const AldorFamilyFarmScreen = () => {
                   </View>
                 </Animated.View>
 
-                {/* Image of the Farm */}
                 <Animated.View
                   style={[
                     styles.imagePlaceholder,
@@ -634,7 +660,6 @@ const AldorFamilyFarmScreen = () => {
                   />
                 </Animated.View>
 
-                {/* About the Farm */}
                 <Animated.View
                   style={[
                     styles.aboutContainer,
@@ -663,7 +688,6 @@ const AldorFamilyFarmScreen = () => {
                     the farm exudes a warm and welcoming atmosphere that makes it feel like a home away from home.
                   </Text>
 
-                  {/* Read More / Read Less Button */}
                   <TouchableOpacity
                     style={styles.readMoreButton}
                     onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
@@ -674,10 +698,8 @@ const AldorFamilyFarmScreen = () => {
                   </TouchableOpacity>
                 </Animated.View>
 
-                {/* Current Location Information */}
                 <View style={styles.currentLocationBox}>{content}</View>
 
-                {/* Map and Directions */}
                 <Animated.View
                   style={[
                     styles.mapContainer,
@@ -687,10 +709,8 @@ const AldorFamilyFarmScreen = () => {
                     },
                   ]}
                 >
-                  {/* Map Header */}
                   <Text style={styles.mapHeader}>How to get there?</Text>
 
-                  {/* Map Wrapper */}
                   <View style={styles.mapWrapper}>
                     <MapView
                       style={styles.map}
@@ -702,14 +722,12 @@ const AldorFamilyFarmScreen = () => {
                       }}
                       showsUserLocation={isLocationEnabled}
                     >
-                      {/* Marker for the Farm Location */}
                       <Marker
                         coordinate={{ latitude: farmLatitude, longitude: farmLongitude }}
                         title="Aldor Acres Family Farm"
                         description="Farm location"
                       />
 
-                      {/* Directions from User Location to Farm */}
                       {isLocationEnabled && location && (
                         <MapViewDirections
                           origin={{
@@ -724,12 +742,10 @@ const AldorFamilyFarmScreen = () => {
                       )}
                     </MapView>
 
-                    {/* Overlay if Location Services are Disabled */}
                     {!isLocationEnabled && (
                       <View style={styles.mapDisabledOverlay}>
                         <Text style={styles.mapDisabledText}>
-                          Location services are disabled. Enable them to see your route on the
-                          map.
+                          Location services are disabled. Enable them to see your route on the map.
                         </Text>
                       </View>
                     )}
@@ -738,15 +754,42 @@ const AldorFamilyFarmScreen = () => {
               </>
             );
           } else if (section.title === 'Reviews') {
-            // Render Review section
+            console.log('Rendering Average Rating:', averageRating);
             return (
               <View style={styles.reviewSectionContainer}>
-                {/* Review Input Area */}
+               
+
+                {/* Average Rating */}
+                <View style={styles.averageRatingContainer}>
+                  <Text style={styles.averageRatingText}>
+                    User Ratings: {averageRating}/5 ★
+                  </Text>
+                </View>
+
+                {/* Review Submission */}
                 <View style={styles.reviewContainer}>
                   <Text style={styles.reviewHeader}>Reviews of this Date!</Text>
 
                   {user ? (
                     <View style={styles.reviewInputArea}>
+                      <View style={styles.starRatingContainer}>
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <TouchableOpacity
+                            key={rating}
+                            onPress={() => setStarRating(rating)}
+                          >
+                            <Text
+                              style={[
+                                styles.star,
+                                { color: rating <= starRating ? '#FFD700' : '#ccc' },
+                              ]}
+                            >
+                              ★
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
                       <TextInput
                         style={styles.reviewInput}
                         placeholder="Write your review here..."
@@ -755,7 +798,6 @@ const AldorFamilyFarmScreen = () => {
                         multiline
                       />
 
-                      {/* Color Picker */}
                       <View style={styles.colorPickerContainer}>
                         <FlatList
                           data={colors}
@@ -783,15 +825,89 @@ const AldorFamilyFarmScreen = () => {
                     <Text style={styles.loginPrompt}>Please log in to submit a review.</Text>
                   )}
                 </View>
+                <Text style={styles.filterTitle}>Filter Reviews</Text>
+                {/* Updated Sorting and Filtering UI with Classic Dropdowns */}
+                <View style={styles.filterRow}>
+                
+                  {/* Sort By Dropdown */}
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownHeader}
+                      onPress={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                    >
+                      <Text style={styles.dropdownHeaderText}>
+                        {
+                          sortOptions.find((o) => o.value === sortOption)?.label ||
+                          "Sort By"
+                        }
+                      </Text>
+                      <Ionicons
+                        name={isSortDropdownOpen ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color="#555"
+                      />
+                    </TouchableOpacity>
+                    {isSortDropdownOpen && (
+                      <View style={styles.dropdownOptions}>
+                        {sortOptions.map((opt) => (
+                          <TouchableOpacity
+                            key={opt.value}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setSortOption(opt.value);
+                              setIsSortDropdownOpen(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownOptionText}>{opt.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
 
-                {/* Separator Line */}
+                  {/* Filter By Minimum Stars Dropdown */}
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownHeader}
+                      onPress={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    >
+                      <Text style={styles.dropdownHeaderText}>
+                        {
+                          filterOptions.find((o) => parseInt(o.value,10) === minStarRating)?.label
+                          || "Filter"
+                        }
+                      </Text>
+                      <Ionicons
+                        name={isFilterDropdownOpen ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color="#555"
+                      />
+                    </TouchableOpacity>
+                    {isFilterDropdownOpen && (
+                      <View style={styles.dropdownOptions}>
+                        {filterOptions.map((opt) => (
+                          <TouchableOpacity
+                            key={opt.value}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setMinStarRating(parseInt(opt.value, 10));
+                              setIsFilterDropdownOpen(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownOptionText}>{opt.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+
                 <View style={styles.separator} />
 
-                {/* Reviews List */}
+                {/* Review List */}
                 {reviews.length > 0 ? (
                   reviews.map((item) => (
                     <View key={item.id} style={styles.reviewItem}>
-                      {/* Profile Color Circle */}
                       <View
                         style={[
                           styles.profilePic,
@@ -803,9 +919,24 @@ const AldorFamilyFarmScreen = () => {
                         </Text>
                       </View>
                       <View style={styles.reviewContent}>
-                        <Text style={styles.reviewUsername}>{item.username}</Text>
-                        {/* Removed the email display here */}
-                        {/* <Text style={styles.reviewEmail}>{item.email}</Text> */}
+                        <View style={styles.reviewHeaderContainer}>
+                          <Text style={styles.reviewUsername}>{item.username}</Text>
+                          <View style={styles.thumbsUpButtonContainer}>
+                            <TouchableOpacity onPress={() => handleThumbsUp(item.id)}>
+                              <Image
+                                source={require('../assets/thumbsUp.png')}
+                                style={styles.thumbsUpIcon}
+                              />
+                            </TouchableOpacity>
+                            <Text style={styles.thumbsUpCount}>
+                              {item.thumbsUpCount || 0}
+                            </Text>
+                          </View>
+                        </View>
+                        
+                        <Text style={styles.reviewStars}>
+                          {'★'.repeat(item.starRating).padEnd(5, '☆')}
+                        </Text>
                         <Text style={styles.reviewText}>{item.comment}</Text>
                         <Text style={styles.reviewTimestamp}>
                           {item.timestamp.toDate
@@ -829,7 +960,6 @@ const AldorFamilyFarmScreen = () => {
   );
 };
 
-// Export the component as the default export
 export default AldorFamilyFarmScreen;
 
 // ==================================================
@@ -837,301 +967,251 @@ export default AldorFamilyFarmScreen;
 // ==================================================
 
 const styles = StyleSheet.create({
-  // Main container style
   container: {
-    flex: 1, // Take up the full height of the screen
-    backgroundColor: '#F4A460', // Background color of the screen
+    flex: 1,
+    backgroundColor: '#F4A460',
   },
-  // Scrollable content style
   scrollContent: {
-    paddingBottom: 20, // Padding at the bottom of the content
+    paddingBottom: 20,
   },
-  // Weather container style
   weatherContainer: {
-    backgroundColor: '#BBCDEC', // Background color of the weather container
-    borderRadius: 10, // Rounded corners
-    margin: 15, // Margin around the container
-    padding: 10, // Padding inside the container
+    backgroundColor: '#BBCDEC',
+    borderRadius: 10,
+    margin: 15,
+    padding: 10,
   },
-  // Unit toggle switch container style
   unitToggle: {
-    flexDirection: 'row', // Arrange items horizontally
-    alignItems: 'center', // Align items vertically centered
-    justifyContent: 'center', // Center items horizontally
-    marginBottom: 5, // Margin below the unit toggle
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
   },
-  // Unit text style
   unitText: {
-    fontSize: 16, // Font size for the unit text
-    color: '#000', // Text color
-    marginHorizontal: 5, // Horizontal margin between texts and switch
+    fontSize: 16,
+    color: '#000',
+    marginHorizontal: 5,
   },
-  // Location name container style
   locationNameContainer: {
-    alignItems: 'center', // Center align the content
-    marginBottom: 5, // Margin below the location name
+    alignItems: 'center',
+    marginBottom: 5,
   },
-  // Location name text style
   locationName: {
-    fontSize: 16, // Font size of the location name
-    color: '#000', // Text color
-    fontWeight: 'bold', // Bold text
+    fontSize: 16,
+    color: '#000',
+    fontWeight: 'bold',
   },
-  // Daily forecast container style
   dailyContainer: {
-    marginBottom: 10, // Margin below the daily container
+    marginBottom: 10,
   },
-  // Individual daily item style
   dailyItem: {
-    width: 80, // Fixed width for each item
-    marginRight: 10, // Margin to the right of each item
+    width: 80,
+    marginRight: 10,
   },
-  // Daily header style
   dailyHeader: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)', // Semi-transparent background
-    borderRadius: 5, // Rounded corners
-    padding: 5, // Padding inside the header
-    alignItems: 'center', // Center align content
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 5,
+    padding: 5,
+    alignItems: 'center',
   },
-  // Daily day text style
   dailyDay: {
-    color: '#000', // Text color
-    fontSize: 14, // Font size
+    color: '#000',
+    fontSize: 14,
   },
-  // Daily weather icon style
   dailyIcon: {
-    width: 30, // Width of the icon
-    height: 30, // Height of the icon
-    marginVertical: 2, // Vertical margin around the icon
+    width: 30,
+    height: 30,
+    marginVertical: 2,
   },
-  // Daily temperature text style
   dailyTemp: {
-    color: '#000', // Text color
-    fontSize: 14, // Font size
+    color: '#000',
+    fontSize: 14,
   },
-  // Detail container style for expanded view
   detailContainer: {
-    alignItems: 'center', // Center align content
+    alignItems: 'center',
   },
-  // Detail text style
   detailText: {
-    color: '#000', // Text color
-    fontSize: 12, // Font size
-    textAlign: 'center', // Center align text
+    color: '#000',
+    fontSize: 12,
+    textAlign: 'center',
   },
-  // Weather disabled container style
   weatherDisabledContainer: {
-    backgroundColor: '#FAF4E4', // Background color
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners
-    marginHorizontal: 15, // Horizontal margin
-    alignItems: 'center', // Center align content
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    alignItems: 'center',
   },
-  // Weather disabled text style
   weatherDisabledText: {
-    fontSize: 16, // Font size
-    color: '#555', // Text color
-    textAlign: 'center', // Center align text
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
   },
-  // Farm information container style
-  farmInfoContainer: {
-    // Empty because styles are added dynamically through animation
-  },
-  // Title text style
+  farmInfoContainer: {},
   title: {
-    fontSize: 24, // Font size
-    fontWeight: 'bold', // Bold text
-    color: '#FAF4E4', // Text color
-    textAlign: 'center', // Center align text
-    marginTop: 10, // Margin above the title
-    textTransform: 'uppercase', // Uppercase text
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FAF4E4',
+    textAlign: 'center',
+    marginTop: 10,
+    textTransform: 'uppercase',
   },
-  // Address text style
   address: {
-    fontSize: 14, // Font size
-    color: '#666', // Text color
-    textAlign: 'center', // Center align text
-    textTransform: 'uppercase', // Uppercase text
-    marginVertical: 5, // Vertical margin
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    marginVertical: 5,
   },
-  // Activity box style
   activityBox: {
-    backgroundColor: '#FAF4E4', // Background color
-    padding: 10, // Padding inside the box
-    borderRadius: 10, // Rounded corners
-    alignSelf: 'center', // Center the box horizontally
-    marginVertical: 10, // Vertical margin
-    width: '90%', // Width relative to the parent
-    shadowColor: '#000', // Shadow color
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.2, // Shadow opacity
-    shadowRadius: 2, // Shadow radius
-    elevation: 2, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 10,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 10,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  // Activity text style
   activityText: {
-    fontSize: 14, // Font size
-    color: '#000', // Text color
-    textAlign: 'center', // Center align text
-    textTransform: 'capitalize', // Capitalize words
+    fontSize: 14,
+    color: '#000',
+    textAlign: 'center',
+    textTransform: 'capitalize',
   },
-  // Image placeholder style
   imagePlaceholder: {
-    width: '90%', // Width relative to the parent
-    height: 200, // Fixed height
-    backgroundColor: '#e0e0e0', // Background color
-    borderRadius: 10, // Rounded corners
-    alignSelf: 'center', // Center horizontally
-    marginVertical: 15, // Vertical margin
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
-    position: 'relative', // Relative positioning
-    overflow: 'hidden', // Hide overflow
+    width: '90%',
+    height: 200,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  // Image style
   image: {
-    width: '100%', // Full width
-    height: '100%', // Full height
-    borderRadius: 10, // Rounded corners
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
-  // About container style
   aboutContainer: {
-    backgroundColor: '#FAF4E4', // Background color
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners
-    marginHorizontal: 15, // Horizontal margin
-    shadowColor: '#000', // Shadow color
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
-    shadowRadius: 2, // Shadow radius
-    elevation: 2, // Elevation for Android shadow
-    marginBottom: 15, // Margin below the container
-    overflow: 'hidden', // Ensure content is clipped
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 15,
+    overflow: 'hidden',
   },
-  // About text style
   aboutText: {
-    fontSize: 16, // Font size
-    color: '#000', // Text color
-   // textAlign: 'justify', // Justify text
+    fontSize: 16,
+    color: '#000',
   },
-  // Read More / Read Less button style
   readMoreButton: {
     alignSelf: 'flex-end',
     marginTop: 5,
   },
   readMoreButtonText: {
     fontSize: 14,
-    color: '#1E90FF', // Dodger Blue
+    color: '#1E90FF',
     textDecorationLine: 'underline',
   },
-
-  // Current location box style
   currentLocationBox: {
-    backgroundColor: '#FAF4E4', // Background color
-    padding: 15, // Padding inside the box
-    borderRadius: 10, // Rounded corners
-    alignSelf: 'center', // Center horizontally
-    marginVertical: 10, // Vertical margin
-    width: '90%', // Width relative to the parent
-    shadowColor: '#000', // Shadow color
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.05, // Shadow opacity
-    shadowRadius: 1, // Shadow radius
-    elevation: 1, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginVertical: 10,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  // Location container style
   locationContainer: {
-    alignItems: 'center', // Center align content
+    alignItems: 'center',
   },
-  // Location text style
   locationText: {
-    fontSize: 18, // Font size
-    fontWeight: 'bold', // Bold text
-    marginBottom: 10, // Margin below the text
-    color: '#333', // Text color
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
   },
-  // Coordinates text style
   coordsText: {
-    fontSize: 16, // Font size
-    marginVertical: 2, // Vertical margin
-    color: '#555', // Text color
+    fontSize: 16,
+    marginVertical: 2,
+    color: '#555',
   },
-  // Location disabled container style
   locationDisabledContainer: {
-    alignItems: 'center', // Center align content
-    padding: 10, // Padding inside the container
+    alignItems: 'center',
+    padding: 10,
   },
-  // Location disabled text style
   locationDisabledText: {
-    fontSize: 16, // Font size
-    color: '#555', // Text color
-    textAlign: 'center', // Center align text
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
   },
-  // Map container style
   mapContainer: {
-    backgroundColor: '#FAF4E4', // Background color
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners
-    marginHorizontal: 15, // Horizontal margin
-    marginTop: 10, // Margin above the container
-    shadowColor: '#000', // Shadow color
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset
-    shadowOpacity: 0.1, // Shadow opacity
-    shadowRadius: 2, // Shadow radius
-    elevation: 2, // Elevation for Android shadow
+    backgroundColor: '#FAF4E4',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 15,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  // Map header text style
   mapHeader: {
-    fontSize: 18, // Font size
-    fontWeight: 'bold', // Bold text
-    color: '#000', // Text color
-    textAlign: 'center', // Center align text
-    marginBottom: 10, // Margin below the header
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  // Map wrapper style
   mapWrapper: {
-    width: '100%', // Full width
-    height: 200, // Fixed height
-    borderRadius: 10, // Rounded corners
-    overflow: 'hidden', // Hide overflow
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  // Map style
   map: {
-    flex: 1, // Take up all available space
+    flex: 1,
   },
-  // Map disabled overlay style
   mapDisabledOverlay: {
-    position: 'absolute', // Absolute positioning
-    top: 0, // Position at the top
-    left: 0, // Position at the left
-    right: 0, // Position at the right
-    bottom: 0, // Position at the bottom
-    backgroundColor: 'rgba(250, 244, 228, 0.8)', // Semi-transparent background
-    alignItems: 'center', // Center align content
-    justifyContent: 'center', // Center align content vertically
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(250, 244, 228, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // Map disabled text style
   mapDisabledText: {
-    fontSize: 16, // Font size
-    color: '#555', // Text color
-    textAlign: 'center', // Center align text
-    paddingHorizontal: 20, // Horizontal padding
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
-  // Error text style
   errorText: {
-    color: 'red', // Text color
-    fontSize: 16, // Font size
-    textAlign: 'center', // Center align text
-    marginVertical: 10, // Vertical margin
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 10,
   },
-
-  // ==================================================
-  // REVIEW SECTION STYLES
-  // ==================================================
-
-  // Review Section Container with Light Beige Background
   reviewSectionContainer: {
-    backgroundColor: '#FAF4E4', // Light beige background
+    backgroundColor: '#FAF4E4',
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 15,
@@ -1182,11 +1262,11 @@ const styles = StyleSheet.create({
   },
   reviewItem: {
     backgroundColor: '#fff',
-    borderRadius: 10, // Consistent rounded corners
-    padding: 8, // Adjusted padding for a more compact look
-    marginBottom: 12, // Spacing between reviews
-    width: '100%', // Full width within the container
-    alignSelf: 'center', // Centers the review item
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 12,
+    width: '100%',
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'flex-start',
     shadowColor: '#000',
@@ -1198,51 +1278,71 @@ const styles = StyleSheet.create({
   reviewContent: {
     flex: 1,
   },
+  reviewHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  thumbsUpButtonContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbsUpIcon: {
+    width: 15,
+    height: 15,
+    marginBottom: 2,
+    marginTop: 5,
+    marginRight: 5,
+    opacity: 0.5,
+  },
+  thumbsUpCount: {
+    fontSize: 12,
+    marginRight: 5,
+    color: '#333',
+    opacity: 0.7,
+  },
   reviewUsername: {
-    fontSize: 14, // Reduced from 16 to 14
+    fontSize: 14,
     fontWeight: 'bold',
-    marginTop: 6,
-    marginBottom: 10,
     color: '#000',
   },
-  reviewEmail: {
-    fontSize: 12, // Reduced from 14 to 12
-    color: '#666',
-    marginBottom: 3, // Reduced from 5 to 3
+  reviewStars: {
+    fontSize: 16,
+    color: '#FFD700',
+    marginBottom: 10,
+    marginTop: -10,
   },
   reviewText: {
-    fontSize: 14, // Reduced from 16 to 14
+    fontSize: 14,
     color: '#333',
-    marginBottom: 3, // Reduced from 5 to 3
+    marginBottom: 3,
   },
   reviewTimestamp: {
-    fontSize: 10, // Reduced from 12 to 10
+    fontSize: 10,
     color: '#999',
     textAlign: 'right',
     marginTop: 8,
   },
-  // Separator Line between Input and Reviews
   separator: {
     height: 1,
     backgroundColor: '#ccc',
     marginVertical: 10,
-    marginBottom:20,
+    marginBottom: 20,
   },
-  // No Reviews Text Style
   noReviewsText: {
     fontSize: 14,
     color: '#555',
     textAlign: 'center',
     marginTop: 10,
   },
-   // Color Picker Container
-   colorPickerContainer: {
+  colorPickerContainer: {
     flexDirection: 'row',
     marginTop: 10,
     marginBottom: 10,
     justifyContent: 'center',
   },
-  // Color Circle
   colorCircle: {
     width: 30,
     height: 30,
@@ -1252,24 +1352,92 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     marginTop: 8,
   },
-  // Selected Color Circle
   selectedColorCircle: {
     borderWidth: 2,
     borderColor: '#000',
   },
-  // Profile Picture Text (Initials)
   profilePicText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  // Update profilePic style to center content
   profilePic: {
-    width: 40, // Width of the circle
-    height: 40, // Height of the circle
-    borderRadius: 20, // Makes it a circle
-    marginRight: 8, // Spacing to the right
-    alignItems: 'center', // Center content horizontally
-    justifyContent: 'center', // Center content vertically
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  starRatingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  star: {
+    fontSize: 30,
+    marginHorizontal: 5,
+  },
+  averageRatingContainer: {
+    marginBottom: 25,
+    alignItems: 'center',
+  },
+  averageRatingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#F4A460',
+  },
+  
+  /* Styles for the new dropdown menus */
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    marginVertical: 10,
+    alignItems: 'center',
+  },
+  dropdownContainer: {
+    flex: 1,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    elevation: 2,
+    marginBottom: 10,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+  },
+  dropdownHeaderText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownOptions: {
+    backgroundColor: '#fff',
+  },
+  dropdownOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+   
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#555',
+  },
+  filterTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 15,
   },
 });
