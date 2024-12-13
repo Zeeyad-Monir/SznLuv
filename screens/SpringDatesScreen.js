@@ -1,5 +1,5 @@
 // SCREENS/SPRINGDATESSCREEN.JS
-// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
+// Detailed comments are added by ChatGPT to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
 // =========================
 // IMPORTS SECTION
@@ -238,8 +238,9 @@ export default function SpringDatesScreen({ navigation }) {
    * It updates the favorites state and synchronizes the change with Firestore.
    * 
    * @param {string} spotName - The name of the spot to toggle as favorite
+   * @param {string} spotAddress - The address/location of the spot
    */
-  const toggleFavorite = async (spotName) => {
+  const toggleFavorite = async (spotName, spotAddress) => {
     // If the user is not authenticated, show an error alert
     if (!user) {
       Alert.alert('Error', 'You must be logged in to add favorites.');
@@ -254,13 +255,17 @@ export default function SpringDatesScreen({ navigation }) {
       const docSnap = await getDoc(userFavoritesRef);
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
-      if (userFavorites[spotName]) {
+      if (userFavorites[spotName]?.isFavourite) {
         // If the spot is already a favorite, remove it
         delete userFavorites[spotName];
         Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        // If the spot is not a favorite, add it
-        userFavorites[spotName] = true;
+        // If the spot is not a favorite, add it with season and location
+        userFavorites[spotName] = {
+          isFavourite: true,
+          season: 'Spring', // Setting the season to 'Spring'
+          location: spotAddress, // Storing the spot's address
+        };
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
 
@@ -287,8 +292,14 @@ export default function SpringDatesScreen({ navigation }) {
    */
   const handleSpotPress = (spot) => {
     // Navigate based on the spot's name
-    if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarm'); // Navigate to the specific screen
+    if (spot.name === 'Blossom Garden') {
+      navigation.navigate('BlossomGardenScreen'); // Navigate to the specific screen
+    } else if (spot.name === 'Spring Haven') {
+      navigation.navigate('SpringHavenScreen'); // Navigate to the specific screen
+    } else if (spot.name === 'River Trail') {
+      navigation.navigate('RiverTrailScreen'); // Navigate to the specific screen
+    } else if (spot.name === 'Meadow Path') {
+      navigation.navigate('MeadowPathScreen'); // Navigate to the specific screen
     } else {
       // Show an alert if the feature is not yet implemented
       Alert.alert('Coming Soon', 'This feature is coming soon.');
@@ -422,7 +433,7 @@ export default function SpringDatesScreen({ navigation }) {
                   */}
                   <TouchableOpacity
                     style={styles.cardHeartIcon} // Styles for the heart icon area
-                    onPress={() => toggleFavorite(spot.name)} // Handler for toggling favorite
+                    onPress={() => toggleFavorite(spot.name, spot.address)} // Handler for toggling favorite
                     accessibilityLabel={`Favorite ${spot.name}`} // Accessibility label
                     accessibilityRole="button" // Accessibility role
                   >
@@ -434,10 +445,10 @@ export default function SpringDatesScreen({ navigation }) {
                     */}
                     <Icon
                       name={
-                        favorites[spot.name] ? 'favorite' : 'favorite-border'
+                        favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border'
                       }
                       size={20} // Size of the icon
-                      color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
+                      color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
                     />
                   </TouchableOpacity>
 
@@ -500,7 +511,7 @@ const styles = StyleSheet.create({
   // Container covering the entire screen
   container: {
     flex: 1, // Takes up the full available space
-    backgroundColor: '#FFB6C1', // Background color adjusted to spring theme
+    backgroundColor: '#FFB6C1', // Background color adjusted to spring theme (light pink)
   },
 
   // Styling for the flowers falling animation
@@ -516,7 +527,7 @@ const styles = StyleSheet.create({
 
   // Styling for the header container (currently empty, can be customized as needed)
   headerContainer: {
-    
+    // Add any specific styles if needed
   },
 
   // Styling for the main title text

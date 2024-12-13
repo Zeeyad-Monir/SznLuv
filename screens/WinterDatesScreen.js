@@ -1,5 +1,5 @@
 // SCREENS/WINTERDATESSCREEN.JS
-// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
+// Detailed comments are added by ChatGPT to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
 // =========================
 // IMPORTS SECTION
@@ -250,8 +250,9 @@ export default function WinterDatesScreen({ navigation }) {
    * It updates the favorites state and synchronizes the change with Firestore.
    * 
    * @param {string} spotName - The name of the spot to toggle as favorite
+   * @param {string} spotAddress - The address/location of the spot
    */
-  const toggleFavorite = async (spotName) => {
+  const toggleFavorite = async (spotName, spotAddress) => {
     // If the user is not authenticated, show an error alert
     if (!user) {
       Alert.alert('Error', 'You must be logged in to add favorites.');
@@ -266,13 +267,17 @@ export default function WinterDatesScreen({ navigation }) {
       const docSnap = await getDoc(userFavoritesRef);
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
-      if (userFavorites[spotName]) {
+      if (userFavorites[spotName]?.isFavourite) {
         // If the spot is already a favorite, remove it
         delete userFavorites[spotName];
         Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        // If the spot is not a favorite, add it
-        userFavorites[spotName] = true;
+        // If the spot is not a favorite, add it with season and location
+        userFavorites[spotName] = {
+          isFavourite: true,
+          season: 'Winter', // Setting the season to 'Winter'
+          location: spotAddress,
+        };
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
 
@@ -299,8 +304,14 @@ export default function WinterDatesScreen({ navigation }) {
    */
   const handleSpotPress = (spot) => {
     // Navigate based on the spot's name
-    if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarm'); // Navigate to the specific screen
+    if (spot.name === 'Glacier Rink') {
+      navigation.navigate('GlacierRinkScreen'); // Ensure this screen is registered
+    } else if (spot.name === 'Frosty Pond') {
+      navigation.navigate('FrostyPondScreen'); // Ensure this screen is registered
+    } else if (spot.name === 'Evergreen Acres') {
+      navigation.navigate('EvergreenAcresScreen'); // Ensure this screen is registered
+    } else if (spot.name === 'Snowy Pines') {
+      navigation.navigate('SnowyPinesScreen'); // Ensure this screen is registered
     } else {
       // Show an alert if the feature is not yet implemented
       Alert.alert('Coming Soon', 'This feature is coming soon.');
@@ -399,17 +410,17 @@ export default function WinterDatesScreen({ navigation }) {
                   {/* Touchable area for the favorite (heart) icon */}
                   <TouchableOpacity
                     style={styles.cardHeartIcon} // Styles for the heart icon area
-                    onPress={() => toggleFavorite(spot.name)} // Handler for toggling favorite
+                    onPress={() => toggleFavorite(spot.name, spot.address)} // Handler for toggling favorite
                     accessibilityLabel={`Favorite ${spot.name}`} // Accessibility label
                     accessibilityRole="button" // Accessibility role
                   >
                     {/* Heart Icon indicating favorite status */}
                     <Icon
                       name={
-                        favorites[spot.name] ? 'favorite' : 'favorite-border' // Icon name based on favorite status
+                        favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border' // Icon name based on favorite status
                       }
                       size={20} // Size of the icon
-                      color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
+                      color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
                     />
                   </TouchableOpacity>
 

@@ -23,6 +23,8 @@ import Favourites from './screens/Favourites';
 import ProfileSettings from './screens/ProfileSettings'; 
 import LaityPumpkinPatch from './screens/LaityPumpkinPatch';
 import EagleAcresDairy from './screens/EagleAcresDairy'; 
+import SeasonalFavourites from './screens/SeasonalFavourites'; 
+
 
 // Import SettingsProvider
 import { SettingsProvider } from './screens/SettingsContext';
@@ -73,6 +75,8 @@ export default function App() {
                 <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
                 <Stack.Screen name="LaityPumpkinPatch" component={LaityPumpkinPatch} />
                 <Stack.Screen name="EagleAcresDairy" component={EagleAcresDairy} />
+                <Stack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
+
 
               </>
             ) : (

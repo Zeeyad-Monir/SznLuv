@@ -1,5 +1,5 @@
 // SCREENS/SUMMERDATESSCREEN.JS
-// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on. 
+// Detailed comments are added by ChatGPT to the existing code, making it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
 // =========================
 // IMPORTS SECTION
@@ -68,7 +68,7 @@ export default function SummerDatesScreen({ navigation }) {
   // =========================
 
   // Accessing the authenticated user from AuthContext
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext); // Access user context
 
   // =========================
   // STATE VARIABLES
@@ -101,6 +101,7 @@ export default function SummerDatesScreen({ navigation }) {
         { name: 'Coral Cove', address: '789 Seaside Blvd' },
       ],
     },
+    // You can add more categories and spots as needed
   ];
 
   // Creating animated values for each category's entrance animation
@@ -232,8 +233,9 @@ export default function SummerDatesScreen({ navigation }) {
    * It updates the favorites state and synchronizes the change with Firestore.
    * 
    * @param {string} spotName - The name of the spot to toggle as favorite
+   * @param {string} spotAddress - The address/location of the spot
    */
-  const toggleFavorite = async (spotName) => {
+  const toggleFavorite = async (spotName, spotAddress) => {
     // If the user is not authenticated, show an error alert
     if (!user) {
       Alert.alert('Error', 'You must be logged in to add favorites.');
@@ -248,13 +250,17 @@ export default function SummerDatesScreen({ navigation }) {
       const docSnap = await getDoc(userFavoritesRef);
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
-      if (userFavorites[spotName]) {
+      if (userFavorites[spotName]?.isFavourite) {
         // If the spot is already a favorite, remove it
         delete userFavorites[spotName];
         Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        // If the spot is not a favorite, add it
-        userFavorites[spotName] = true;
+        // If the spot is not a favorite, add it with season and location
+        userFavorites[spotName] = {
+          isFavourite: true,
+          season: 'Summer', // Setting the season to 'Summer'
+          location: spotAddress, // Storing the spot's address
+        };
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
       }
 
@@ -281,8 +287,12 @@ export default function SummerDatesScreen({ navigation }) {
    */
   const handleSpotPress = (spot) => {
     // Navigate based on the spot's name
-    if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarm'); // Navigate to the specific screen
+    if (spot.name === 'Sunset Beach') {
+      navigation.navigate('SunsetBeachScreen'); // Ensure this screen is registered
+    } else if (spot.name === 'Golden Sands') {
+      navigation.navigate('GoldenSandsScreen'); // Ensure this screen is registered
+    } else if (spot.name === 'Coral Cove') {
+      navigation.navigate('CoralCoveScreen'); // Ensure this screen is registered
     } else {
       // Show an alert if the feature is not yet implemented
       Alert.alert('Coming Soon', 'This feature is coming soon.');
@@ -296,10 +306,17 @@ export default function SummerDatesScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* =========================
-          FLOWERS FALLING ANIMATION
+          SUMMER FALLING ANIMATION
           ========================= */}
       
-      {/* LottieView component to display the flowers falling animation in the background */}
+      {/* 
+        LottieView component to display the summer falling animation in the background.
+        - source: The JSON file containing the animation.
+        - autoPlay: Automatically starts the animation.
+        - loop: Makes the animation loop indefinitely.
+        - style: Styling applied to the animation.
+        - speed: Speed at which the animation plays.
+      */}
       <LottieView
         source={summerFalling} // Source of the animation JSON
         autoPlay // Automatically play the animation
@@ -312,7 +329,11 @@ export default function SummerDatesScreen({ navigation }) {
           ANIMATED TITLE AND ICONS
           ========================= */}
 
-      {/* Animated View for the header container, including the NavBar and title */}
+      {/* 
+        Animated View for the header container, including the NavBar and title.
+        - opacity: Animated opacity value for fade-in effect.
+        - transform: Animated vertical translation for slide-in effect.
+      */}
       <Animated.View
         style={[
           styles.headerContainer, // Base styles
@@ -325,7 +346,10 @@ export default function SummerDatesScreen({ navigation }) {
         {/* Integrated Navigation Bar */}
         <NavBar />
 
-        {/* Screen Title */}
+        {/* 
+          Screen Title.
+          - style: Styling applied to the title text.
+        */}
         <Text style={styles.mainTitle}>Summer Dates</Text>
       </Animated.View>
 
@@ -333,9 +357,16 @@ export default function SummerDatesScreen({ navigation }) {
           MAIN CONTENT
           ========================= */}
 
-      {/* ScrollView to allow vertical scrolling of content */}
+      {/* 
+        ScrollView to allow vertical scrolling of content.
+        - contentContainerStyle: Styling applied to the content container.
+      */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Mapping through each category to display its spots */}
+        {/* 
+          Mapping through each category to display its spots.
+          - key: Unique key for each category to help React identify elements.
+          - style: Animated styles for each category section.
+        */}
         {categories.map((category, index) => (
           <Animated.View
             key={index} // Unique key for each category
@@ -350,7 +381,11 @@ export default function SummerDatesScreen({ navigation }) {
             {/* Category Title */}
             <Text style={styles.categoryTitle}>{category.title}</Text>
 
-            {/* Mapping through each spot within the category */}
+            {/* 
+              Mapping through each spot within the category to display spot cards.
+              - key: Unique key for each spot to help React identify elements.
+              - style: Animated styles for each spot card.
+            */}
             {category.spots.map((spot, idx) => (
               <Animated.View
                 key={idx} // Unique key for each spot
@@ -365,7 +400,13 @@ export default function SummerDatesScreen({ navigation }) {
                   },
                 ]}
               >
-                {/* Touchable area for the entire spot card */}
+                {/* 
+                  Touchable area for the entire spot card.
+                  - style: Styling for the content area.
+                  - onPress: Handler for spot press.
+                  - accessibilityLabel: Accessibility label for screen readers.
+                  - accessibilityRole: Accessibility role for better accessibility.
+                */}
                 <TouchableOpacity
                   style={styles.dateSpotCardContent} // Styles for the content area
                   onPress={() => handleSpotPress(spot)} // Handler for spot press
@@ -376,18 +417,31 @@ export default function SummerDatesScreen({ navigation }) {
                       FAVORITE ICON
                       ========================= */}
 
-                  {/* Touchable area for the favorite (heart) icon */}
+                  {/* 
+                    Touchable area for the favorite (heart) icon.
+                    - style: Styling for the heart icon area.
+                    - onPress: Handler for toggling favorite.
+                    - accessibilityLabel: Accessibility label for screen readers.
+                    - accessibilityRole: Accessibility role for better accessibility.
+                  */}
                   <TouchableOpacity
                     style={styles.cardHeartIcon} // Styles for the heart icon area
-                    onPress={() => toggleFavorite(spot.name)} // Handler for toggling favorite
+                    onPress={() => toggleFavorite(spot.name, spot.address)} // Handler for toggling favorite
                     accessibilityLabel={`Favorite ${spot.name}`} // Accessibility label
                     accessibilityRole="button" // Accessibility role
                   >
-                    {/* Heart Icon indicating favorite status */}
+                    {/* 
+                      Heart Icon indicating favorite status.
+                      - name: Icon name based on favorite status.
+                      - size: Size of the icon.
+                      - color: Color based on favorite status.
+                    */}
                     <Icon
-                      name={favorites[spot.name] ? 'favorite' : 'favorite-border'} // Icon name based on favorite status
+                      name={
+                        favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border'
+                      }
                       size={20} // Size of the icon
-                      color={favorites[spot.name] ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
+                      color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
                     />
                   </TouchableOpacity>
 
@@ -395,7 +449,10 @@ export default function SummerDatesScreen({ navigation }) {
                       SPOT INFORMATION
                       ========================= */}
 
-                  {/* Container for spot name and address */}
+                  {/* 
+                    Container for spot name and address.
+                    - style: Styling for the text container.
+                  */}
                   <View style={styles.cardTextContainer}>
                     {/* Spot Name */}
                     <Text style={styles.dateSpotName}>{spot.name}</Text>
@@ -408,7 +465,13 @@ export default function SummerDatesScreen({ navigation }) {
                       NAVIGATION ARROW ICON
                       ========================= */}
 
-                  {/* Touchable area for the navigation arrow icon */}
+                  {/* 
+                    Touchable area for the navigation arrow icon.
+                    - style: Styling for the arrow icon area.
+                    - onPress: Handler for arrow icon press.
+                    - accessibilityLabel: Accessibility label for screen readers.
+                    - accessibilityRole: Accessibility role for better accessibility.
+                  */}
                   <TouchableOpacity
                     style={styles.cardArrowIcon} // Styles for the arrow icon area
                     onPress={() => handleSpotPress(spot)} // Handler for arrow icon press
@@ -436,10 +499,10 @@ const styles = StyleSheet.create({
   // Container covering the entire screen
   container: {
     flex: 1, // Takes up the full available space
-    backgroundColor: '#F8DD74', // Background color adjusted to summer theme
+    backgroundColor: '#F8DD74', // Background color adjusted to summer theme (light yellow)
   },
 
-  // Styling for the flowers falling animation
+  // Styling for the summer falling animation
   leavesAnimation: {
     position: 'absolute', // Positioned absolutely to overlay other content
     width: Dimensions.get('window').width * 1.2, // Width relative to screen size
@@ -452,7 +515,7 @@ const styles = StyleSheet.create({
 
   // Styling for the header container (currently empty, can be customized as needed)
   headerContainer: {
-    
+    // Add any specific styles if needed
   },
 
   // Styling for the main title text
