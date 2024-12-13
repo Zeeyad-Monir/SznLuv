@@ -38,6 +38,24 @@ const SeasonalFavourites = () => {
   const notificationTranslateY = useRef(new Animated.Value(50)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
 
+  const seasonTitle = `${season.charAt(0).toUpperCase() + season.slice(1)} Spots`;
+
+  const getSeasonStyle = (season) => {
+    // Return background color based on the season
+    switch (season.toLowerCase()) {
+      case 'fall':
+        return { backgroundColor: '#FFA571' };
+      case 'winter':
+        return { backgroundColor: '#A7C8FF' };
+      case 'spring':
+        return { backgroundColor: '#FFC1E3' };
+      case 'summer':
+        return { backgroundColor: '#FFF9C4' };
+      default:
+        return { backgroundColor: '#FFA571' }; // Default to fall color if none provided
+    }
+  };
+
   // Fetch seasonal favourites
   useEffect(() => {
     const fetchFavourites = async () => {
@@ -203,8 +221,6 @@ const SeasonalFavourites = () => {
     );
   }
 
-  const seasonTitle = `${season.charAt(0).toUpperCase() + season.slice(1)} Spots`;
-
   return (
     <View style={styles.container}>
       <NavBar />
@@ -233,7 +249,11 @@ const SeasonalFavourites = () => {
       >
         <Text style={styles.title}>Favourites</Text>
         <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
-        <Text style={styles.categoryTitle}>{seasonTitle}</Text>
+        
+        {/* Seasonal Subtitle Container */}
+        <View style={[styles.subtitleContainer, getSeasonStyle(season)]}>
+          <Text style={styles.subtitleText}>{seasonTitle}</Text>
+        </View>
       </Animated.View>
 
       <ScrollView style={styles.favouritesList}>
@@ -308,11 +328,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
     marginTop: 13,
   },
-  categoryTitle: {
-    fontSize: 24,
+  // New subtitle container styling
+  subtitleContainer: {
+    alignSelf: 'center',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 50,
+    marginTop: 32,  // 32px below the main titles
+    marginBottom: 20, // 24px above the list
+  },
+  subtitleText: {
+    fontSize: 25,
     fontWeight: '700',
-    marginTop: 20,
-    color: "#323232",
+    color: '#000000',
+    // fontFamily: 'Poppins', // If a custom font is desired, ensure it's loaded
+    textAlign: 'center',
   },
   favouritesList: {
     marginTop: 20,

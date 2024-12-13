@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   gridItemText: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
