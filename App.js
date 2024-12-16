@@ -24,6 +24,8 @@ import ProfileSettings from './screens/ProfileSettings';
 import LaityPumpkinPatch from './screens/LaityPumpkinPatch';
 import EagleAcresDairy from './screens/EagleAcresDairy'; 
 import SeasonalFavourites from './screens/SeasonalFavourites'; 
+import CustomCollectionScreen from './screens/CustomCollectionScreen'; 
+
 
 
 // Import SettingsProvider
@@ -76,6 +78,8 @@ export default function App() {
                 <Stack.Screen name="LaityPumpkinPatch" component={LaityPumpkinPatch} />
                 <Stack.Screen name="EagleAcresDairy" component={EagleAcresDairy} />
                 <Stack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
+                <Stack.Screen name="CustomCollectionScreen" component={CustomCollectionScreen} />
+
 
 
               </>
