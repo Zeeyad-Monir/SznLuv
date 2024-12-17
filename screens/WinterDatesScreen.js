@@ -19,6 +19,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Modal,
 } from 'react-native';
 
 // Importing Material Icons for icon usage in the UI
@@ -40,7 +41,7 @@ import NavBar from '../components/NavBar';
 import LottieView from 'lottie-react-native';
 
 // Importing the snow falling animation JSON file
-import snowFalling from '../assets/snowFalling.json'; 
+import snowFalling from '../assets/snowFalling.json';
 
 // =========================
 // CONSTANTS SECTION
@@ -60,9 +61,10 @@ const screenHeight = Dimensions.get('window').height;
  * This component displays a list of winter date spots categorized under different activities.
  * It includes animations for a visually appealing UI and allows users to favorite spots.
  * Favorites are synchronized with Firestore for persistence.
+ * Additionally, users can add favorite spots to specific collections.
  */
 export default function WinterDatesScreen({ navigation }) {
-  
+
   // =========================
   // CONTEXT USAGE
   // =========================
@@ -76,6 +78,13 @@ export default function WinterDatesScreen({ navigation }) {
 
   // State to manage user's favorite spots
   const [favorites, setFavorites] = useState({});
+
+  // NEW STATES: Notification and Modal Controls
+  const [showChooseCollectionNotification, setShowChooseCollectionNotification] = useState(false);
+  const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
+  const [showChooseCollectionModal, setShowChooseCollectionModal] = useState(false);
+  const [userCollections, setUserCollections] = useState([]);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   // =========================
   // ANIMATED VALUES SECTION
@@ -244,10 +253,94 @@ export default function WinterDatesScreen({ navigation }) {
   // =========================
 
   /**
+   * NEW FUNCTION: Fetch user-defined collections
+   * 
+   * This asynchronous function retrieves the user's collections from Firestore.
+   * It updates the `userCollections` state with the fetched data.
+   */
+  const fetchUserCollections = async () => {
+    if (!user) return;
+    try {
+      const favouritesDoc = doc(db, 'favourites', user.uid);
+      const docSnap = await getDoc(favouritesDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.collections && Array.isArray(data.collections)) {
+          setUserCollections(data.collections);
+        } else {
+          setUserCollections([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user-defined collections:', error);
+    }
+  };
+
+  /**
+   * NEW FUNCTION: Add spot to a specific collection
+   * 
+   * This asynchronous function adds a given spot to a specified collection in Firestore.
+   * It ensures that duplicates are not added and provides user feedback upon success or failure.
+   * 
+   * @param {string} collectionTitle - The title of the collection to add the spot to
+   * @param {string} spotName - The name of the spot to be added
+   */
+  const addSpotToCollection = async (collectionTitle, spotName) => {
+    try {
+      const favouritesDoc = doc(db, 'favourites', user.uid);
+      const docSnap = await getDoc(favouritesDoc);
+
+      if (!docSnap.exists()) return;
+
+      const data = docSnap.data();
+      if (!data.collections) {
+        data.collections = [];
+      }
+
+      // Find the target collection
+      const targetCollectionIndex = data.collections.findIndex(
+        (col) => col.title === collectionTitle
+      );
+
+      if (targetCollectionIndex === -1) {
+        Alert.alert('Error', 'Collection not found.');
+        return;
+      }
+
+      const targetCollection = data.collections[targetCollectionIndex];
+      if (!targetCollection.dates) {
+        targetCollection.dates = [];
+      }
+
+      // Prevent duplicates
+      if (targetCollection.dates.includes(spotName)) {
+        Alert.alert('Info', 'This spot is already in the collection.');
+        return;
+      }
+
+      targetCollection.dates.push(spotName);
+      data.collections[targetCollectionIndex] = targetCollection;
+
+      await setDoc(favouritesDoc, data, { merge: true });
+
+      // Show success notification
+      setShowSuccessNotification(true);
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error adding spot to collection:', error);
+      Alert.alert('Error', 'Failed to add spot to collection.');
+    }
+  };
+
+  /**
    * toggleFavorite Function
    * 
    * This asynchronous function toggles the favorite status of a given spot.
    * It updates the favorites state and synchronizes the change with Firestore.
+   * Additionally, it triggers the "Choose Collection" notification for newly favorited spots.
    * 
    * @param {string} spotName - The name of the spot to toggle as favorite
    * @param {string} spotAddress - The address/location of the spot
@@ -279,6 +372,15 @@ export default function WinterDatesScreen({ navigation }) {
           location: spotAddress,
         };
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
+
+        // NEW: Show "Choose Collection" notification
+        setNewlyFavouritedSpot({ name: spotName });
+        setShowChooseCollectionNotification(true);
+
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+          setShowChooseCollectionNotification(false);
+        }, 3000);
       }
 
       // Update the favorites in Firestore
@@ -316,6 +418,39 @@ export default function WinterDatesScreen({ navigation }) {
       // Show an alert if the feature is not yet implemented
       Alert.alert('Coming Soon', 'This feature is coming soon.');
     }
+  };
+
+  /**
+   * NEW FUNCTION: Handle "Choose Collection" button press in notification
+   * 
+   * This function is triggered when the user taps on the "Choose Collection" notification.
+   * It fetches the user's collections and opens the choose collection modal.
+   */
+  const handleChooseCollectionPress = async () => {
+    // Hide the notification bar
+    setShowChooseCollectionNotification(false);
+
+    // Fetch user collections
+    await fetchUserCollections();
+
+    // Open the choose collection modal
+    setShowChooseCollectionModal(true);
+  };
+
+  /**
+   * NEW FUNCTION: Handle user selecting a collection in the modal
+   * 
+   * This function is triggered when the user selects a collection from the modal.
+   * It adds the newly favorited spot to the selected collection.
+   * 
+   * @param {string} collectionTitle - The title of the selected collection
+   */
+  const handleCollectionSelect = (collectionTitle) => {
+    if (!newlyFavouritedSpot) return;
+    addSpotToCollection(collectionTitle, newlyFavouritedSpot.name);
+
+    // Close the modal
+    setShowChooseCollectionModal(false);
   };
 
   // =========================
@@ -457,6 +592,89 @@ export default function WinterDatesScreen({ navigation }) {
           </Animated.View>
         ))}
       </ScrollView>
+
+      {/* =========================
+          NEW: "Choose Collection" Notification
+          ========================= */}
+
+      {/* NEW: "Choose Collection" Notification Styled Like Success Notification */}
+      {showChooseCollectionNotification && (
+        <TouchableOpacity
+          style={styles.successNotification}
+          onPress={handleChooseCollectionPress}
+          accessibilityLabel="Choose Collection"
+          accessibilityRole="button"
+        >
+          <Text style={styles.successNotificationText}>Choose Collection</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* =========================
+          NEW: Success Notification
+          ========================= */}
+
+      {/* NEW: Success Notification */}
+      {showSuccessNotification && (
+        <View style={styles.successNotification}>
+          <Text style={styles.successNotificationText}>
+            Added to Collection
+          </Text>
+        </View>
+      )}
+
+      {/* =========================
+          NEW: Choose Collection Modal
+          ========================= */}
+
+      {/* NEW: Choose Collection Modal */}
+      <Modal
+        visible={showChooseCollectionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowChooseCollectionModal(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            {/* Close Button */}
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowChooseCollectionModal(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>X</Text>
+            </TouchableOpacity>
+            {/* Modal Title */}
+            <Text style={styles.modalTitle}>Collections</Text>
+
+            {userCollections.length > 0 ? (
+              // NEW: Scrollable Container for Collections (Visible 4 at a time)
+              <View style={styles.collectionListContainer}>
+                <ScrollView>
+                  {userCollections.map((collection, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.collectionButton,
+                        { backgroundColor: collection.color },
+                      ]}
+                      onPress={() => handleCollectionSelect(collection.title)}
+                      accessibilityLabel={`Add to ${collection.title} Collection`}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.collectionButtonText}>
+                        {collection.title}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : (
+              <Text style={styles.noCollectionsText}>
+                No Collections Available. Create one first!
+              </Text>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -566,5 +784,107 @@ const styles = StyleSheet.create({
   // Styling for the navigation arrow icon area within the card
   cardArrowIcon: {
     marginLeft: 16, // Left margin to separate from text
+  },
+
+  // =========================
+  // NEW: Success and "Choose Collection" Notification Styles
+  // =========================
+
+  // NEW: Success and "Choose Collection" Notification Styles
+  successNotification: {
+    position: 'absolute',
+    bottom: 60,
+    alignSelf: 'center',
+    backgroundColor: '#4A90E2', // Blue background
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  successNotificationText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+
+  // =========================
+  // NEW: Modal Styles
+  // =========================
+
+  // NEW: Modal Styles
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    maxHeight: '70%', // Ensures the modal doesn't exceed 70% of screen height
+    backgroundColor: '#fff', // Light beige background
+    borderRadius: 10,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#323232',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'transparent',
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#888',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+  // =========================
+  // NEW: Collection List Container for Scrollable List (Visible 4 items)
+  // =========================
+
+  collectionListContainer: {
+    width: '100%',
+    height: 240, // 4 items * (50px height + 10px margin) = 240px
+  },
+  collectionButton: {
+    marginVertical: 5, // 10px total vertical gap between buttons
+    borderRadius: 8,
+    height: 50, // Fixed height per collection button
+    width: '90%',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  collectionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  noCollectionsText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: '#555',
+    fontSize: 16,
   },
 });

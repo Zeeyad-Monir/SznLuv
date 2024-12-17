@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     zIndex: 1, // Ensure it appears above other elements
   },
   deleteButtonText: {
-    color: '#FF0000', // Red color for visibility
+    color: '#000000', // Red color for visibility
     fontWeight: 'bold',
     fontSize: 14,
   },
