@@ -23,7 +23,6 @@ export default function FallDatesScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [favorites, setFavorites] = useState({});
 
-  // NEW STATES: Notification and Modal Controls
   const [showChooseCollectionNotification, setShowChooseCollectionNotification] = useState(false);
   const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
   const [showChooseCollectionModal, setShowChooseCollectionModal] = useState(false);
@@ -112,7 +111,6 @@ export default function FallDatesScreen({ navigation }) {
       fetchFavorites();
     }
 
-    // Animate title
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 1,
@@ -127,7 +125,6 @@ export default function FallDatesScreen({ navigation }) {
       }),
     ]).start();
 
-    // Animate categories and spots with staggered delays
     let currentDelay = 500;
 
     categories.forEach((category, categoryIndex) => {
@@ -185,11 +182,10 @@ export default function FallDatesScreen({ navigation }) {
     });
   }, []);
 
-  // NEW FUNCTION: Fetch user-defined collections
   const fetchUserCollections = async () => {
     if (!user) return;
     try {
-      const favouritesDoc = doc(db, 'favourites', user.uid);
+      const favouritesDoc = doc(db, "favourites", user.uid);
       const docSnap = await getDoc(favouritesDoc);
 
       if (docSnap.exists()) {
@@ -201,14 +197,13 @@ export default function FallDatesScreen({ navigation }) {
         }
       }
     } catch (error) {
-      console.error('Error fetching user-defined collections:', error);
+      console.error("Error fetching user-defined collections:", error);
     }
   };
 
-  // NEW FUNCTION: Add spot to a specific collection
   const addSpotToCollection = async (collectionTitle, spotName) => {
     try {
-      const favouritesDoc = doc(db, 'favourites', user.uid);
+      const favouritesDoc = doc(db, "favourites", user.uid);
       const docSnap = await getDoc(favouritesDoc);
 
       if (!docSnap.exists()) return;
@@ -218,13 +213,12 @@ export default function FallDatesScreen({ navigation }) {
         data.collections = [];
       }
 
-      // Find the target collection
       const targetCollectionIndex = data.collections.findIndex(
         (col) => col.title === collectionTitle
       );
 
       if (targetCollectionIndex === -1) {
-        Alert.alert('Error', 'Collection not found.');
+        Alert.alert("Error", "Collection not found.");
         return;
       }
 
@@ -232,10 +226,8 @@ export default function FallDatesScreen({ navigation }) {
       if (!targetCollection.dates) {
         targetCollection.dates = [];
       }
-
-      // Prevent duplicates
       if (targetCollection.dates.includes(spotName)) {
-        Alert.alert('Info', 'This spot is already in the collection.');
+        Alert.alert("Info", "This spot is already in the collection.");
         return;
       }
 
@@ -244,18 +236,16 @@ export default function FallDatesScreen({ navigation }) {
 
       await setDoc(favouritesDoc, data, { merge: true });
 
-      // Show success notification
       setShowSuccessNotification(true);
       setTimeout(() => {
         setShowSuccessNotification(false);
       }, 2000);
     } catch (error) {
-      console.error('Error adding spot to collection:', error);
-      Alert.alert('Error', 'Failed to add spot to collection.');
+      console.error("Error adding spot to collection:", error);
+      Alert.alert("Error", "Failed to add spot to collection.");
     }
   };
 
-  // MODIFIED FUNCTION: Toggle favorite with new notification logic
   const toggleFavorite = async (spotName, spotAddress) => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to add favorites.');
@@ -269,26 +259,26 @@ export default function FallDatesScreen({ navigation }) {
       let userFavorites = docSnap.exists() ? docSnap.data() : {};
 
       if (userFavorites[spotName]) {
-        // Remove favorite
+        // Remove favourite
         delete userFavorites[spotName];
         Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
       } else {
-        // Add favorite with a 'season' property of "Fall"
+        // Add favourite with a 'season' property of "Fall"
         userFavorites[spotName] = {
           isFavourite: true,
-          season: 'Fall',
+          season: "Fall",
           location: spotAddress,
         };
         Alert.alert('Added to Favorites', `${spotName} has been added.`);
 
-        // NEW: Show "Choose Collection" notification
+        // Show the "Choose Collection" notification styled like success notification
         setNewlyFavouritedSpot({ name: spotName });
         setShowChooseCollectionNotification(true);
 
-        // Auto-hide notification after 3 seconds
+        // Auto-hide after 3 seconds
         setTimeout(() => {
           setShowChooseCollectionNotification(false);
-        }, 3000);
+        }, 5000);
       }
 
       await setDoc(userFavoritesRef, userFavorites);
@@ -311,24 +301,15 @@ export default function FallDatesScreen({ navigation }) {
     }
   };
 
-  // NEW FUNCTION: Handle "Choose Collection" button press in notification
   const handleChooseCollectionPress = async () => {
-    // Hide the notification bar
     setShowChooseCollectionNotification(false);
-
-    // Fetch user collections
     await fetchUserCollections();
-
-    // Open the choose collection modal
     setShowChooseCollectionModal(true);
   };
 
-  // NEW FUNCTION: Handle user selecting a collection in the modal
   const handleCollectionSelect = (collectionTitle) => {
     if (!newlyFavouritedSpot) return;
     addSpotToCollection(collectionTitle, newlyFavouritedSpot.name);
-
-    // Close the modal
     setShowChooseCollectionModal(false);
   };
 
@@ -398,16 +379,10 @@ export default function FallDatesScreen({ navigation }) {
                   >
                     <Icon
                       name={
-                        favorites[spot.name]?.isFavourite
-                          ? 'favorite'
-                          : 'favorite-border'
+                        favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border'
                       }
                       size={20}
-                      color={
-                        favorites[spot.name]?.isFavourite
-                          ? '#FF0000'
-                          : '#A9A9A9'
-                      }
+                      color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'}
                     />
                   </TouchableOpacity>
 
@@ -431,7 +406,7 @@ export default function FallDatesScreen({ navigation }) {
         ))}
       </ScrollView>
 
-      {/* NEW: "Choose Collection" Notification Styled Like Success Notification */}
+      {/* "Choose Collection" notification styled identically to success notification */}
       {showChooseCollectionNotification && (
         <TouchableOpacity
           style={styles.successNotification}
@@ -443,16 +418,14 @@ export default function FallDatesScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* NEW: Success Notification */}
+      {/* Success Notification */}
       {showSuccessNotification && (
         <View style={styles.successNotification}>
-          <Text style={styles.successNotificationText}>
-            Added to Collection
-          </Text>
+          <Text style={styles.successNotificationText}>Added to Collection</Text>
         </View>
       )}
 
-      {/* NEW: Choose Collection Modal */}
+      {/* Choose Collection Modal */}
       <Modal
         visible={showChooseCollectionModal}
         transparent
@@ -461,40 +434,28 @@ export default function FallDatesScreen({ navigation }) {
       >
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            {/* Close Button */}
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowChooseCollectionModal(false)}
             >
               <Text style={styles.modalCloseButtonText}>X</Text>
             </TouchableOpacity>
-            {/* Modal Title */}
             <Text style={styles.modalTitle}>Collections</Text>
 
             {userCollections.length > 0 ? (
-              // NEW: Scrollable Container for Collections (Visible 4 at a time)
-              <View style={styles.collectionListContainer}>
-                <ScrollView>
-                  {userCollections.map((collection, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[
-                        styles.collectionButton,
-                        { backgroundColor: collection.color },
-                      ]}
-                      onPress={() => handleCollectionSelect(collection.title)}
-                      accessibilityLabel={`Add to ${collection.title} Collection`}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.collectionButtonText}>
-                        {collection.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+              <ScrollView style={{ width: '100%' }}>
+                {userCollections.map((collection, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.collectionButton, { backgroundColor: collection.color }]}
+                    onPress={() => handleCollectionSelect(collection.title)}
+                  >
+                    <Text style={styles.collectionButtonText}>{collection.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             ) : (
-              <Text style={styles.noCollectionsText}>
+              <Text style={{ marginTop: 20, textAlign: 'center' }}>
                 No Collections Available. Create one first!
               </Text>
             )}
@@ -578,39 +539,33 @@ const styles = StyleSheet.create({
   cardArrowIcon: {
     marginLeft: 16,
   },
-
-  // NEW: Success and "Choose Collection" Notification Styles
+  
+  // Use the same styling as success notification
   successNotification: {
     position: 'absolute',
     bottom: 60,
     alignSelf: 'center',
-    backgroundColor: '#4A90E2', // Blue background
+    backgroundColor: '#4A90E2',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
   successNotificationText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
   },
 
-  // NEW: Modal Styles
+  // Modal styles
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
     width: '80%',
-    maxHeight: '70%', // Ensures the modal doesn't exceed 70% of screen height
-    backgroundColor: '#fff', // Light beige background
+    maxHeight: '70%',
+    backgroundColor: '#fff',
     borderRadius: 10,
     paddingTop: 20,
     paddingBottom: 20,
@@ -638,19 +593,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-
-  // NEW: Collection List Container for Scrollable List (Visible 4 items)
-  collectionListContainer: {
-    width: '100%',
-    height: 240, // 4 items * (50px height + 10px margin) = 240px
-  },
   collectionButton: {
-    marginVertical: 5, // 10px total vertical gap between buttons
+    marginVertical: 10,
     borderRadius: 8,
-    height: 50, // Fixed height per collection button
+    paddingVertical: 12,
     width: '90%',
     alignSelf: 'center',
-    justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -662,11 +610,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  noCollectionsText: {
-    marginTop: 20,
-    textAlign: 'center',
-    color: '#555',
-    fontSize: 16,
   },
 });
