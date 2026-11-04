@@ -20,6 +20,7 @@ import {
 
 // Importing external NavBar component.
 import NavBar from "../components/NavBar"; // Adjust the path based on your project structure
+import { fallSpotNames } from "../services/spots";
 
 /* ================================ ASYNC STORAGE ================================ */
 // Importing AsyncStorage for persistent storage.
@@ -59,13 +60,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 /* ================================ DATA ================================ */
 // Season-specific date ideas categorized by season.
 const seasonDateOptions = {
-  Fall: [
-    "Aldor Acres Family Farm",
-    "Eagle Acres Dairy",
-    "Laity Pumpkin Patch",
-    "Sunset Summit",
-    "Leaf Trail",
-  ],
+  Fall: fallSpotNames, // every spot on the Fall screen (services/spots.js)
   Winter: [
     "Glacier Rink",
     "Frosty Pond",
@@ -553,6 +548,8 @@ const SpinTheWheel = () => {
     const numSections = dateOptions.length;
     const angle = 360 / numSections;
     const radius = 150;
+    // Every label reads "Mystery Spot", so on a dense wheel (e.g. Fall's long list) the text would only overlap; hide it.
+    const showLabels = numSections <= 12;
 
     return dateOptions.map((option, index) => {
       const startAngle = index * angle;
@@ -600,6 +597,7 @@ const SpinTheWheel = () => {
             strokeWidth="2"
           />
           {/* SVG Text for the section */}
+          {showLabels && (
           <SvgText
             x={textX}
             y={textY - (lines.length - 1) * 6}
@@ -616,6 +614,7 @@ const SpinTheWheel = () => {
               </TSpan>
             ))}
           </SvgText>
+          )}
         </G>
       );
     });

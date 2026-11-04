@@ -102,8 +102,8 @@ const LaityPumpkinPatch = () => {
   // =========================
 
   // Latitude and longitude of the Laity Pumpkin Patch
-  const farmLatitude = 49.21939;
-  const farmLongitude = -122.60193;
+  const farmLatitude = 49.23465;
+  const farmLongitude = -122.63515;
 
   // =========================
   // ANIMATED VALUES SECTION
@@ -579,11 +579,11 @@ const LaityPumpkinPatch = () => {
           <Text style={styles.title}>Laity Pumpkin Patch</Text>
 
           {/* Farm Address */}
-          <Text style={styles.address}>2725 Laity St, Maple Ridge, BC</Text>
+          <Text style={styles.address}>12725 Laity St, Maple Ridge, BC</Text>
 
           {/* Activity Box Highlighting Features */}
           <View style={styles.activityBox}>
-            <Text style={styles.activityText}>Wineries, pumpkins, and more!</Text>
+            <Text style={styles.activityText}>Two pumpkin patches, corn mazes, and a pumpkin cannon!</Text>
           </View>
         </Animated.View>
 

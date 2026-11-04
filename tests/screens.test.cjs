@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHarness, act } = require('./renderHarness.cjs');
+const { detailedFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 
 for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'CustomCollectionScreen', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
@@ -152,3 +153,38 @@ for (const screen of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresD
     assert.ok(!h.calls.some(([name]) => name === 'watchLocation'));
   });
 }
+
+for (const spot of detailedFallSpots) {
+  test(`SpotDetailScreen renders ${spot.placeID} with its own title, address, tagline and photo placeholder`, async () => {
+    const h = createHarness();
+    const renderer = await h.render('screens/SpotDetailScreen.js', { props: { route: { params: { placeID: spot.placeID } } } });
+    const output = JSON.stringify(renderer.toJSON());
+    for (const text of [spot.title, spot.detailAddress, spot.tagline, 'Photo coming soon']) assert.ok(output.includes(text), `${spot.placeID} shows ${text}`);
+    await act(async () => renderer.unmount());
+  });
+}
+test('SpotDetailScreen explains an unknown spot instead of querying reviews for it', async () => {
+  const h = createHarness();
+  const renderer = await h.render('screens/SpotDetailScreen.js', { props: { route: { params: { placeID: 'nope' } } } });
+  assert.match(JSON.stringify(renderer.toJSON()), /Details unavailable for this spot/);
+  await act(async () => renderer.unmount());
+});
+test('Fall screen lists every spot in category order and opens the right venue page', async () => {
+  const h = createHarness();
+  const renderer = await h.render('screens/FallDatesScreen.js');
+  const output = JSON.stringify(renderer.toJSON());
+  for (const category of fallCategories) assert.ok(output.includes(category.title), category.title);
+  for (const name of fallSpotNames) assert.ok(output.includes(name), name);
+  assert.ok(!output.includes('Sunset Summit') && !output.includes('Riverfront Meadows'));
+  const detail = name => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
+  await act(async () => detail('Aldor Family Farm').props.onPress());
+  await act(async () => detail('Reifel Bird Sanctuary').props.onPress());
+  assert.deepEqual(h.navigations, [['AldorFamilyFarmScreen'], ['SpotDetailScreen', { placeID: 'reifel_bird_sanctuary' }]]);
+  await act(async () => renderer.unmount());
+});
+test('Seasons screen shows the same Fall count as the Fall list', async () => {
+  const h = createHarness();
+  const renderer = await h.render('screens/SeasonsScreen.js');
+  assert.ok(JSON.stringify(renderer.toJSON()).includes(`"${fallSpotNames.length}"," Active Ideas"`));
+  await act(async () => renderer.unmount());
+});

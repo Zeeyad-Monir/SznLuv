@@ -88,8 +88,8 @@ const EagleAcresDairy = () => {
   // =========================
 
   // Coordinates for the Eagle Acres Dairy & Pumpkin Patch
-  const farmLatitude = 49.1744;
-  const farmLongitude = -122.5645;
+  const farmLatitude = 49.15948;
+  const farmLongitude = -122.55347;
 
   // =========================
   // ANIMATION SETUP SECTION
@@ -552,7 +552,7 @@ const EagleAcresDairy = () => {
           <Text style={styles.title}>Eagle Acres Dairy & Pumpkin Patch</Text>
           <Text style={styles.address}>8796 240 St, Langley, BC</Text>
           <View style={styles.activityBox}>
-            <Text style={styles.activityText}>Wineries, pumpkins, and more!</Text>
+            <Text style={styles.activityText}>Farm animals, a corn maze, and hayrides!</Text>
           </View>
         </Animated.View>
 
@@ -588,8 +588,8 @@ const EagleAcresDairy = () => {
             rabbits, cats & dogs for some relaxing time in the 
             country. Look for R2D2 the Milking Robot and other 
             cool machines working on our dairy farm. Relax on 
-            a scenic hayride that circles past the future corn
-            maze and pumpkin fields of 2024!
+            a scenic hayride that circles past the corn
+            maze and pumpkin fields!
           </Text>
         </Animated.View>
 

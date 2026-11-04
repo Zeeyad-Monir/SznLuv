@@ -1,5 +1,6 @@
 import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
+import { fallCategories } from '../services/spots';
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
@@ -21,6 +22,9 @@ import NavBar from '../components/NavBar';
 import LottieView from 'lottie-react-native';
 import fallingLeaves from '../assets/fallingLeaves.json';
 
+// Longest entrance delay (ms). With 20+ cards, uncapped staggering left late cards invisible for ~10s.
+const MAX_ANIMATION_DELAY = 2500;
+
 export default function FallDatesScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [favorites, setFavorites] = useState({});
@@ -37,51 +41,8 @@ export default function FallDatesScreen({ navigation }) {
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleTranslateY = useRef(new Animated.Value(-50)).current;
 
-  const categories = [
-    {
-      title: 'Pumpkin Patches',
-      spots: [
-        {
-          name: 'Aldor Family Farm',
-          address: '24990 84 Ave, Langley',
-        },
-        {
-          name: 'Eagle Acres Dairy',
-          address: '789 Fall Blvd',
-        },
-        {
-          name: 'Laity Pumpkin Patch',
-          address: '2725 Laity St, Maple Ridge, BC',
-        },
-      ],
-    },
-    {
-      title: 'Hikes with a View',
-      spots: [
-        {
-          name: 'Sunset Summit',
-          address: '456 Mountain Rd',
-        },
-        {
-          name: 'Leaf Trail',
-          address: '321 Forest Path',
-        },
-      ],
-    },
-    {
-      title: 'Park and a Picnic',
-      spots: [
-        {
-          name: 'Maple Park',
-          address: '654 Maple St',
-        },
-        {
-          name: 'Riverfront Meadows',
-          address: '987 River Rd',
-        },
-      ],
-    },
-  ];
+  // Sections and spots come from services/spots.js so the list, venue pages, favourites and wheel stay in sync.
+  const categories = fallCategories;
 
   const categoryAnimations = categories.map(() => ({
     translateX: useRef(new Animated.Value(-50)).current,
@@ -125,7 +86,7 @@ export default function FallDatesScreen({ navigation }) {
     let currentDelay = 500;
 
     categories.forEach((category, categoryIndex) => {
-      const categoryDelay = currentDelay + categoryIndex * 400;
+      const categoryDelay = Math.min(currentDelay + categoryIndex * 400, MAX_ANIMATION_DELAY);
 
       Animated.parallel([
         Animated.timing(categoryAnimations[categoryIndex].translateX, {
@@ -144,7 +105,7 @@ export default function FallDatesScreen({ navigation }) {
       ]).start();
 
       category.spots.forEach((spot, spotIndex) => {
-        const spotDelay = categoryDelay + (spotIndex + 1) * 300;
+        const spotDelay = Math.min(categoryDelay + (spotIndex + 1) * 300, MAX_ANIMATION_DELAY);
 
         Animated.parallel([
           Animated.timing(cardAnimations[categoryIndex][spotIndex].translateY, {

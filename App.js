@@ -22,6 +22,7 @@ import HomeScreen from './screens/HomeScreen';
 import VancouverScreen from './screens/VancouverScreen';
 import SeasonsScreen from './screens/SeasonsScreen';
 import FallDatesScreen from './screens/FallDatesScreen';
+import SpotDetailScreen from './screens/SpotDetailScreen';
 import WinterDatesScreen from './screens/WinterDatesScreen';
 import SpringDatesScreen from './screens/SpringDatesScreen';
 import SummerDatesScreen from './screens/SummerDatesScreen';
@@ -100,6 +101,7 @@ export default function App() {
                 <Stack.Screen name="SeasonsScreen" component={SeasonsScreen} />
                 <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
                 <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
+                <Stack.Screen name="SpotDetailScreen" component={SpotDetailScreen} />
                 <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
                 <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
                 <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />

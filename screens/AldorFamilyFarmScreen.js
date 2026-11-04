@@ -118,8 +118,8 @@ const AldorFamilyFarmScreen = () => {
   // FARM LOCATION COORDINATES
   // ==================================================
 
-  const farmLatitude = 49.1706;
-  const farmLongitude = -122.6076;
+  const farmLatitude = 49.15313;
+  const farmLongitude = -122.53021;
 
   // ==================================================
   // ANIMATION REFERENCES

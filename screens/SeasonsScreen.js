@@ -29,6 +29,7 @@ import { doc, getDoc } from 'firebase/firestore';
 
 // Importing a custom navigation bar component
 import NavBar from '../components/NavBar';
+import { fallSpotNames } from '../services/spots';
 
 // =========================
 // CONSTANTS SECTION
@@ -109,10 +110,8 @@ export default function SeasonsScreen() {
    */
   const fetchDateCounts = async () => {
     try {
-      // Fetching Fall date count
-      const fallDatesRef = doc(db, 'dateCounts', 'fall');
-      const fallDatesSnap = await getDoc(fallDatesRef);
-      setFallCount(fallDatesSnap.exists() ? fallDatesSnap.data().count : 7);
+      // Fall count comes from the spot list itself (services/spots.js) so it always matches the Fall screen
+      setFallCount(fallSpotNames.length);
 
       // Fetching Winter date count
       const winterDatesRef = doc(db, 'dateCounts', 'winter');
@@ -131,7 +130,7 @@ export default function SeasonsScreen() {
     } catch (error) {
       console.error('Error fetching date counts:', error); // Logging any errors
       // Setting default counts in case of error
-      setFallCount(0);
+      setFallCount(fallSpotNames.length);
       setWinterCount(0);
       setSpringCount(0);
       setSummerCount(0);

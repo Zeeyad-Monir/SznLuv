@@ -4,7 +4,8 @@ const { registerWithProfile } = require('../services/registrationFlow');
 const { firebaseErrorMessage } = require('../services/firebaseErrors');
 const { toggleFavourite, removeFavourite, changeCollection } = require('../services/favouritesState');
 const { sessionAccess } = require('../services/sessionAccess');
-const { openVenue, venueRoutes } = require('../services/venueNavigation');
+const { openVenue, venueRoutes, SPOT_DETAIL_ROUTE } = require('../services/venueNavigation');
+const { fallCategoryTitles, legacyFallSpots, detailedFallSpots, fallCategories, fallSpotNames, getSpotByPlaceID } = require('../services/spots');
 
 function registrationFixture(failures = {}) {
   const calls = [];
@@ -109,4 +110,50 @@ test('venue links navigate only to registered screens and explain unavailable de
   assert.equal(navigated.length, 3);
   assert.equal(alerts.length, 3);
   assert.ok(alerts.every(([title]) => title === 'Details unavailable'));
+});
+
+const otherSeasonSpotNames = ['Glacier Rink', 'Frosty Pond', 'Evergreen Acres', 'Snowy Pines', 'Science World', 'Blossom Garden', 'VanDusen Botanical Garden', 'Spring Haven', 'River Trail', 'Meadow Path', 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
+test('fall spots: every detailed spot has the complete, consistently formatted record the venue page needs', () => {
+  assert.equal(detailedFallSpots.length, 20);
+  const placeIDs = new Set(), names = new Set();
+  for (const spot of detailedFallSpots) {
+    for (const field of ['placeID', 'category', 'name', 'address', 'title', 'detailAddress', 'tagline']) {
+      assert.ok(typeof spot[field] === 'string' && spot[field].trim() === spot[field] && spot[field].length > 0, `${spot.placeID}: ${field}`);
+    }
+    assert.match(spot.placeID, /^[a-z]+(_[a-z]+)*$/, spot.placeID);
+    assert.ok(fallCategoryTitles.includes(spot.category), `${spot.placeID}: category`);
+    assert.ok(!/[./]/.test(spot.name) && spot.name !== 'collections', `${spot.placeID}: name is a safe favourites key`);
+    assert.ok(!spot.address.includes(', BC') && spot.detailAddress.endsWith(', BC'), `${spot.placeID}: address formats`);
+    assert.ok(spot.tagline.endsWith('!'), `${spot.placeID}: tagline`);
+    assert.ok(Number.isFinite(spot.latitude) && spot.latitude > 48.9 && spot.latitude < 49.4, `${spot.placeID}: latitude near Greater Vancouver`);
+    assert.ok(Number.isFinite(spot.longitude) && spot.longitude > -123.3 && spot.longitude < -122.2, `${spot.placeID}: longitude near Greater Vancouver`);
+    assert.equal(spot.about.length, 3, `${spot.placeID}: about paragraphs`);
+    assert.ok(spot.about.every(text => text.trim().length > 40), `${spot.placeID}: about text`);
+    assert.ok(spot.about[2].startsWith('Good to know:'), `${spot.placeID}: practical paragraph`);
+    assert.ok(!placeIDs.has(spot.placeID) && !names.has(spot.name), `${spot.placeID}: unique`);
+    placeIDs.add(spot.placeID); names.add(spot.name);
+    assert.equal(getSpotByPlaceID(spot.placeID), spot);
+  }
+  assert.equal(getSpotByPlaceID('does_not_exist'), undefined);
+});
+test('fall spots: names are unique across seasons and the list matches the original three venue screens', () => {
+  assert.equal(new Set(fallSpotNames).size, fallSpotNames.length);
+  assert.equal(fallSpotNames.length, 23);
+  assert.ok(fallSpotNames.every(name => !otherSeasonSpotNames.includes(name)));
+  assert.deepEqual(legacyFallSpots.map(spot => spot.name).sort(), Object.keys(venueRoutes).sort());
+  assert.deepEqual(fallCategories.map(category => category.spots.length), [9, 5, 3, 3, 3]);
+  assert.ok(fallCategories.every(category => category.spots.every(spot => spot.name && spot.address)));
+});
+test('venue links open the shared detail page for every new fall spot', () => {
+  for (const spot of detailedFallSpots) {
+    const navigated = [], alerts = [];
+    openVenue({ navigate: (...args) => navigated.push(args) }, (...args) => alerts.push(args), spot.name);
+    assert.deepEqual(navigated, [[SPOT_DETAIL_ROUTE, { placeID: spot.placeID }]], spot.name);
+    assert.equal(alerts.length, 0);
+  }
+  for (const [name, route] of Object.entries(venueRoutes)) {
+    const navigated = [];
+    openVenue({ navigate: (...args) => navigated.push(args) }, () => assert.fail('legacy spot should navigate'), name);
+    assert.deepEqual(navigated, [[route]]);
+  }
 });
