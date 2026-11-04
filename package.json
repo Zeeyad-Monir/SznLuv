@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
@@ -43,7 +44,8 @@
     "react-native-vector-icons": "^10.2.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2"
+    "@babel/core": "^7.25.2",
+    "react-test-renderer": "18.3.1"
   },
   "private": true
 }

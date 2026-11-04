@@ -1,0 +1,213 @@
+{
+  "platform": "iPhone 16 / iOS 18.0 / Expo Go SDK 52",
+  "automatedTests": {
+    "passed": 44,
+    "failed": 0
+  },
+  "native": {
+    "signupVerified": true,
+    "loginVerified": true,
+    "profileAndReservationUidMatched": true,
+    "sessionRestoredAfterColdRestart": true,
+    "logoutPersistedAcrossRestart": true,
+    "persistence": "LOCAL",
+    "account": {
+      "uid": "tb9K5fSZt2Zo2ZwmDetQJyGid183",
+      "email": "codex.audit.native.1793759115039@example.com",
+      "username": "codex_native_24cf9e5983ed"
+    }
+  },
+  "backendBaseline": [
+    {
+      "name": "Original signup: unauthenticated username check",
+      "status": "error",
+      "code": "permission-denied",
+      "message": "7 PERMISSION_DENIED: Missing or insufficient permissions."
+    },
+    {
+      "name": "Create isolated audit account using Firebase Auth",
+      "status": "success",
+      "result": {
+        "uid": "yP9a9lAjoHcXKDeT3d2t0o8BEW82",
+        "email": "codex.audit.1793758129299@example.com"
+      }
+    },
+    {
+      "name": "Wrong-password login",
+      "status": "error",
+      "code": "auth/invalid-credential",
+      "message": "Firebase: Error (auth/invalid-credential)."
+    },
+    {
+      "name": "Valid login",
+      "status": "success",
+      "result": true
+    },
+    {
+      "name": "Duplicate email signup",
+      "status": "error",
+      "code": "auth/email-already-in-use",
+      "message": "Firebase: Error (auth/email-already-in-use)."
+    },
+    {
+      "name": "Authenticated read: usernames",
+      "status": "success",
+      "result": false
+    },
+    {
+      "name": "Authenticated read: users",
+      "status": "success",
+      "result": false
+    },
+    {
+      "name": "Authenticated read: favourites",
+      "status": "success",
+      "result": false
+    },
+    {
+      "name": "Authenticated read: dateCounts",
+      "status": "success",
+      "result": false
+    },
+    {
+      "name": "Atomic username/profile provisioning",
+      "status": "success",
+      "result": true
+    },
+    {
+      "name": "Favourites write on audit account only",
+      "status": "success"
+    },
+    {
+      "name": "Logout",
+      "status": "success"
+    }
+  ],
+  "externalApiAndQueryChecks": [
+    {
+      "name": "Reproduce stale favourites replacement",
+      "result": {
+        "firstChangeLost": true
+      }
+    },
+    {
+      "name": "Review query recent",
+      "result": {
+        "count": 28
+      }
+    },
+    {
+      "name": "Review query popular",
+      "result": {
+        "count": 10
+      }
+    },
+    {
+      "name": "Review query rated",
+      "result": {
+        "count": 19
+      }
+    },
+    {
+      "name": "Review query recent with min rating",
+      "result": {
+        "count": 18
+      }
+    },
+    {
+      "name": "Review query popular with min rating",
+      "result": {
+        "count": 9
+      }
+    },
+    {
+      "name": "Weather API using public venue coordinates",
+      "result": {
+        "http": 200,
+        "code": "200",
+        "message": 0
+      }
+    },
+    {
+      "name": "Directions API between public venue coordinates",
+      "result": {
+        "http": 200,
+        "status": "REQUEST_DENIED",
+        "error": "You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started"
+      }
+    }
+  ],
+  "ownershipChecks": [
+    {
+      "check": "Other audit account users read",
+      "passed": false
+    },
+    {
+      "check": "Other audit account favourites read",
+      "passed": false
+    },
+    {
+      "check": "Other audit account favourites write",
+      "passed": false
+    }
+  ],
+  "liveServiceChecks": [
+    {
+      "name": "Signup created its profile and reservation",
+      "passed": true
+    },
+    {
+      "name": "Duplicate email preserves the signed-in account",
+      "passed": true
+    },
+    {
+      "name": "Duplicate username removes only the new account and signs out",
+      "passed": true
+    },
+    {
+      "name": "Concurrent favourites and collection changes retain all data",
+      "passed": true
+    },
+    {
+      "name": "A repeated review upvote counts once, including concurrent requests",
+      "passed": true
+    },
+    {
+      "name": "Review query: timestamp desc, minimum 0",
+      "passed": true
+    },
+    {
+      "name": "Review query: timestamp desc, minimum 3",
+      "passed": true
+    },
+    {
+      "name": "Review query: thumbsUpCount desc, minimum 0",
+      "passed": true
+    },
+    {
+      "name": "Review query: thumbsUpCount desc, minimum 3",
+      "passed": true
+    },
+    {
+      "name": "Review query: starRating desc, minimum 0",
+      "passed": true
+    },
+    {
+      "name": "Review query: starRating desc, minimum 3",
+      "passed": true
+    },
+    {
+      "name": "Review query: starRating asc, minimum 0",
+      "passed": true
+    },
+    {
+      "name": "Review query: starRating asc, minimum 3",
+      "passed": true
+    },
+    {
+      "name": "Saved data and profile survive logout and login",
+      "passed": true
+    }
+  ],
+  "visualWalkthroughCompleted": false
+}

@@ -50,7 +50,7 @@ import { db } from "../firebaseConfig"; // Import Firestore database instance
 
 /* ================================ AUTH CONTEXT IMPORTS ================================ */
 // Importing AuthContext to get authenticated user.
-import { AuthContext } from "../App"; // Import AuthContext to get authenticated user
+import { AuthContext } from "../contexts/AuthContext"; // Import AuthContext to get authenticated user
 
 /* ================================ DEVICE DIMENSIONS ================================ */
 // Getting the width and height of the device screen for positioning elements.

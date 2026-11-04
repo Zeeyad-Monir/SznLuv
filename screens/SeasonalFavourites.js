@@ -1,3 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { removeSavedSpot } from '../services/favourites';
+import { openVenue } from '../services/venueNavigation';
 // SeasonalFavourites.js
 // This screen displays only the favourites for a specific season.
 // It allows removal of favourites just like the old favourites screen did, but filtered by season.
@@ -14,10 +17,10 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import NavBar from '../components/NavBar';
-import { AuthContext } from '../App';
+import { AuthContext } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
@@ -57,13 +60,14 @@ const SeasonalFavourites = () => {
   };
 
   // Fetch seasonal favourites
-  useEffect(() => {
+  useFocusEffect(React.useCallback(() => {
     const fetchFavourites = async () => {
       try {
         if (user) {
           const favouritesDoc = doc(db, "favourites", user.uid);
           const docSnap = await getDoc(favouritesDoc);
 
+          setFavourites([]);
           if (docSnap.exists()) {
             const data = docSnap.data();
 
@@ -92,7 +96,7 @@ const SeasonalFavourites = () => {
     };
 
     fetchFavourites();
-  }, [user, season]);
+  }, [user, season]));
 
   useEffect(() => {
     if (!loading) {
@@ -176,42 +180,17 @@ const SeasonalFavourites = () => {
       return;
     }
 
-    const userFavoritesRef = doc(db, 'favourites', user.uid);
-
     try {
-      const docSnap = await getDoc(userFavoritesRef);
-      let userFavorites = docSnap.exists() ? docSnap.data() : {};
-
-      if (userFavorites[spotName]) {
-        delete userFavorites[spotName];
-        await setDoc(userFavoritesRef, userFavorites);
-
-        setFavourites((prevFavourites) =>
-          prevFavourites.filter((fav) => fav !== spotName).sort((a, b) => a.localeCompare(b))
-        );
-
-        setNotificationMessage(`"${spotName}" removed from favourites.`);
-      } else {
-        console.log('Favourite not found.');
-      }
+      await removeSavedSpot(user.uid, spotName);
+      setFavourites(previous => previous.filter(name => name !== spotName));
+      setNotificationMessage(`"${spotName}" removed from favourites.`);
     } catch (error) {
       console.error('Error removing favourite:', error);
       Alert.alert('Error', 'Failed to remove favourite. Please try again.');
     }
   };
 
-  const handleFavouritePress = (name) => {
-    // Navigation logic based on the spot name
-    if (name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarmScreen');
-    } else if (name === 'Laity Pumpkin Patch') {
-      navigation.navigate('LaityPumpkinPatch');
-    } else if (name === 'Eagle Acres Dairy') {
-      navigation.navigate('EagleAcresDairy');
-    } else {
-      Alert.alert('Coming Soon', 'Feature coming soon.');
-    }
-  };
+  const handleFavouritePress = (name) => openVenue(navigation, Alert.alert, name);
 
   if (loading) {
     return (

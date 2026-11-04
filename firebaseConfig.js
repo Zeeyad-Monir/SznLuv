@@ -1,9 +1,13 @@
 // firebaseConfig.js
 
 // Import Firebase modules
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   getAuth,
+  initializeAuth,
+  getReactNativePersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -23,10 +27,19 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-export const auth = getAuth(app);
+function initializeAuthentication() {
+  if (Platform.OS === 'web') return getAuth(app);
+  try {
+    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch (error) {
+    if (error.code === 'auth/already-initialized') return getAuth(app);
+    throw error;
+  }
+}
+export const auth = initializeAuthentication();
 export const db = getFirestore(app);
 export const storage = getStorage(app); // Initialize and export Firebase Storage
 

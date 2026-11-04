@@ -1,3 +1,5 @@
+import { toggleSavedSpot, updateCollection } from '../services/favourites';
+import { openVenue } from '../services/venueNavigation';
 // SCREENS/SPRINGDATESSCREEN.JS
 // Detailed comments are added by ChatGPT to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
@@ -26,13 +28,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Importing Firestore functions for database interactions
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 // Importing Firebase authentication and database configurations
 import { auth, db } from '../firebaseConfig'; // Import Firebase config
 
 // Importing AuthContext to access authenticated user information
-import { AuthContext } from '../App'; // Import AuthContext
+import { AuthContext } from '../contexts/AuthContext'; // Import AuthContext
 
 // Importing a custom navigation bar component
 import NavBar from '../components/NavBar'; // Import NavBar
@@ -144,26 +146,18 @@ export default function SpringDatesScreen({ navigation }) {
    * and initializes the favorites state. It also triggers animations for the title, categories, and cards.
    */
   useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, 'favourites', user.uid), snapshot => {
+      setFavorites(snapshot.exists() ? snapshot.data() : {});
+    }, error => {
+      console.error('Favourites subscription failed:', { code: error.code });
+      Alert.alert('Favourites unavailable', 'Could not load your saved spots. Please check your connection and account access.');
+    });
+  }, [user]);
+
+  useEffect(() => {
     // Function to fetch user's favorites from Firestore
-    if (user) {
-      const fetchFavorites = async () => {
-        const userFavoritesRef = doc(db, 'favourites', user.uid);
-        try {
-          const docSnap = await getDoc(userFavoritesRef);
-          if (docSnap.exists()) {
-            setFavorites(docSnap.data());
-          }
-        } catch (error) {
-          // Logging any errors that occur during fetching
-          console.error('Error fetching favorites:', error);
-        }
-      };
 
-      // Invoke the fetchFavorites function to load favorites
-      fetchFavorites();
-    }
-
-    // Animate the title and icons immediately on mount
     Animated.parallel([
       // Animate the opacity of the title from 0 to 1
       Animated.timing(titleOpacity, {
@@ -276,50 +270,12 @@ export default function SpringDatesScreen({ navigation }) {
    */
   const addSpotToCollection = async (collectionTitle, spotName) => {
     try {
-      const favouritesDoc = doc(db, 'favourites', user.uid);
-      const docSnap = await getDoc(favouritesDoc);
-
-      if (!docSnap.exists()) return;
-
-      const data = docSnap.data();
-      if (!data.collections) {
-        data.collections = [];
-      }
-
-      // Find the target collection
-      const targetCollectionIndex = data.collections.findIndex(
-        (col) => col.title === collectionTitle
-      );
-
-      if (targetCollectionIndex === -1) {
-        Alert.alert('Error', 'Collection not found.');
-        return;
-      }
-
-      const targetCollection = data.collections[targetCollectionIndex];
-      if (!targetCollection.dates) {
-        targetCollection.dates = [];
-      }
-
-      // Prevent duplicates
-      if (targetCollection.dates.includes(spotName)) {
-        Alert.alert('Info', 'This spot is already in the collection.');
-        return;
-      }
-
-      targetCollection.dates.push(spotName);
-      data.collections[targetCollectionIndex] = targetCollection;
-
-      await setDoc(favouritesDoc, data, { merge: true });
-
-      // Show success notification
+      await updateCollection(user?.uid, { type: 'add', title: collectionTitle, spot: spotName });
       setShowSuccessNotification(true);
-      setTimeout(() => {
-        setShowSuccessNotification(false);
-      }, 2000);
+      setTimeout(() => setShowSuccessNotification(false), 2000);
     } catch (error) {
       console.error('Error adding spot to collection:', error);
-      Alert.alert('Error', 'Failed to add spot to collection.');
+      Alert.alert('Could not save spot', error.message);
     }
   };
 
@@ -334,52 +290,21 @@ export default function SpringDatesScreen({ navigation }) {
    * @param {string} spotAddress - The address/location of the spot
    */
   const toggleFavorite = async (spotName, spotAddress) => {
-    // If the user is not authenticated, show an error alert
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to add favorites.');
-      return;
-    }
-
-    // Reference to the user's favorites document in Firestore
-    const userFavoritesRef = doc(db, 'favourites', user.uid);
-
     try {
-      // Fetch the current favorites from Firestore
-      const docSnap = await getDoc(userFavoritesRef);
-      let userFavorites = docSnap.exists() ? docSnap.data() : {};
-
-      if (userFavorites[spotName]?.isFavourite) {
-        // If the spot is already a favorite, remove it
-        delete userFavorites[spotName];
-        Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
-      } else {
-        // If the spot is not a favorite, add it with season and location
-        userFavorites[spotName] = {
-          isFavourite: true,
-          season: 'Spring', // Setting the season to 'Spring'
-          location: spotAddress, // Storing the spot's address
-        };
-        Alert.alert('Added to Favorites', `${spotName} has been added.`);
-
-        // NEW: Show "Choose Collection" notification
+      const next = await toggleSavedSpot(user?.uid, spotName, {
+        isFavourite: true, season: 'Spring', location: spotAddress,
+      });
+      setFavorites(next);
+      const added = !!next[spotName]?.isFavourite;
+      Alert.alert(added ? 'Added to Favorites' : 'Removed from Favorites', spotName);
+      if (added) {
         setNewlyFavouritedSpot({ name: spotName });
         setShowChooseCollectionNotification(true);
-
-        // Auto-hide notification after 3 seconds
-        setTimeout(() => {
-          setShowChooseCollectionNotification(false);
-        }, 3000);
+        setTimeout(() => setShowChooseCollectionNotification(false), 5000);
       }
-
-      // Update the favorites in Firestore
-      await setDoc(userFavoritesRef, userFavorites);
-
-      // Update the local favorites state
-      setFavorites(userFavorites);
     } catch (error) {
-      // Log any errors that occur during the update
       console.error('Error updating favorites:', error);
-      Alert.alert('Error', 'Could not update favorites. Please try again.');
+      Alert.alert('Could not save favourite', 'Your change was not saved. Please check your connection and try again.');
     }
   };
 
@@ -392,21 +317,7 @@ export default function SpringDatesScreen({ navigation }) {
    * 
    * @param {Object} spot - The spot object containing name and address
    */
-  const handleSpotPress = (spot) => {
-    // Navigate based on the spot's name
-    if (spot.name === 'Blossom Garden') {
-      navigation.navigate('BlossomGardenScreen'); // Navigate to the specific screen
-    } else if (spot.name === 'Spring Haven') {
-      navigation.navigate('SpringHavenScreen'); // Navigate to the specific screen
-    } else if (spot.name === 'River Trail') {
-      navigation.navigate('RiverTrailScreen'); // Navigate to the specific screen
-    } else if (spot.name === 'Meadow Path') {
-      navigation.navigate('MeadowPathScreen'); // Navigate to the specific screen
-    } else {
-      // Show an alert if the feature is not yet implemented
-      Alert.alert('Coming Soon', 'This feature is coming soon.');
-    }
-  };
+  const handleSpotPress = (spot) => openVenue(navigation, Alert.alert, spot.name);
 
   /**
    * NEW FUNCTION: Handle "Choose Collection" button press in notification

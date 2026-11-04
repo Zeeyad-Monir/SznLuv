@@ -1,3 +1,5 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { updateCollection } from '../services/favourites';
 // Favourites.js
 
 import React, { useEffect, useRef, useState, useContext } from "react";
@@ -17,8 +19,8 @@ import {
 } from "react-native";
 import NavBar from '../components/NavBar';
 import { useNavigation } from '@react-navigation/native';
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { AuthContext } from '../App';
+import { doc, getDoc } from "firebase/firestore";
+import { AuthContext } from '../contexts/AuthContext';
 import { db } from "../firebaseConfig";
 
 const { width } = Dimensions.get('window');
@@ -77,13 +79,15 @@ const Favourites = () => {
   // ======== DELETING COLLECTION STATE ========
   const [deletingCollection, setDeletingCollection] = useState(null);
 
-  useEffect(() => {
+  useFocusEffect(React.useCallback(() => {
     if (!user) return;
     const fetchCollections = async () => {
       try {
         const favouritesDoc = doc(db, "favourites", user.uid);
         const docSnap = await getDoc(favouritesDoc);
 
+        setCollections([]);
+        setCollectionAnimations([]);
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data.collections && Array.isArray(data.collections)) {
@@ -101,7 +105,7 @@ const Favourites = () => {
       }
     };
     fetchCollections();
-  }, [user]);
+  }, [user]));
 
   const handleCreateCollection = async () => {
     if (!newCollectionTitle.trim()) {
@@ -130,17 +134,7 @@ const Favourites = () => {
 
     if (user) {
       try {
-        const favouritesDoc = doc(db, "favourites", user.uid);
-        const docSnap = await getDoc(favouritesDoc);
-
-        let data = docSnap.exists() ? docSnap.data() : {};
-        if (!data.collections) {
-          data.collections = [];
-        }
-
-        data.collections.push(newCollection);
-
-        await setDoc(favouritesDoc, data, { merge: true });
+        const data = await updateCollection(user.uid, { type: 'create', title: newCollection.title, color: selectedColor });
         setCollections(data.collections);
 
         // Initialize animation for the new collection
@@ -243,31 +237,10 @@ const Favourites = () => {
 
   const performDeletion = async (collectionToDelete, animIndex) => {
     try {
-      const favouritesDocRef = doc(db, "favourites", user.uid);
-      const docSnap = await getDoc(favouritesDocRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.collections && Array.isArray(data.collections)) {
-          const updatedCollections = data.collections.filter(
-            (col) => col.title !== collectionToDelete.title
-          );
-
-          await setDoc(favouritesDocRef, { collections: updatedCollections }, { merge: true });
-          setCollections(updatedCollections);
-
-          // Remove the associated animation
-          if (animIndex !== -1) {
-            setCollectionAnimations((prevAnimations) => {
-              const newAnimations = [...prevAnimations];
-              newAnimations.splice(animIndex, 1);
-              return newAnimations;
-            });
-          }
-
-          Alert.alert("Success", "Collection deleted successfully.");
-        }
-      }
+      const next = await updateCollection(user.uid, { type: 'delete', title: collectionToDelete.title });
+      setCollections(next.collections);
+      if (animIndex !== -1) setCollectionAnimations(previous => previous.filter((_, index) => index !== animIndex));
+      Alert.alert('Success', 'Collection deleted successfully.');
 
       // Reset the deletingCollection state
       setDeletingCollection(null);

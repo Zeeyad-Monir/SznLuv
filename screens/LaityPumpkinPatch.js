@@ -74,6 +74,7 @@ const LaityPumpkinPatch = () => {
 
   // State to store the user's current location
   const [location, setLocation] = useState(null);
+  const [directionsError, setDirectionsError] = useState(false);
 
   // State to store any error messages related to location fetching
   const [errorMsg, setErrorMsg] = useState(null);
@@ -142,9 +143,12 @@ const LaityPumpkinPatch = () => {
    */
   useEffect(() => {
     let locationSubscription;
+    let cancelled = false;
 
     const startLocationTracking = async () => {
       if (!isLocationEnabled) {
+        setLocation(null);
+        setErrorMsg(null);
         setLoading(false); // Stop loading if location services are disabled
         return;
       }
@@ -152,6 +156,8 @@ const LaityPumpkinPatch = () => {
       try {
         // Requesting foreground location permissions
         let { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        setErrorMsg(null);
 
         if (status !== 'granted') {
           setErrorMsg('Permission to access location was denied.');
@@ -167,11 +173,15 @@ const LaityPumpkinPatch = () => {
             distanceInterval: 1600, // Update every mile (approx. 1600 meters)
           },
           (newLocation) => {
+            if (cancelled) return;
             setLocation(newLocation); // Update location state with new coordinates
             setLoading(false); // Stop loading once location is obtained
           }
         );
+        if (cancelled) locationSubscription.remove();
+        else setLoading(false);
       } catch (error) {
+        if (cancelled) return;
         setErrorMsg('Error fetching location.');
         setLoading(false);
       }
@@ -181,6 +191,7 @@ const LaityPumpkinPatch = () => {
 
     // Cleanup function to remove location subscription when component unmounts
     return () => {
+      cancelled = true;
       if (locationSubscription) locationSubscription.remove();
     };
   }, [isLocationEnabled]);
@@ -216,6 +227,7 @@ const LaityPumpkinPatch = () => {
           const data = await response.json();
 
           if (response.ok) {
+            setWeatherError(null);
             // Processing fetched data to extract daily forecasts
             const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
@@ -627,6 +639,7 @@ const LaityPumpkinPatch = () => {
         >
           {/* Map Header */}
           <Text style={styles.mapHeader}>How to get there?</Text>
+                  {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
 
           {/* Map Wrapper */}
           <View style={styles.mapWrapper}>
@@ -651,6 +664,8 @@ const LaityPumpkinPatch = () => {
               {/* Directions from User Location to Pumpkin Patch */}
               {isLocationEnabled && location && (
                 <MapViewDirections
+                  onReady={() => setDirectionsError(false)}
+                  onError={(message) => { console.error('Directions unavailable:', message); setDirectionsError(true); }}
                   origin={{
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,

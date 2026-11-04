@@ -27,7 +27,7 @@ import NavBar from '../components/NavBar';
 
 // Importing context providers for settings and authentication
 import { SettingsContext } from './SettingsContext';
-import { AuthContext } from '../App';
+import { AuthContext } from '../contexts/AuthContext';
 
 // Importing Firestore functions for database interactions
 import { doc, getDoc } from 'firebase/firestore';
@@ -94,26 +94,7 @@ const ProfileSettings = () => {
    * Handles the toggling of location services.
    * It calls the toggleLocationServices function from context and shows an alert based on the new state.
    */
-  const handleToggleLocation = async () => {
-    try {
-      // Toggling the location services
-      await toggleLocationServices();
-
-      // Determining the message based on the current state of location services
-      const message = isLocationEnabled
-        ? 'Location services have been disabled.'
-        : 'Location services have been enabled.';
-
-      // Displaying an alert to inform the user about the change
-      Alert.alert('Location Services', message);
-    } catch (error) {
-      // Logging the error for debugging purposes
-      console.error('Error toggling location services:', error);
-
-      // Displaying an error alert to the user
-      Alert.alert('Error', 'Failed to toggle location services.');
-    }
-  };
+  const handleToggleLocation = () => toggleLocationServices();
 
   /**
    * Handles the sign-out process.

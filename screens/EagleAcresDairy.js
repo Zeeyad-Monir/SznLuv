@@ -74,6 +74,7 @@ const EagleAcresDairy = () => {
 
   // State variables for managing location, loading states, errors, and data
   const [location, setLocation] = useState(null);
+  const [directionsError, setDirectionsError] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [weatherData, setWeatherData] = useState(null);
@@ -124,9 +125,12 @@ const EagleAcresDairy = () => {
    */
   useEffect(() => {
     let locationSubscription;
+    let cancelled = false;
 
     const startLocationTracking = async () => {
       if (!isLocationEnabled) {
+        setLocation(null);
+        setErrorMsg(null);
         setLoading(false);
         return;
       }
@@ -134,6 +138,8 @@ const EagleAcresDairy = () => {
       try {
         // Requesting foreground location permissions
         let { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        setErrorMsg(null);
 
         if (status !== 'granted') {
           setErrorMsg('Permission to access location was denied.');
@@ -154,11 +160,15 @@ const EagleAcresDairy = () => {
             distanceInterval: 1600, // Update every mile (approx. 1600 meters)
           },
           (newLocation) => {
+            if (cancelled) return;
             setLocation(newLocation);
             setLoading(false);
           }
         );
+        if (cancelled) locationSubscription.remove();
+        else setLoading(false);
       } catch (error) {
+        if (cancelled) return;
         setErrorMsg('Error fetching location.');
         setLoading(false);
       }
@@ -168,6 +178,7 @@ const EagleAcresDairy = () => {
 
     // Cleanup function to remove location subscription when component unmounts
     return () => {
+      cancelled = true;
       if (locationSubscription) locationSubscription.remove();
     };
   }, [isLocationEnabled]);
@@ -203,6 +214,7 @@ const EagleAcresDairy = () => {
           const data = await response.json();
 
           if (response.ok) {
+            setWeatherError(null);
             // Processing fetched data to extract daily forecasts
             const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
@@ -596,6 +608,7 @@ const EagleAcresDairy = () => {
         >
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
+                  {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
           <View style={styles.mapWrapper}>
             <MapView
               style={styles.map}
@@ -614,6 +627,8 @@ const EagleAcresDairy = () => {
               />
               {isLocationEnabled && location && (
                 <MapViewDirections
+                  onReady={() => setDirectionsError(false)}
+                  onError={(message) => { console.error('Directions unavailable:', message); setDirectionsError(true); }}
                   origin={{
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,

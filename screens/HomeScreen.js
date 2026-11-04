@@ -25,7 +25,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 
 // Importing AuthContext to access authenticated user information
-import { AuthContext } from '../App';
+import { AuthContext } from '../contexts/AuthContext';
 
 // Importing Firebase authentication and database functions
 import { auth, db } from '../firebaseConfig';

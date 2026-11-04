@@ -1,3 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { updateCollection } from '../services/favourites';
+import { openVenue } from '../services/venueNavigation';
 // CustomCollectionScreen.js
 
 import React, { useEffect, useState, useContext, useRef } from "react";
@@ -12,10 +15,10 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import NavBar from "../components/NavBar";
-import { AuthContext } from '../App';
+import { AuthContext } from '../contexts/AuthContext';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -36,13 +39,15 @@ const CustomCollectionScreen = () => {
   const notificationTranslateY = useRef(new Animated.Value(50)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
+  useFocusEffect(React.useCallback(() => {
+    if (!user) return;
     // Fetch the updated 'collections' array from Firestore to ensure we have the latest data
     const fetchFavoritedSpots = async () => {
       try {
-        const docRef = doc(db, "favourites", collection.userId);
+        const docRef = doc(db, "favourites", user.uid);
         const docSnap = await getDoc(docRef);
 
+        setFavoritedSpots([]);
         if (docSnap.exists()) {
           const data = docSnap.data();
 
@@ -66,7 +71,7 @@ const CustomCollectionScreen = () => {
     };
 
     fetchFavoritedSpots();
-  }, [collection]);
+  }, [collection, user]));
 
   useEffect(() => {
     if (notificationMessage !== '') {
@@ -112,53 +117,18 @@ const CustomCollectionScreen = () => {
       return;
     }
 
-    const userFavoritesRef = doc(db, 'favourites', collection.userId);
-
     try {
-      const docSnap = await getDoc(userFavoritesRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const collections = data.collections || [];
-
-        // Find the matching collection
-        const matchingCollectionIndex = collections.findIndex(
-          (col) => col.title === collection.title
-        );
-
-        if (matchingCollectionIndex !== -1) {
-          const matchingCollection = collections[matchingCollectionIndex];
-          const updatedDates = matchingCollection.dates.filter(
-            (spot) => spot !== spotName
-          );
-
-          // Update the collection's dates
-          collections[matchingCollectionIndex].dates = updatedDates;
-
-          // Update Firestore
-          await setDoc(userFavoritesRef, { ...data, collections }, { merge: true });
-
-          // Update local state
-          setFavoritedSpots(updatedDates);
-
-          // Show notification
-          setNotificationMessage(`"${spotName}" removed from "${collection.title}" collection.`);
-        } else {
-          console.log('Collection not found.');
-        }
-      } else {
-        console.log('Favorites document does not exist.');
-      }
+      const next = await updateCollection(user.uid, { type: 'remove', title: collection.title, spot: spotName });
+      const updatedCollection = next.collections.find(col => col.title === collection.title);
+      setFavoritedSpots(updatedCollection?.dates || []);
+      setNotificationMessage(`"${spotName}" removed from "${collection.title}" collection.`);
     } catch (error) {
       console.error('Error removing favourite:', error);
       Alert.alert('Error', 'Failed to remove favourite. Please try again.');
     }
   };
 
-  const handleSpotPress = (spotName) => {
-    Alert.alert("Coming Soon", `Navigate to details for: ${spotName}`);
-    // You can route to a spot detail screen if you have one:
-    // navigation.navigate('SpotDetailScreen', { spotName });
-  };
+  const handleSpotPress = (spotName) => openVenue(navigation, Alert.alert, spotName);
 
   if (loading) {
     return (

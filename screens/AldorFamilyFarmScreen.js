@@ -1,3 +1,4 @@
+import { upvoteReview } from '../services/reviews';
 // ==================================================
 // IMPORTS
 // ==================================================
@@ -41,9 +42,6 @@ import {
   where,
   orderBy,
   onSnapshot,
-  getDoc,
-  runTransaction,
-  doc,
 } from 'firebase/firestore';
 
 // ==================================================
@@ -82,6 +80,7 @@ const AldorFamilyFarmScreen = () => {
   const { isLocationEnabled } = useContext(SettingsContext);
 
   const [location, setLocation] = useState(null);
+  const [directionsError, setDirectionsError] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -94,6 +93,7 @@ const AldorFamilyFarmScreen = () => {
   const [dailyData, setDailyData] = useState([]);
 
   const [reviews, setReviews] = useState([]);
+  const [reviewsError, setReviewsError] = useState(null);
   const [comment, setComment] = useState('');
   const [user, setUser] = useState(null);
 
@@ -146,15 +146,20 @@ const AldorFamilyFarmScreen = () => {
 
   useEffect(() => {
     let locationSubscription;
+    let cancelled = false;
 
     const startLocationTracking = async () => {
       if (!isLocationEnabled) {
+        setLocation(null);
+        setErrorMsg(null);
         setLoading(false);
         return;
       }
 
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        setErrorMsg(null);
 
         if (status !== 'granted') {
           setErrorMsg('Permission to access location was denied.');
@@ -169,11 +174,15 @@ const AldorFamilyFarmScreen = () => {
             distanceInterval: 1600,
           },
           (newLocation) => {
+            if (cancelled) return;
             setLocation(newLocation);
             setLoading(false);
           }
         );
+        if (cancelled) locationSubscription.remove();
+        else setLoading(false);
       } catch (error) {
+        if (cancelled) return;
         setErrorMsg('Error fetching location.');
         setLoading(false);
       }
@@ -182,6 +191,7 @@ const AldorFamilyFarmScreen = () => {
     startLocationTracking();
 
     return () => {
+      cancelled = true;
       if (locationSubscription) locationSubscription.remove();
     };
   }, [isLocationEnabled]);
@@ -204,6 +214,7 @@ const AldorFamilyFarmScreen = () => {
           const data = await response.json();
 
           if (response.ok) {
+            setWeatherError(null);
             const dailyForecasts = processDailyData(data.list);
             setWeatherData(data);
             setDailyData(dailyForecasts);
@@ -383,6 +394,11 @@ const AldorFamilyFarmScreen = () => {
         ...doc.data(),
       }));
       setReviews(updatedReviews);
+      setReviewsError(null);
+    }, (error) => {
+      console.error('Reviews subscription failed:', { code: error.code, message: error.message });
+      setReviews([]);
+      setReviewsError('Reviews could not be loaded. Please try another filter or reopen this page.');
     });
 
     return () => unsubscribe();
@@ -426,52 +442,18 @@ const AldorFamilyFarmScreen = () => {
       setSelectedColor(colors[0]);
       Alert.alert('Success', 'Review submitted!');
     } catch (error) {
+      console.error('Review submission failed:', { code: error.code, message: error.message });
       Alert.alert('Error', 'Could not submit the review.');
     }
   };
 
-  const checkUserVote = async (reviewId) => {
-    if (!user) return false;
-    const voteDocRef = doc(db, 'users', user.uid, 'votes', reviewId);
-    const voteSnapshot = await getDoc(voteDocRef);
-    return voteSnapshot.exists();
-  };
-
   const handleThumbsUp = async (reviewId) => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to upvote reviews.');
-      return;
-    }
-
     try {
-      const userHasVoted = await checkUserVote(reviewId);
-
-      if (userHasVoted) {
-        Alert.alert('Error', 'You have already upvoted this review.');
-        return;
-      }
-
-      const reviewRef = doc(db, 'reviews', reviewId);
-      const voteDocRef = doc(db, 'users', user.uid, 'votes', reviewId);
-
-      await runTransaction(db, async (transaction) => {
-        const reviewDoc = await transaction.get(reviewRef);
-        if (!reviewDoc.exists()) {
-          throw 'Review does not exist!';
-        }
-
-        const currentThumbsUp = reviewDoc.data().thumbsUpCount || 0;
-        transaction.update(reviewRef, {
-          thumbsUpCount: currentThumbsUp + 1,
-        });
-
-        transaction.set(voteDocRef, { reviewId });
-      });
-
+      await upvoteReview(user?.uid, reviewId);
       Alert.alert('Success', 'You upvoted the review!');
     } catch (error) {
-      Alert.alert('Error', 'Failed to upvote the review.');
-      console.error('Thumbs-Up Error:', error);
+      console.error('Thumbs-Up Error:', { code: error.code });
+      Alert.alert('Could not upvote', error.code === 'review/already-voted' ? error.message : 'Failed to upvote the review. Please try again.');
     }
   };
 
@@ -710,6 +692,7 @@ const AldorFamilyFarmScreen = () => {
                   ]}
                 >
                   <Text style={styles.mapHeader}>How to get there?</Text>
+                  {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
 
                   <View style={styles.mapWrapper}>
                     <MapView
@@ -730,6 +713,8 @@ const AldorFamilyFarmScreen = () => {
 
                       {isLocationEnabled && location && (
                         <MapViewDirections
+                  onReady={() => setDirectionsError(false)}
+                  onError={(message) => { console.error('Directions unavailable:', message); setDirectionsError(true); }}
                           origin={{
                             latitude: location.coords.latitude,
                             longitude: location.coords.longitude,
@@ -905,6 +890,7 @@ const AldorFamilyFarmScreen = () => {
                 <View style={styles.separator} />
 
                 {/* Review List */}
+                {!!reviewsError && <Text accessibilityRole="alert">{reviewsError}</Text>}
                 {reviews.length > 0 ? (
                   reviews.map((item) => (
                     <View key={item.id} style={styles.reviewItem}>
@@ -915,7 +901,7 @@ const AldorFamilyFarmScreen = () => {
                         ]}
                       >
                         <Text style={styles.profilePicText}>
-                          {item.username.charAt(0).toUpperCase()}
+                          {(item.username || 'User').charAt(0).toUpperCase()}
                         </Text>
                       </View>
                       <View style={styles.reviewContent}>
@@ -939,8 +925,8 @@ const AldorFamilyFarmScreen = () => {
                         </Text>
                         <Text style={styles.reviewText}>{item.comment}</Text>
                         <Text style={styles.reviewTimestamp}>
-                          {item.timestamp.toDate
-                            ? item.timestamp.toDate().toLocaleString()
+                          {item.timestamp?.toDate
+                            ? item.timestamp?.toDate().toLocaleString()
                             : new Date(item.timestamp).toLocaleString()}
                         </Text>
                       </View>

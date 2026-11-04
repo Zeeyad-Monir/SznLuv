@@ -47,6 +47,7 @@ export const SettingsProvider = ({ children }) => {
    * Initialized to false by default.
    */
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // =========================
   // LOAD SETTINGS EFFECT SECTION
@@ -76,6 +77,8 @@ export const SettingsProvider = ({ children }) => {
       } catch (e) {
         // Log any errors that occur during the retrieval process
         console.error('Failed to load location setting:', e);
+      } finally {
+        setSettingsLoaded(true);
       }
     };
     
@@ -99,6 +102,7 @@ export const SettingsProvider = ({ children }) => {
      * 
      * An asynchronous function that saves the current location setting to AsyncStorage.
      */
+    if (!settingsLoaded) return;
     const saveSettings = async () => {
       try {
         // Attempt to save the 'isLocationEnabled' state as a JSON string
@@ -111,7 +115,7 @@ export const SettingsProvider = ({ children }) => {
     
     // Invoke the saveSettings function to persist the current setting
     saveSettings();
-  }, [isLocationEnabled]); // Dependency array ensures this runs whenever 'isLocationEnabled' changes
+  }, [isLocationEnabled, settingsLoaded]); // Dependency array ensures this runs whenever 'isLocationEnabled' changes
 
   // =========================
   // TOGGLE LOCATION SERVICES FUNCTION
@@ -132,12 +136,6 @@ export const SettingsProvider = ({ children }) => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         
         if (status === 'granted') {
-          // If permission is granted, retrieve the current position
-          const location = await Location.getCurrentPositionAsync({});
-          
-          // Log the retrieved location for debugging purposes
-          console.log('User Location:', location);
-          
           // Update the state to indicate that location services are enabled
           setIsLocationEnabled(true);
           
@@ -178,7 +176,7 @@ export const SettingsProvider = ({ children }) => {
         toggleLocationServices,  // Function to toggle location services on or off
       }}
     >
-      {children} {/* Render any child components that are wrapped by the provider */}
+      {children}
     </SettingsContext.Provider>
   );
 };

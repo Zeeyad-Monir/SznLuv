@@ -26,8 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 
 // Importing Firebase authentication and database functions
 import { login } from '../firebaseConfig';
-import { db } from '../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { firebaseErrorMessage } from '../services/firebaseErrors';
 
 // =========================
 // COMPONENT DEFINITION
@@ -118,14 +117,7 @@ export default function LoginScreen() {
       console.error('Login failed:', error); // Log the error for debugging purposes
 
       // Step 5: Handle specific Firebase authentication errors and provide appropriate feedback to the user
-      let errorMessage = 'Login failed. Please try again.'; // Default error message
-      if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.'; // Specific message for wrong password
-      } else if (error.code === 'auth/user-not-found') {
-        errorMessage = 'User not found. Please check your credentials.'; // Specific message for user not found
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'The email address is invalid.'; // Specific message for invalid email
-      }
+      const errorMessage = firebaseErrorMessage(error, 'login');
       Alert.alert('Login Failed', errorMessage); // Display the appropriate error message to the user
     } finally {
       // Step 6: Hide the loading spinner regardless of the login outcome

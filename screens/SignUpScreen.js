@@ -3,7 +3,7 @@
 
 // STYLING DONE
 
-import React, { useState } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,11 +16,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-// SIGNUP/AUTHENTICATION
-// Importing the Firestore database instance and the register & logout functions for Firebase Authentication
-import { db, register, logout } from '../firebaseConfig';
-// Importing Firestore functions for document manipulation and transactional operations
-import { doc, setDoc, runTransaction } from 'firebase/firestore';
+import { AuthContext } from '../contexts/AuthContext';
+import { auth } from '../firebaseConfig';
+import { createAccountWithProfile, normalizeUsername, validUsername } from '../services/accounts';
+import { firebaseErrorMessage } from '../services/firebaseErrors';
 
 /**
  * SignUpScreen Component
@@ -32,6 +31,8 @@ import { doc, setDoc, runTransaction } from 'firebase/firestore';
 export default function SignUpScreen() {
   // useNavigation hook provides navigation functionality to navigate between screens
   const navigation = useNavigation();
+  const { setRegistering, setRegistrationError } = useContext(AuthContext);
+  const submitting = useRef(false);
   
   // ============================
   // SIGNUP: STATE MANAGEMENT
@@ -83,7 +84,7 @@ export default function SignUpScreen() {
    * @returns {boolean} - Returns true if password meets criteria, otherwise false
    */
   const validatePassword = (password) => {
-    const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/; // Regex for password strength
+    const regex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // Regex for password strength
     return regex.test(password);
   };
 
@@ -103,172 +104,42 @@ export default function SignUpScreen() {
    * - Error handling and user feedback
    */
   const handleSignUp = async () => {
-    // Normalize inputs by trimming whitespace and converting to lowercase
-    const normalizedUsername = username.trim().toLowerCase();
+    if (submitting.current) return;
+    const normalizedUsername = normalizeUsername(username);
     const normalizedEmail = email.trim().toLowerCase();
-
-    // ============================
-    // SIGNUP: INPUT VALIDATION
-    // ============================
-
-    // Check if any of the input fields are empty
     if (!normalizedUsername || !normalizedEmail || !password) {
-      Alert.alert('Error', 'Please fill all fields.'); // Alert user to fill all fields
-      return; // Exit the function early
+      Alert.alert('Error', 'Please fill all fields.');
+      return;
     }
-
-    // Check if the username meets the minimum length requirement
-    if (normalizedUsername.length < 3) {
-      Alert.alert('Invalid Username', 'Username must be at least 3 characters long.');
-      return; // Exit the function early
+    if (!validUsername(normalizedUsername)) {
+      Alert.alert('Invalid Username', 'Use 3–40 letters, numbers, dots, underscores or hyphens.');
+      return;
     }
-
-    // Validate the email format using the validateEmail function
     if (!validateEmail(normalizedEmail)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
-      return; // Exit the function early
+      return;
     }
-
-    // Validate the password strength using the validatePassword function
     if (!validatePassword(password)) {
-      Alert.alert(
-        'Weak Password',
-        'Password must be at least 8 characters long and include both letters and numbers.'
-      );
-      return; // Exit the function early
+      Alert.alert('Weak Password', 'Password must be at least 8 characters long and include letters and numbers.');
+      return;
     }
-
-    // Set the loading state to true to display the loading indicator
+    submitting.current = true;
     setLoading(true);
-
+    setRegistrationError(null);
+    setRegistering(true);
     try {
-      // ============================
-      // SIGNUP: USERNAME AVAILABILITY CHECK
-      // ============================
-
-      /**
-       * Check if the desired username is already taken.
-       * Uses a Firestore transaction to ensure atomicity.
-       */
-      const usernameAvailable = await runTransaction(db, async (transaction) => {
-        // Reference to the 'usernames' collection document for the normalized username
-        const usernameRef = doc(db, 'usernames', normalizedUsername);
-        // Attempt to get the document snapshot
-        const usernameSnap = await transaction.get(usernameRef);
-
-        if (usernameSnap.exists()) {
-          // If the document exists, the username is already taken
-          return false;
-        } else {
-          // If the document does not exist, the username is available
-          return true;
-        }
-      });
-
-      // If the username is not available, alert the user and stop the registration process
-      if (!usernameAvailable) {
-        Alert.alert('Username Taken', 'This username is already taken. Please choose another one.');
-        setLoading(false); // Hide the loading indicator
-        return; // Exit the function early
-      }
-
-      // ============================
-      // AUTHENTICATION: REGISTER USER
-      // ============================
-
-      /**
-       * Register the user using Firebase Authentication with the provided email and password.
-       * The register function handles Firebase's createUserWithEmailAndPassword internally.
-       */
-      const userCredential = await register(normalizedEmail, password);
-      const user = userCredential.user; // Extract the user object from the credential
-
-      // ============================
-      // SIGNUP: STORE USERNAME IN FIRESTORE
-      // ============================
-
-      /**
-       * After successful authentication, store the username in the Firestore database.
-       * This ensures that usernames are unique and associated with user UIDs.
-       */
-      await runTransaction(db, async (transaction) => {
-        const usernameRef = doc(db, 'usernames', normalizedUsername); // Reference to the username document
-        const usernameSnap = await transaction.get(usernameRef); // Get the document snapshot
-
-        if (usernameSnap.exists()) {
-          // If the username was taken between the initial check and now, throw an error
-          throw new Error('Username already taken');
-        } else {
-          // If the username is still available, set the document with user details
-          transaction.set(usernameRef, {
-            uid: user.uid, // Store the user's UID
-            email: normalizedEmail, // Store the user's email
-          });
-        }
-      });
-
-      // **New Step: Store Username in the 'users' Collection**
-      /**
-       * Create a document in the 'users' collection with the user's UID as the document ID.
-       * This document will store the username and any other user-specific information.
-       */
-      await setDoc(doc(db, 'users', user.uid), {
-        username: normalizedUsername, // Store the username
-        email: normalizedEmail,       // Store the email (optional, already in 'usernames' collection)
-        createdAt: new Date(),        // Timestamp of account creation
-        // Add any additional fields you want to store for the user here
-      });
-
-      // ============================
-      // SIGNUP: SIGN OUT AND NAVIGATE
-      // ============================
-
-      /**
-       * Since Firebase automatically signs in the user upon successful registration,
-       * we need to sign them out before navigating to the Login screen.
-       */
-      await logout(); // Sign out the user
-
-      // Navigate the user to the Login screen
-      //navigation.navigate('Login'); 
-
-      // ============================
-      // SIGNUP: SUCCESS FEEDBACK
-      // ============================
-
-      // Inform the user of successful registration after navigating
+      await createAccountWithProfile({ email: normalizedEmail, password, username: normalizedUsername });
+      navigation.navigate('Login');
       Alert.alert('Success', 'Account created successfully! Please log in with your credentials.');
-
     } catch (error) {
-      // Log the error for debugging purposes
-      console.error('Registration failed:', error);
-      
-      // ============================
-      // AUTHENTICATION: ERROR HANDLING
-      // ============================
-
-      /**
-       * Handle different types of errors and provide user-friendly messages.
-       * This includes errors from Firebase Authentication and Firestore transactions.
-       */
-      let errorMessage = 'Registration failed. Please try again.'; // Default error message
-
-      // Check for specific error messages or codes to provide detailed feedback
-      if (error.message === 'Username already taken') {
-        errorMessage = 'This username is already taken. Please choose another one.';
-      } else if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already in use.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'The email address is invalid.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'The password is too weak.';
-      }
-
-      // Display the appropriate error message to the user
-      Alert.alert('Registration Failed', errorMessage);
+      console.error('Registration failed:', { code: error.code, stage: error.stage, cleanupErrors: error.cleanupErrors });
+      const message = firebaseErrorMessage(error, 'signup');
+      if (auth.currentUser) setRegistrationError(message);
+      Alert.alert('Registration Failed', message);
     } finally {
-      // Ensure that the loading indicator is hidden regardless of success or failure
+      setRegistering(false);
       setLoading(false);
+      submitting.current = false;
     }
   };
 
@@ -376,11 +247,9 @@ export default function SignUpScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 
-        **Removed: Link to Login Screen**
-        Previously, this TouchableOpacity allowed users to navigate to the Login screen manually.
-        Since we now navigate automatically after sign-up, we remove this manual navigation link.
-      */}
+      <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading} style={{ marginTop: 24 }}>
+        <Text>Already have an account? Log In</Text>
+      </TouchableOpacity>
     </View>
   );
 }

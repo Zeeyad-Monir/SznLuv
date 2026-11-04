@@ -1,3 +1,5 @@
+import { toggleSavedSpot, updateCollection } from '../services/favourites';
+import { openVenue } from '../services/venueNavigation';
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
@@ -12,9 +14,9 @@ import {
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-import { AuthContext } from '../App';
+import { AuthContext } from '../contexts/AuthContext';
 import NavBar from '../components/NavBar';
 import LottieView from 'lottie-react-native';
 import fallingLeaves from '../assets/fallingLeaves.json';
@@ -95,21 +97,16 @@ export default function FallDatesScreen({ navigation }) {
   );
 
   useEffect(() => {
-    if (user) {
-      const fetchFavorites = async () => {
-        const userFavoritesRef = doc(db, 'favourites', user.uid);
-        try {
-          const docSnap = await getDoc(userFavoritesRef);
-          if (docSnap.exists()) {
-            setFavorites(docSnap.data());
-          }
-        } catch (error) {
-          console.error('Error fetching favorites:', error);
-        }
-      };
+    if (!user) return;
+    return onSnapshot(doc(db, 'favourites', user.uid), snapshot => {
+      setFavorites(snapshot.exists() ? snapshot.data() : {});
+    }, error => {
+      console.error('Favourites subscription failed:', { code: error.code });
+      Alert.alert('Favourites unavailable', 'Could not load your saved spots. Please check your connection and account access.');
+    });
+  }, [user]);
 
-      fetchFavorites();
-    }
+  useEffect(() => {
 
     Animated.parallel([
       Animated.timing(titleOpacity, {
@@ -203,103 +200,35 @@ export default function FallDatesScreen({ navigation }) {
 
   const addSpotToCollection = async (collectionTitle, spotName) => {
     try {
-      const favouritesDoc = doc(db, "favourites", user.uid);
-      const docSnap = await getDoc(favouritesDoc);
-
-      if (!docSnap.exists()) return;
-
-      const data = docSnap.data();
-      if (!data.collections) {
-        data.collections = [];
-      }
-
-      const targetCollectionIndex = data.collections.findIndex(
-        (col) => col.title === collectionTitle
-      );
-
-      if (targetCollectionIndex === -1) {
-        Alert.alert("Error", "Collection not found.");
-        return;
-      }
-
-      const targetCollection = data.collections[targetCollectionIndex];
-      if (!targetCollection.dates) {
-        targetCollection.dates = [];
-      }
-      if (targetCollection.dates.includes(spotName)) {
-        Alert.alert("Info", "This spot is already in the collection.");
-        return;
-      }
-
-      targetCollection.dates.push(spotName);
-      data.collections[targetCollectionIndex] = targetCollection;
-
-      await setDoc(favouritesDoc, data, { merge: true });
-
+      await updateCollection(user?.uid, { type: 'add', title: collectionTitle, spot: spotName });
       setShowSuccessNotification(true);
-      setTimeout(() => {
-        setShowSuccessNotification(false);
-      }, 2000);
+      setTimeout(() => setShowSuccessNotification(false), 2000);
     } catch (error) {
-      console.error("Error adding spot to collection:", error);
-      Alert.alert("Error", "Failed to add spot to collection.");
+      console.error('Error adding spot to collection:', error);
+      Alert.alert('Could not save spot', error.message);
     }
   };
 
   const toggleFavorite = async (spotName, spotAddress) => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to add favorites.');
-      return;
-    }
-
-    const userFavoritesRef = doc(db, 'favourites', user.uid);
-
     try {
-      const docSnap = await getDoc(userFavoritesRef);
-      let userFavorites = docSnap.exists() ? docSnap.data() : {};
-
-      if (userFavorites[spotName]) {
-        // Remove favourite
-        delete userFavorites[spotName];
-        Alert.alert('Removed from Favorites', `${spotName} has been removed.`);
-      } else {
-        // Add favourite with a 'season' property of "Fall"
-        userFavorites[spotName] = {
-          isFavourite: true,
-          season: "Fall",
-          location: spotAddress,
-        };
-        Alert.alert('Added to Favorites', `${spotName} has been added.`);
-
-        // Show the "Choose Collection" notification styled like success notification
+      const next = await toggleSavedSpot(user?.uid, spotName, {
+        isFavourite: true, season: 'Fall', location: spotAddress,
+      });
+      setFavorites(next);
+      const added = !!next[spotName]?.isFavourite;
+      Alert.alert(added ? 'Added to Favorites' : 'Removed from Favorites', spotName);
+      if (added) {
         setNewlyFavouritedSpot({ name: spotName });
         setShowChooseCollectionNotification(true);
-
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-          setShowChooseCollectionNotification(false);
-        }, 5000);
+        setTimeout(() => setShowChooseCollectionNotification(false), 5000);
       }
-
-      await setDoc(userFavoritesRef, userFavorites);
-      setFavorites(userFavorites);
     } catch (error) {
       console.error('Error updating favorites:', error);
-      Alert.alert('Error', 'Could not update favorites. Please try again.');
+      Alert.alert('Could not save favourite', 'Your change was not saved. Please check your connection and try again.');
     }
   };
 
-  const handleSpotPress = (spot) => {
-    if (spot.name === 'Aldor Family Farm') {
-      navigation.navigate('AldorFamilyFarmScreen');
-    } else if (spot.name === 'Eagle Acres Dairy') {
-      navigation.navigate('EagleAcresDairy');
-    } else if (spot.name === 'Laity Pumpkin Patch') {
-      navigation.navigate('LaityPumpkinPatch');
-    } else {
-      Alert.alert('Coming Soon', 'This feature is coming soon.');
-    }
-  };
+  const handleSpotPress = (spot) => openVenue(navigation, Alert.alert, spot.name);
 
   const handleChooseCollectionPress = async () => {
     setShowChooseCollectionNotification(false);
