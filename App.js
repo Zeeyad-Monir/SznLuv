@@ -19,6 +19,8 @@ import { firebaseErrorMessage } from './services/firebaseErrors';
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import HomeScreen from './screens/HomeScreen';
+import VancouverScreen from './screens/VancouverScreen';
+import SeasonsScreen from './screens/SeasonsScreen';
 import FallDatesScreen from './screens/FallDatesScreen';
 import WinterDatesScreen from './screens/WinterDatesScreen';
 import SpringDatesScreen from './screens/SpringDatesScreen';
@@ -94,6 +96,8 @@ export default function App() {
             {access === 'home' ? (
               <>
                 <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="VancouverScreen" component={VancouverScreen} />
+                <Stack.Screen name="SeasonsScreen" component={SeasonsScreen} />
                 <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
                 <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
                 <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />

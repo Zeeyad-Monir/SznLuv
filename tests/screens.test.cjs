@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHarness, act } = require('./renderHarness.cjs');
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'CustomCollectionScreen', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'CustomCollectionScreen', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -10,6 +10,29 @@ for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'FallDatesScr
     await act(async () => renderer.unmount());
   });
 }
+test('home hierarchy: Home > Vancouver > Seasons > the four season screens', async () => {
+  async function pressCards(file) {
+    const h = createHarness();
+    const renderer = await h.render('screens/' + file + '.js');
+    const cards = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityLabel?.includes(' - View '));
+    const results = {};
+    for (const card of cards) {
+      h.navigations.length = 0;
+      await act(async () => card.props.onPress());
+      results[card.props.accessibilityLabel] = h.navigations.at(-1);
+    }
+    await act(async () => renderer.unmount());
+    return results;
+  }
+  assert.deepEqual(await pressCards('HomeScreen'), { 'Vancouver - View Vancouver': ['VancouverScreen'] });
+  assert.deepEqual(await pressCards('VancouverScreen'), { 'Seasons - View Seasons': ['SeasonsScreen'] });
+  assert.deepEqual(await pressCards('SeasonsScreen'), {
+    'Fall Season - View Active Date Ideas': ['FallDatesScreen'],
+    'Winter Season - View Active Date Ideas': ['WinterDatesScreen'],
+    'Spring Season - View Active Date Ideas': ['SpringDatesScreen'],
+    'Summer Season - View Active Date Ideas': ['SummerDatesScreen'],
+  });
+});
 for (const screen of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
   test(`${screen} handles denied location without starting tracking`, async () => {
     const h = createHarness();
