@@ -657,9 +657,9 @@ const styles = StyleSheet.create({
     borderRadius: 14, // Rounded corners
     flexDirection: 'row', // Horizontal layout for child elements
     alignItems: 'center', // Vertically centers child elements
-    height: 64, // Same height for every spot card (the name is a single shrink-to-fit line)
+    height: 74, // Same height for every spot card (the name is a single shrink-to-fit line)
     padding: 14, // Padding inside the card
-    marginBottom: 21, // Bottom margin to separate cards
+    marginBottom: 24.15, // Bottom margin to separate cards
     shadowColor: '#000', // Shadow color for iOS
     shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
     shadowOpacity: 0.1, // Shadow opacity for iOS

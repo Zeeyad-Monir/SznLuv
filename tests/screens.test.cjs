@@ -197,9 +197,9 @@ for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
     const cards = renderer.root.findAll(node => node.type === 'AnimatedView' && [].concat(node.props.style).some(style => style && style.borderRadius === 14));
     assert.ok(cards.length > 0, 'cards render');
     const heights = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).height));
-    assert.deepEqual([...heights], [64], 'every card has the same fixed height');
+    assert.deepEqual([...heights], [74], 'every card has the same fixed height (15% taller than the earlier 64)');
     const gaps = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).marginBottom));
-    assert.deepEqual([...gaps], [21], 'space between cards is 15% more than the original 18');
+    assert.deepEqual([...gaps], [24.15], 'space between cards is 15% more than the earlier 21');
     const hearts = renderer.root.findAll(node => ['favorite', 'favorite-border'].includes(node.props.name));
     assert.equal(hearts.length, cards.length, 'one heart per card');
     assert.ok(hearts.every(node => node.props.size === 23), 'hearts are 15% larger than the original 20');

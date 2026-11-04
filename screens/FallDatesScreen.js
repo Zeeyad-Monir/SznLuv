@@ -404,9 +404,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64, // Same height for every spot card (the name is a single shrink-to-fit line)
+    height: 74, // Same height for every spot card (the name is a single shrink-to-fit line)
     padding: 14,
-    marginBottom: 21,
+    marginBottom: 24.15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
