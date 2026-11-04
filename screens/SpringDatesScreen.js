@@ -493,7 +493,7 @@ export default function SpringDatesScreen({ navigation }) {
                       name={
                         favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border'
                       }
-                      size={20} // Size of the icon
+                      size={23} // Size of the icon
                       color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'} // Color based on favorite status
                     />
                   </TouchableOpacity>
@@ -503,15 +503,20 @@ export default function SpringDatesScreen({ navigation }) {
                       ========================= */}
 
                   {/* 
-                    Container for spot name and address.
+                    Container for spot name.
                     - style: Styling for the text container.
                   */}
                   <View style={styles.cardTextContainer}>
                     {/* Spot Name */}
-                    <Text style={styles.dateSpotName}>{spot.name}</Text>
-
-                    {/* Spot Address */}
-                    <Text style={styles.addressText}>{spot.address}</Text>
+                    <Text
+                      style={styles.dateSpotName}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.5}
+                      maxFontSizeMultiplier={1.2}
+                    >
+                      {spot.name}
+                    </Text>
                   </View>
 
                   {/* =========================
@@ -689,8 +694,9 @@ const styles = StyleSheet.create({
     borderRadius: 14, // Rounded corners
     flexDirection: 'row', // Horizontal layout for child elements
     alignItems: 'center', // Vertically centers child elements
+    height: 64, // Same height for every spot card (the name is a single shrink-to-fit line)
     padding: 14, // Padding inside the card
-    marginBottom: 18, // Bottom margin to separate cards
+    marginBottom: 21, // Bottom margin to separate cards
     shadowColor: '#000', // Shadow color for iOS
     shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
     shadowOpacity: 0.1, // Shadow opacity for iOS
@@ -710,7 +716,7 @@ const styles = StyleSheet.create({
     marginRight: 16, // Right margin to separate from text
   },
 
-  // Styling for the container holding spot name and address
+  // Styling for the container holding spot name
   cardTextContainer: {
     flex: 1, // Takes up the remaining space
   },
@@ -722,12 +728,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', // Bold font weight
   },
 
-  // Styling for the spot address text
-  addressText: {
-    color: '#696969', // Dim gray text color for subtlety
-    fontSize: 16, // Font size
-    marginTop: 4, // Top margin for spacing
-  },
 
   // Styling for the navigation arrow icon area within the card
   cardArrowIcon: {

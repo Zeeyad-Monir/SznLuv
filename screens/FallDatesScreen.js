@@ -271,14 +271,21 @@ export default function FallDatesScreen({ navigation }) {
                       name={
                         favorites[spot.name]?.isFavourite ? 'favorite' : 'favorite-border'
                       }
-                      size={20}
+                      size={23}
                       color={favorites[spot.name]?.isFavourite ? '#FF0000' : '#A9A9A9'}
                     />
                   </TouchableOpacity>
 
                   <View style={styles.cardTextContainer}>
-                    <Text style={styles.dateSpotName}>{spot.name}</Text>
-                    <Text style={styles.addressText}>{spot.address}</Text>
+                    <Text
+                      style={styles.dateSpotName}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.5}
+                      maxFontSizeMultiplier={1.2}
+                    >
+                      {spot.name}
+                    </Text>
                   </View>
 
                   <TouchableOpacity
@@ -397,8 +404,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    height: 64, // Same height for every spot card (the name is a single shrink-to-fit line)
     padding: 14,
-    marginBottom: 18,
+    marginBottom: 21,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -420,11 +428,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 22,
     fontWeight: 'bold',
-  },
-  addressText: {
-    color: '#696969',
-    fontSize: 16,
-    marginTop: 4,
   },
   cardArrowIcon: {
     marginLeft: 16,

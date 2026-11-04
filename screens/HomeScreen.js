@@ -18,6 +18,7 @@ import {
   ScrollView,
   Animated,
   Easing,
+  ImageBackground,
 } from 'react-native';
 
 // Importing navigation hook to navigate between screens
@@ -93,8 +94,9 @@ const seasonalOverlays = {
   summer: hexToRGBA(seasonalColors.summer, seasonalOpacities.summer),
 };
 
-// Flat card colour (no photo yet) for the Vancouver card
-const vancouverCardColor = '#4A6FA5';
+// Cover image for the Vancouver card, slightly faded (opacity 0.9) with a thin white wash on top
+const vancouverImage = require('../assets/cities/VancouverCoverIMG.png');
+const COVER_IMAGE_OPACITY = 0.9;
 
 // =========================
 // COMPONENT DEFINITION
@@ -302,15 +304,25 @@ export default function HomeScreen() {
             ]}
           >
             <TouchableOpacity
-              style={[styles.seasonTouchable, { backgroundColor: vancouverCardColor }]} // Base card styles with a flat colour
+              style={styles.seasonTouchable} // Base styles for the touchable area
               onPress={() => navigation.navigate('VancouverScreen')} // Navigates to VancouverScreen on press
               accessible={true} // Enables accessibility
               accessibilityLabel="Vancouver - View Vancouver" // Accessibility label for screen readers
             >
-              {/* Text Container for the card title */}
-              <View style={styles.textContainer}>
-                <Text style={styles.seasonTitle}>Vancouver</Text>
-              </View>
+              {/* Background image for the Vancouver card */}
+              <ImageBackground
+                source={vancouverImage}
+                style={styles.imageBackground}
+                imageStyle={{ borderRadius: 12, opacity: COVER_IMAGE_OPACITY }}
+              >
+                {/* Thin white layer over the image to wash out the colours a little */}
+                <View style={styles.imageWash} pointerEvents="none" />
+
+                {/* Text Container for the card title */}
+                <View style={styles.textContainer}>
+                  <Text style={styles.seasonTitle}>Vancouver</Text>
+                </View>
+              </ImageBackground>
             </TouchableOpacity>
           </Animated.View>
 
@@ -380,6 +392,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden', // Clips any child content outside the container
   },
 
+  // Image background inside cards
+  imageBackground: {
+    flex: 1, // Takes up the full available space
+    justifyContent: 'flex-start', // Aligns children at the top
+  },
+
+  // Thin white layer over the cover image
+  imageWash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+
   // Text Container within Cards
   textContainer: {
     paddingHorizontal: 20, // Horizontal padding inside the container
@@ -390,7 +418,10 @@ const styles = StyleSheet.create({
   seasonTitle: {
     fontSize: 35, // Large font size for the card title
     fontWeight: 'bold', // Bold font weight for emphasis
-    color: '#FFFFFF', // White color for contrast against the card colour
+    color: '#FFFFFF', // White color for contrast against the card image
+    textShadowColor: 'rgba(0, 0, 0, 0.55)', // Soft shadow keeps the title readable on light parts of the image
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
   // Loading Container for ActivityIndicator

@@ -176,6 +176,7 @@ test('Fall screen lists every spot in category order and opens the right venue p
   for (const category of fallCategories) assert.ok(output.includes(category.title), category.title);
   for (const name of fallSpotNames) assert.ok(output.includes(name), name);
   assert.ok(!output.includes('Sunset Summit') && !output.includes('Riverfront Meadows'));
+  for (const category of fallCategories) for (const spot of category.spots) assert.ok(!output.includes(spot.address), `${spot.name} card does not show its address`);
   const detail = name => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
   await act(async () => detail('Aldor Family Farm').props.onPress());
   await act(async () => detail('Reifel Bird Sanctuary').props.onPress());
@@ -187,4 +188,40 @@ test('Seasons screen shows the same Fall count as the Fall list', async () => {
   const renderer = await h.render('screens/SeasonsScreen.js');
   assert.ok(JSON.stringify(renderer.toJSON()).includes(`"${fallSpotNames.length}"," Active Ideas"`));
   await act(async () => renderer.unmount());
+});
+
+for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
+  test(`${season} spot cards are one size, show only a one-line shrink-to-fit name, and no address`, async () => {
+    const h = createHarness();
+    const renderer = await h.render(`screens/${season}DatesScreen.js`);
+    const cards = renderer.root.findAll(node => node.type === 'AnimatedView' && [].concat(node.props.style).some(style => style && style.borderRadius === 14));
+    assert.ok(cards.length > 0, 'cards render');
+    const heights = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).height));
+    assert.deepEqual([...heights], [64], 'every card has the same fixed height');
+    const gaps = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).marginBottom));
+    assert.deepEqual([...gaps], [21], 'space between cards is 15% more than the original 18');
+    const hearts = renderer.root.findAll(node => ['favorite', 'favorite-border'].includes(node.props.name));
+    assert.equal(hearts.length, cards.length, 'one heart per card');
+    assert.ok(hearts.every(node => node.props.size === 23), 'hearts are 15% larger than the original 20');
+    const names = renderer.root.findAll(node => node.type === 'Text' && node.props.numberOfLines === 1 && node.props.adjustsFontSizeToFit);
+    assert.equal(names.length, cards.length, 'one shrink-to-fit single-line name per card');
+    assert.ok(names.every(node => node.props.minimumFontScale > 0 && node.props.minimumFontScale < 1));
+    const addressLines = renderer.root.findAll(node => node.type === 'Text' && [].concat(node.props.style).some(style => style && style.color === '#696969'));
+    assert.equal(addressLines.length, 0, 'no address line on the card front');
+    await act(async () => renderer.unmount());
+  });
+}
+
+test('the Vancouver and Seasons cards use the cover images from the assets folder', async () => {
+  for (const [file, image] of [['HomeScreen', 'cities/VancouverCoverIMG.png'], ['VancouverScreen', 'Seasonal/SeasonalCoverIMG.png']]) {
+    const h = createHarness();
+    const renderer = await h.render(`screens/${file}.js`);
+    const backgrounds = renderer.root.findAllByType('ImageBackground');
+    assert.equal(backgrounds.length, 1, `${file} has one image card`);
+    assert.ok(String(backgrounds[0].props.source).endsWith(`assets/${image}`), `${file} uses ${image}`);
+    assert.equal(backgrounds[0].props.imageStyle.opacity, 0.9, `${file} image opacity is 10% lower`);
+    const washes = renderer.root.findAll(node => node.type === 'View' && node.props.pointerEvents === 'none' && node.props.style && node.props.style.backgroundColor === 'rgba(255, 255, 255, 0.2)');
+    assert.equal(washes.length, 1, `${file} has a thin white layer over the image`);
+    await act(async () => renderer.unmount());
+  }
 });

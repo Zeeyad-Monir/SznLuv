@@ -16,6 +16,7 @@ import {
   ScrollView,
   Animated,
   Easing,
+  ImageBackground,
 } from 'react-native';
 
 // Importing navigation hook to navigate between screens
@@ -28,8 +29,9 @@ import NavBar from '../components/NavBar';
 // CONSTANTS SECTION
 // =========================
 
-// Flat card colour (no photo yet) for the Seasons card
-const seasonsCardColor = '#7A8F5C';
+// Cover image for the Seasons card, slightly faded (opacity 0.9) with a thin white wash on top
+const seasonsImage = require('../assets/Seasonal/SeasonalCoverIMG.png');
+const COVER_IMAGE_OPACITY = 0.9;
 
 // =========================
 // COMPONENT DEFINITION
@@ -109,14 +111,23 @@ export default function VancouverScreen() {
             ]}
           >
             <TouchableOpacity
-              style={[styles.cardTouchable, { backgroundColor: seasonsCardColor }]}
+              style={styles.cardTouchable}
               onPress={() => navigation.navigate('SeasonsScreen')} // Opens the four seasons
               accessible={true}
               accessibilityLabel="Seasons - View Seasons"
             >
-              <View style={styles.textContainer}>
-                <Text style={styles.cardTitle}>Seasons</Text>
-              </View>
+              <ImageBackground
+                source={seasonsImage}
+                style={styles.imageBackground}
+                imageStyle={{ borderRadius: 12, opacity: COVER_IMAGE_OPACITY }}
+              >
+                {/* Thin white layer over the image to wash out the colours a little */}
+                <View style={styles.imageWash} pointerEvents="none" />
+
+                <View style={styles.textContainer}>
+                  <Text style={styles.cardTitle}>Seasons</Text>
+                </View>
+              </ImageBackground>
             </TouchableOpacity>
           </Animated.View>
 
@@ -170,6 +181,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  imageBackground: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+
+  imageWash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+
   textContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -179,5 +204,8 @@ const styles = StyleSheet.create({
     fontSize: 35,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.55)', // Keeps the title readable on the light sky in the image
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 });
