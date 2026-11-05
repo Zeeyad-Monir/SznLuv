@@ -31,6 +31,7 @@ import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
 import NavBar from '../components/NavBar';
+import useVenueWeather from '../hooks/useVenueWeather';
 import { SettingsContext } from './SettingsContext';
 
 // Import Firebase authentication and Firestore
@@ -48,7 +49,6 @@ import {
 // CONSTANTS AND API KEYS
 // ==================================================
 
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316';
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
 
 // Sorting and filtering options arrays
@@ -84,13 +84,9 @@ const AldorFamilyFarmScreen = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [weatherData, setWeatherData] = useState(null);
-  const [weatherError, setWeatherError] = useState(null);
-
   const [isMetric, setIsMetric] = useState(true);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
-  const [dailyData, setDailyData] = useState([]);
 
   const [reviews, setReviews] = useState([]);
   const [reviewsError, setReviewsError] = useState(null);
@@ -196,68 +192,8 @@ const AldorFamilyFarmScreen = () => {
     };
   }, [isLocationEnabled]);
 
-  useEffect(() => {
-    const fetchWeatherData = async () => {
-      if (!isLocationEnabled) {
-        setWeatherError('Location services are disabled.');
-        return;
-      }
-
-      if (location) {
-        const { latitude, longitude } = location.coords;
-
-        try {
-          const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
-          );
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setWeatherError(null);
-            const dailyForecasts = processDailyData(data.list);
-            setWeatherData(data);
-            setDailyData(dailyForecasts);
-          } else {
-            setWeatherError(data.message || 'Unable to fetch weather data.');
-          }
-        } catch (error) {
-          setWeatherError(error.message || 'An error occurred while fetching weather data.');
-        }
-      }
-    };
-
-    const processDailyData = (list) => {
-      const days = {};
-
-      list.forEach((item) => {
-        const date = new Date(item.dt * 1000);
-        const day = date.toISOString().split('T')[0];
-
-        if (!days[day]) {
-          days[day] = [];
-        }
-
-        days[day].push(item);
-      });
-
-      const dailyData = Object.keys(days).map((day) => {
-        const dayData = days[day];
-
-        const noonData =
-          dayData.find((item) => {
-            const date = new Date(item.dt * 1000);
-            return date.getHours() === 12;
-          }) || dayData[Math.floor(dayData.length / 2)];
-
-        return noonData;
-      });
-
-      return dailyData;
-    };
-
-    fetchWeatherData();
-  }, [location, isLocationEnabled]);
+  // Forecast for the spot itself (not the user's location), so it loads without a GPS fix
+  const { weatherData, dailyData, weatherError } = useVenueWeather(farmLatitude, farmLongitude);
 
   useEffect(() => {
     if (!loading) {
@@ -479,30 +415,6 @@ const AldorFamilyFarmScreen = () => {
     },
   ];
 
-  let content;
-  if (loading) {
-    content = <ActivityIndicator size="large" color="#0000ff" />;
-  } else if (errorMsg) {
-    content = <Text style={styles.errorText}>{errorMsg}</Text>;
-  } else if (location) {
-    const { latitude, longitude } = location.coords;
-    content = (
-      <View style={styles.locationContainer}>
-        <Text style={styles.locationText}>Your Current Location:</Text>
-        <Text style={styles.coordsText}>Latitude: {latitude.toFixed(6)}</Text>
-        <Text style={styles.coordsText}>Longitude: {longitude.toFixed(6)}</Text>
-      </View>
-    );
-  } else if (!isLocationEnabled) {
-    content = (
-      <View style={styles.locationDisabledContainer}>
-        <Text style={styles.locationDisabledText}>
-          Location services are disabled. Enable them in settings to see your current location and directions.
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <NavBar />
@@ -518,7 +430,7 @@ const AldorFamilyFarmScreen = () => {
             return (
               <>
                 {/* Main Section */}
-                {isLocationEnabled && weatherData ? (
+                {weatherData ? (
                   <Animated.View
                     style={[
                       styles.weatherContainer,
@@ -595,14 +507,10 @@ const AldorFamilyFarmScreen = () => {
                       />
                     </View>
                   </Animated.View>
-                ) : !isLocationEnabled ? (
-                  <View style={styles.weatherDisabledContainer}>
-                    <Text style={styles.weatherDisabledText}>
-                      Weather information is unavailable because location services are disabled.
-                    </Text>
-                  </View>
                 ) : weatherError ? (
-                  <Text style={styles.errorText}>{weatherError}</Text>
+                  <View style={styles.weatherDisabledContainer}>
+                    <Text style={styles.weatherDisabledText}>{weatherError}</Text>
+                  </View>
                 ) : (
                   <ActivityIndicator size="large" color="#0000ff" />
                 )}
@@ -616,7 +524,15 @@ const AldorFamilyFarmScreen = () => {
                     },
                   ]}
                 >
-                  <Text style={styles.title}>Aldor Acres Family Farm</Text>
+                  <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.5}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    Aldor Acres Family Farm
+                  </Text>
                   <Text style={styles.address}>24990 84 Ave, Langley, BC</Text>
 
                   <View style={styles.activityBox}>
@@ -680,8 +596,6 @@ const AldorFamilyFarmScreen = () => {
                   </TouchableOpacity>
                 </Animated.View>
 
-                <View style={styles.currentLocationBox}>{content}</View>
-
                 <Animated.View
                   style={[
                     styles.mapContainer,
@@ -693,6 +607,7 @@ const AldorFamilyFarmScreen = () => {
                 >
                   <Text style={styles.mapHeader}>How to get there?</Text>
                   {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
+                  {!!errorMsg && <Text accessibilityRole="alert">{errorMsg} Directions need your location, but you can still see the venue on the map.</Text>}
 
                   <View style={styles.mapWrapper}>
                     <MapView
@@ -1038,6 +953,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FAF4E4',
     textAlign: 'center',
+    paddingHorizontal: 15, // Keeps a margin when the title shrinks to fit on one line
     marginTop: 10,
     textTransform: 'uppercase',
   },
@@ -1109,42 +1025,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E90FF',
     textDecorationLine: 'underline',
-  },
-  currentLocationBox: {
-    backgroundColor: '#FAF4E4',
-    padding: 15,
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginVertical: 10,
-    width: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  locationContainer: {
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  coordsText: {
-    fontSize: 16,
-    marginVertical: 2,
-    color: '#555',
-  },
-  locationDisabledContainer: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  locationDisabledText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
   },
   mapContainer: {
     backgroundColor: '#FAF4E4',

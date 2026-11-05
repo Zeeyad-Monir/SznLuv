@@ -42,7 +42,7 @@ Based on `FallDatesScreen.js`, `AldorFamilyFarmScreen.js`, `LaityPumpkinPatch.js
 | **Activity tagline** | Venue page "activity box" | "Petting zoo, pumpkins, and more!" | One short line. |
 | **About text** | Venue page, expandable | 1–3 paragraphs | Aldor has "Read more"; Laity and Eagle have one paragraph. |
 | **Photo** | Venue page image | `assets/FamilyFarm.jpg` | One per venue. |
-| **Coordinates** | Map pin, directions destination, and the OpenWeather forecast lookup | `49.1706, -122.6076` | **Weather uses the user's location**, not the venue's; the venue lat/lng drives map and directions. |
+| **Coordinates** | Map pin, directions destination, and the OpenWeather forecast lookup | `49.1706, -122.6076` | Weather is fetched for the venue's own lat/lng (updated 2026-11-04); the same lat/lng drives the map and directions. |
 | **placeID** | Reviews collection filter and review submit | `aldor_farm` | snake_case slug, unique per venue. |
 | **Wheel label** | `SpinTheWheel.js` pool for Fall | "Aldor Acres Family Farm" | A string list; names differ from the season list today. |
 | **Season-count** | Home "N Active Ideas" | `dateCounts/fall.count`, fallback 7 | Should be updated when spots are added. The Firestore doc needs project access; the hard-coded fallback is in `SeasonsScreen.js`. |
@@ -514,7 +514,7 @@ Checked against the code and the sources above.
 
 1. **Date-limited spots.** Roughly 14 of the 20 are events or seasonal openings that have already ended this year. The app has no date or season-window field. Decide whether to show typical dates as text, add a "season window" field, or hide spots out of season. This catalogue captures both "2026 observed" and "typical annual pattern" so any of those works.
 2. **Home count.** Home reads `dateCounts/fall.count`, falling back to 7. The fallback is hard-coded in `SeasonsScreen.js`. The Firestore doc cannot be edited without project access, so the count will need a code fallback update.
-3. **Weather block.** The venue page weather uses the user's location, not the venue's. That is existing behaviour, but it will look odd for spots across the region.
+3. **Weather block.** Each venue page now shows the forecast for the spot's own coordinates (it used to use the user's location). It no longer depends on location permission.
 4. **Venue-page template.** Every spot above has the data for the current template (title, address, tagline, about, photo, coordinates, placeID). Spots 1–5, 7, 8, 10 and 12 are small enough that a lighter shared template would work better than a copy of the 1,000-line farm screens.
 5. **Maan Farms** is the only spot outside Metro Vancouver. Remove if you want strictly Greater Vancouver.
 6. **Confirm before shipping:** all prices (several guides contradict each other), the Reifel reservation rule, Buntzen's rockslide closure, the Pacific Spirit Admiralty Trail closure, and the Bog/Hopcott/Hazelmere official sites.

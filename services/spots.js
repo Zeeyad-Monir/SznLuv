@@ -251,7 +251,7 @@ const detailedFallSpots = [
     category: HALLOWEEN,
     name: 'Canyon Frights at Capilano',
     address: '3735 Capilano Rd, North Vancouver',
-    title: 'Canyon Frights at Capilano Suspension Bridge Park',
+    title: 'Canyon Frights at Capilano',
     detailAddress: '3735 Capilano Rd, North Vancouver, BC',
     latitude: 49.3427,
     longitude: -123.11605,

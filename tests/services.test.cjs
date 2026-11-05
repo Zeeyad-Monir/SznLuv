@@ -5,6 +5,7 @@ const { firebaseErrorMessage } = require('../services/firebaseErrors');
 const { toggleFavourite, removeFavourite, changeCollection } = require('../services/favouritesState');
 const { sessionAccess } = require('../services/sessionAccess');
 const { openVenue, venueRoutes, SPOT_DETAIL_ROUTE } = require('../services/venueNavigation');
+const { buildForecastUrl, processDailyData, fetchForecast, WEATHER_UNAVAILABLE } = require('../services/weather');
 const { fallCategoryTitles, legacyFallSpots, detailedFallSpots, fallCategories, fallSpotNames, getSpotByPlaceID } = require('../services/spots');
 
 function registrationFixture(failures = {}) {
@@ -155,5 +156,33 @@ test('venue links open the shared detail page for every new fall spot', () => {
     const navigated = [];
     openVenue({ navigate: (...args) => navigated.push(args) }, () => assert.fail('legacy spot should navigate'), name);
     assert.deepEqual(navigated, [[route]]);
+  }
+});
+
+test('spot titles are short enough to fit one line on the venue page', () => {
+  for (const spot of detailedFallSpots) assert.ok(spot.title.length <= 41, `${spot.placeID}: "${spot.title}" is ${spot.title.length} characters`);
+});
+test('weather: the forecast URL uses the coordinates it is given', () => {
+  assert.equal(buildForecastUrl(49.1, -122.5, 'KEY'), 'https://api.openweathermap.org/data/2.5/forecast?lat=49.1&lon=-122.5&appid=KEY&units=metric');
+});
+test('weather: one entry per day, preferring the one at noon', () => {
+  const at = (day, hour) => ({ dt: new Date(2026, 10, day, hour).getTime() / 1000, hour });
+  const daily = processDailyData([at(5, 3), at(5, 12), at(5, 18), at(6, 0), at(6, 3), at(6, 9)]);
+  assert.equal(daily.length, 2);
+  assert.equal(daily[0].hour, 12);
+  assert.equal(daily[1].hour, 3); // no noon entry: falls back to the middle one
+});
+test('weather: fetchForecast returns the data, and turns every failure into one friendly message', async () => {
+  const list = [{ dt: new Date(2026, 10, 5, 12).getTime() / 1000 }];
+  const ok = await fetchForecast(49, -123, { key: 'K', fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ city: { name: 'X' }, list }) }) });
+  assert.equal(ok.weatherData.city.name, 'X');
+  assert.equal(ok.dailyData.length, 1);
+  const failures = {
+    'HTTP error': async () => ({ ok: false, status: 401, json: async () => ({ message: 'Invalid API key' }) }),
+    'network error': async () => { throw new Error('Network request failed'); },
+    'malformed body': async () => ({ ok: true, status: 200, json: async () => ({}) }),
+  };
+  for (const [label, fetchImpl] of Object.entries(failures)) {
+    await assert.rejects(() => fetchForecast(49, -123, { key: 'K', fetchImpl }), error => error.message === WEATHER_UNAVAILABLE && typeof error.detail === 'string', label);
   }
 });

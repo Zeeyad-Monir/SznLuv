@@ -34,6 +34,7 @@ import MapViewDirections from 'react-native-maps-directions';
 
 // Import the external NavBar component
 import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
+import useVenueWeather from '../hooks/useVenueWeather';
 
 // Import SettingsContext to access location services settings
 import { SettingsContext } from './SettingsContext'; // Adjust the path based on your project structure
@@ -43,11 +44,9 @@ import { SettingsContext } from './SettingsContext'; // Adjust the path based on
 // =========================
 
 // API key for OpenWeatherMap to fetch weather data
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316'; // Weather API Key
 
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
-
 
 // =========================
 // COMPONENT DEFINITION
@@ -77,11 +76,8 @@ const EagleAcresDairy = () => {
   const [directionsError, setDirectionsError] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [weatherData, setWeatherData] = useState(null);
-  const [weatherError, setWeatherError] = useState(null);
   const [isMetric, setIsMetric] = useState(true);
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
-  const [dailyData, setDailyData] = useState([]);
 
   // =========================
   // FARM COORDINATES SECTION
@@ -183,88 +179,8 @@ const EagleAcresDairy = () => {
     };
   }, [isLocationEnabled]);
 
-  // =========================
-  // WEATHER DATA EFFECT HOOK SECTION
-  // =========================
-
-  /**
-   * useEffect Hook: Fetches weather data based on the user's current location.
-   * 
-   * - Checks if location services are enabled.
-   * - Fetches weather forecast data from OpenWeatherMap API.
-   * - Processes the fetched data to extract daily forecasts.
-   * - Handles errors related to weather data fetching.
-   */
-  useEffect(() => {
-    const fetchWeatherData = async () => {
-      if (!isLocationEnabled) {
-        setWeatherError('Location services are disabled.');
-        return;
-      }
-
-      if (location) {
-        const { latitude, longitude } = location.coords;
-
-        try {
-          // Fetching weather forecast data from OpenWeatherMap API
-          const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
-          );
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setWeatherError(null);
-            // Processing fetched data to extract daily forecasts
-            const dailyForecasts = processDailyData(data.list);
-            setWeatherData(data);
-            setDailyData(dailyForecasts);
-          } else {
-            setWeatherError(data.message || 'Unable to fetch weather data.');
-          }
-        } catch (error) {
-          setWeatherError(error.message || 'An error occurred while fetching weather data.');
-        }
-      }
-    };
-
-    /**
-     * processDailyData Function
-     * 
-     * Processes the raw weather data to extract daily forecasts.
-     * Selects the forecast closest to noon for each day.
-     *
-     * @param {Array} list - Array of weather forecast data points.
-     * @returns {Array} - Array of processed daily weather data.
-     */
-    const processDailyData = (list) => {
-      const days = {};
-      list.forEach((item) => {
-        const date = new Date(item.dt * 1000);
-        const day = date.toISOString().split('T')[0]; // Extracting the date in YYYY-MM-DD format
-        if (!days[day]) {
-          days[day] = [];
-        }
-        days[day].push(item);
-      });
-
-      const dailyData = Object.keys(days).map((day) => {
-        // Selecting the forecast closest to noon
-        const dayData = days[day];
-        const noonData =
-          dayData.find((item) => {
-            const date = new Date(item.dt * 1000);
-            return date.getHours() === 12;
-          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback to the middle item if noon data is not available
-
-        return noonData;
-      });
-
-      return dailyData;
-    };
-
-    fetchWeatherData();
-  }, [location, isLocationEnabled]);
+  // Forecast for the spot itself (not the user's location), so it loads without a GPS fix
+  const { weatherData, dailyData, weatherError } = useVenueWeather(farmLatitude, farmLongitude);
 
   // =========================
   // ANIMATION EFFECT HOOK SECTION
@@ -409,35 +325,6 @@ const EagleAcresDairy = () => {
   };
 
   // =========================
-  // CONDITIONAL CONTENT RENDERING SECTION
-  // =========================
-
-  let content;
-
-  if (loading) {
-    content = <ActivityIndicator size="large" color="#0000ff" />;
-  } else if (errorMsg) {
-    content = <Text style={styles.errorText}>{errorMsg}</Text>;
-  } else if (location) {
-    const { latitude, longitude } = location.coords;
-    content = (
-      <View style={styles.locationContainer}>
-        <Text style={styles.locationText}>Your Current Location:</Text>
-        <Text style={styles.coordsText}>Latitude: {latitude.toFixed(6)}</Text>
-        <Text style={styles.coordsText}>Longitude: {longitude.toFixed(6)}</Text>
-      </View>
-    );
-  } else if (!isLocationEnabled) {
-    content = (
-      <View style={styles.locationDisabledContainer}>
-        <Text style={styles.locationDisabledText}>
-          Location services are disabled. Enable them in settings to see your current location and directions.
-        </Text>
-      </View>
-    );
-  }
-
-  // =========================
   // RENDERING SECTION
   // =========================
 
@@ -449,7 +336,7 @@ const EagleAcresDairy = () => {
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
-        {isLocationEnabled && weatherData ? (
+        {weatherData ? (
           <Animated.View
             style={[
               styles.weatherContainer,
@@ -527,14 +414,10 @@ const EagleAcresDairy = () => {
               />
             </View>
           </Animated.View>
-        ) : !isLocationEnabled ? (
-          <View style={styles.weatherDisabledContainer}>
-            <Text style={styles.weatherDisabledText}>
-              Weather information is unavailable because location services are disabled.
-            </Text>
-          </View>
         ) : weatherError ? (
-          <Text style={styles.errorText}>{weatherError}</Text>
+          <View style={styles.weatherDisabledContainer}>
+            <Text style={styles.weatherDisabledText}>{weatherError}</Text>
+          </View>
         ) : (
           <ActivityIndicator size="large" color="#0000ff" />
         )}
@@ -549,7 +432,15 @@ const EagleAcresDairy = () => {
             },
           ]}
         >
-          <Text style={styles.title}>Eagle Acres Dairy & Pumpkin Patch</Text>
+          <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.5}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    Eagle Acres Dairy & Pumpkin Patch
+                  </Text>
           <Text style={styles.address}>8796 240 St, Langley, BC</Text>
           <View style={styles.activityBox}>
             <Text style={styles.activityText}>Farm animals, a corn maze, and hayrides!</Text>
@@ -593,9 +484,6 @@ const EagleAcresDairy = () => {
           </Text>
         </Animated.View>
 
-        {/* ------------------ USER'S CURRENT LOCATION SECTION ------------------ */}
-        <View style={styles.currentLocationBox}>{content}</View>
-
         {/* ------------------ MAP SECTION ------------------ */}
         <Animated.View
           style={[
@@ -609,6 +497,7 @@ const EagleAcresDairy = () => {
           {/* Header for Map Section */}
           <Text style={styles.mapHeader}>How to get there?</Text>
                   {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
+                  {!!errorMsg && <Text accessibilityRole="alert">{errorMsg} Directions need your location, but you can still see the venue on the map.</Text>}
           <View style={styles.mapWrapper}>
             <MapView
               style={styles.map}
@@ -763,6 +652,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FAF4E4',
     textAlign: 'center',
+    paddingHorizontal: 15, // Keeps a margin when the title shrinks to fit on one line
     marginTop: 10,
     textTransform: 'uppercase',
   },
@@ -832,42 +722,6 @@ const styles = StyleSheet.create({
   },
 
   /* ------------------ USER'S CURRENT LOCATION STYLES ------------------ */
-  currentLocationBox: {
-    backgroundColor: '#FAF4E4',
-    padding: 15,
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginVertical: 10,
-    width: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  locationContainer: {
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  coordsText: {
-    fontSize: 16,
-    marginVertical: 2,
-    color: '#555',
-  },
-  locationDisabledContainer: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  locationDisabledText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-  },
 
   /* ------------------ MAP SECTION STYLES ------------------ */
   mapContainer: {

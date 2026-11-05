@@ -1,5 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const { createHarness, act } = require('./renderHarness.cjs');
 const { detailedFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 
@@ -224,4 +226,50 @@ test('the Vancouver and Seasons cards use the cover images from the assets folde
     assert.equal(washes.length, 1, `${file} has a thin white layer over the image`);
     await act(async () => renderer.unmount());
   }
+});
+
+// ---- all 23 spot info pages: the 3 original farm screens + the 20 shared-page spots
+const legacySpotPages = ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy'].map(file => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'screens', file + '.js'), 'utf8');
+  return { label: file, file, props: {}, latitude: Number(source.match(/const farmLatitude = ([-\d.]+);/)[1]), longitude: Number(source.match(/const farmLongitude = ([-\d.]+);/)[1]) };
+});
+const sharedSpotPages = detailedFallSpots.map(spot => ({ label: spot.placeID, file: 'SpotDetailScreen', props: { route: { params: { placeID: spot.placeID } } }, latitude: spot.latitude, longitude: spot.longitude }));
+const spotPages = [...legacySpotPages, ...sharedSpotPages];
+const titleNodes = renderer => renderer.root.findAll(node => node.type === 'Text' && node.props.style && node.props.style.fontSize === 24 && node.props.style.textTransform === 'uppercase');
+test('there are 23 spot info pages under test', () => assert.equal(spotPages.length, 23));
+for (const page of spotPages) {
+  test(`${page.label}: one-line title, forecast for the spot without a GPS fix, no blank location bar`, async () => {
+    const h = createHarness();
+    const renderer = await h.render(`screens/${page.file}.js`, { props: page.props });
+    const titles = titleNodes(renderer);
+    assert.equal(titles.length, 1, 'one title');
+    assert.equal(titles[0].props.numberOfLines, 1);
+    assert.ok(titles[0].props.adjustsFontSizeToFit && titles[0].props.minimumFontScale > 0 && titles[0].props.minimumFontScale < 1);
+    const requests = h.calls.filter(([name]) => name === 'fetch');
+    assert.equal(requests.length, 1, 'one forecast request');
+    assert.ok(requests[0][1].includes(`lat=${page.latitude}&lon=${page.longitude}`), `forecast is for the spot (${requests[0][1]})`);
+    const output = JSON.stringify(renderer.toJSON());
+    assert.ok(output.includes('Testville'), 'forecast strip is shown even though location is off');
+    assert.equal(renderer.root.findAllByType('ActivityIndicator').length, 0, 'no endless spinner');
+    assert.ok(!output.includes('Your Current Location') && !output.includes('Latitude'), 'no current-location bar');
+    await act(async () => renderer.unmount());
+  });
+  test(`${page.label}: a failed forecast request shows a short message instead of a spinner`, async () => {
+    const h = createHarness({ fetch: async () => ({ ok: false, status: 401, json: async () => ({ message: 'Invalid API key' }) }) });
+    const realError = console.error;
+    console.error = () => {};
+    try {
+      const renderer = await h.render(`screens/${page.file}.js`, { props: page.props });
+      assert.match(JSON.stringify(renderer.toJSON()), /Weather is unavailable right now/);
+      assert.equal(renderer.root.findAllByType('ActivityIndicator').length, 0);
+      await act(async () => renderer.unmount());
+    } finally { console.error = realError; }
+  });
+}
+test('a denied location permission is explained under the map on the shared page too, and tracking never starts', async () => {
+  const h = createHarness();
+  const renderer = await h.render('screens/SpotDetailScreen.js', { location: true, props: sharedSpotPages[0].props });
+  assert.ok(!h.calls.some(([name]) => name === 'watchLocation'));
+  assert.match(JSON.stringify(renderer.toJSON()), /Permission to access location was denied/);
+  await act(async () => renderer.unmount());
 });

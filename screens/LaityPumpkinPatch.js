@@ -34,6 +34,7 @@ import MapViewDirections from 'react-native-maps-directions';
 
 // Importing a custom navigation bar component
 import NavBar from '../components/NavBar';
+import useVenueWeather from '../hooks/useVenueWeather';
 
 // Importing SettingsContext to access location settings
 import { SettingsContext } from './SettingsContext';
@@ -43,7 +44,6 @@ import { SettingsContext } from './SettingsContext';
 // =========================
 
 // OpenWeatherMap API key for fetching weather data
-const WEATHER_API_KEY = '92be9d8cdbac2f4865e8666ae541f316';
 
 // Google Maps API key for map directions
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
@@ -83,10 +83,8 @@ const LaityPumpkinPatch = () => {
   const [loading, setLoading] = useState(true);
 
   // State to store fetched weather data
-  const [weatherData, setWeatherData] = useState(null);
 
   // State to store any error messages related to weather data fetching
-  const [weatherError, setWeatherError] = useState(null);
 
   // State to toggle between metric and imperial units
   const [isMetric, setIsMetric] = useState(true);
@@ -95,7 +93,6 @@ const LaityPumpkinPatch = () => {
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
 
   // State to store processed daily weather data
-  const [dailyData, setDailyData] = useState([]);
 
   // =========================
   // LOCATION CONSTANTS SECTION
@@ -196,88 +193,8 @@ const LaityPumpkinPatch = () => {
     };
   }, [isLocationEnabled]);
 
-  // =========================
-  // WEATHER DATA EFFECT SECTION
-  // =========================
-
-  /**
-   * useEffect Hook: Fetches weather data based on the user's current location.
-   * 
-   * - Checks if location services are enabled.
-   * - Fetches weather forecast data from OpenWeatherMap API.
-   * - Processes the fetched data to extract daily forecasts.
-   * - Handles errors related to weather data fetching.
-   */
-  useEffect(() => {
-    const fetchWeatherData = async () => {
-      if (!isLocationEnabled) {
-        setWeatherError('Location services are disabled.');
-        return;
-      }
-
-      if (location) {
-        const { latitude, longitude } = location.coords;
-
-        try {
-          // Fetching weather forecast data from OpenWeatherMap API
-          const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
-          );
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setWeatherError(null);
-            // Processing fetched data to extract daily forecasts
-            const dailyForecasts = processDailyData(data.list);
-            setWeatherData(data);
-            setDailyData(dailyForecasts);
-          } else {
-            setWeatherError(data.message || 'Unable to fetch weather data.');
-          }
-        } catch (error) {
-          setWeatherError(error.message || 'An error occurred while fetching weather data.');
-        }
-      }
-    };
-
-    /**
-     * processDailyData Function
-     * 
-     * Processes the raw weather data to extract daily forecasts.
-     * Selects the forecast closest to noon for each day.
-     *
-     * @param {Array} list - Array of weather forecast data points.
-     * @returns {Array} - Array of processed daily weather data.
-     */
-    const processDailyData = (list) => {
-      const days = {};
-      list.forEach((item) => {
-        const date = new Date(item.dt * 1000);
-        const day = date.toISOString().split('T')[0]; // Extracting the date in YYYY-MM-DD format
-        if (!days[day]) {
-          days[day] = [];
-        }
-        days[day].push(item);
-      });
-
-      const dailyData = Object.keys(days).map((day) => {
-        // Selecting the forecast closest to noon
-        const dayData = days[day];
-        const noonData =
-          dayData.find((item) => {
-            const date = new Date(item.dt * 1000);
-            return date.getHours() === 12;
-          }) || dayData[Math.floor(dayData.length / 2)]; // Fallback to the middle item if noon data is not available
-
-        return noonData;
-      });
-
-      return dailyData;
-    };
-
-    fetchWeatherData();
-  }, [location, isLocationEnabled]);
+  // Forecast for the spot itself (not the user's location), so it loads without a GPS fix
+  const { weatherData, dailyData, weatherError } = useVenueWeather(farmLatitude, farmLongitude);
 
   // =========================
   // ANIMATION EFFECT SECTION
@@ -422,39 +339,6 @@ const LaityPumpkinPatch = () => {
   };
 
   // =========================
-  // CONTENT RENDERING SECTION
-  // =========================
-
-  let content;
-
-  if (loading) {
-    // Display a loading indicator while fetching data
-    content = <ActivityIndicator size="large" color="#0000ff" />;
-  } else if (errorMsg) {
-    // Display error message if location fetching fails
-    content = <Text style={styles.errorText}>{errorMsg}</Text>;
-  } else if (location) {
-    // Display user's current location coordinates
-    const { latitude, longitude } = location.coords;
-    content = (
-      <View style={styles.locationContainer}>
-        <Text style={styles.locationText}>Your Current Location:</Text>
-        <Text style={styles.coordsText}>Latitude: {latitude.toFixed(6)}</Text>
-        <Text style={styles.coordsText}>Longitude: {longitude.toFixed(6)}</Text>
-      </View>
-    );
-  } else if (!isLocationEnabled) {
-    // Inform the user if location services are disabled
-    content = (
-      <View style={styles.locationDisabledContainer}>
-        <Text style={styles.locationDisabledText}>
-          Location services are disabled. Enable them in settings to see your current location and directions.
-        </Text>
-      </View>
-    );
-  }
-
-  // =========================
   // RENDERING SECTION
   // =========================
 
@@ -465,7 +349,7 @@ const LaityPumpkinPatch = () => {
 
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {isLocationEnabled && weatherData ? (
+        {weatherData ? (
           // Weather Information Section with Animations
           <Animated.View
             style={[
@@ -550,16 +434,10 @@ const LaityPumpkinPatch = () => {
               />
             </View>
           </Animated.View>
-        ) : !isLocationEnabled ? (
-          // Weather Disabled Message
-          <View style={styles.weatherDisabledContainer}>
-            <Text style={styles.weatherDisabledText}>
-              Weather information is unavailable because location services are disabled.
-            </Text>
-          </View>
         ) : weatherError ? (
-          // Weather Fetching Error Message
-          <Text style={styles.errorText}>{weatherError}</Text>
+          <View style={styles.weatherDisabledContainer}>
+            <Text style={styles.weatherDisabledText}>{weatherError}</Text>
+          </View>
         ) : (
           // Fallback Loading Indicator
           <ActivityIndicator size="large" color="#0000ff" />
@@ -576,7 +454,15 @@ const LaityPumpkinPatch = () => {
           ]}
         >
           {/* Farm Title */}
-          <Text style={styles.title}>Laity Pumpkin Patch</Text>
+          <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.5}
+                    maxFontSizeMultiplier={1.2}
+                  >
+                    Laity Pumpkin Patch
+                  </Text>
 
           {/* Farm Address */}
           <Text style={styles.address}>12725 Laity St, Maple Ridge, BC</Text>
@@ -624,9 +510,6 @@ const LaityPumpkinPatch = () => {
           </Text>
         </Animated.View>
 
-        {/* Current Location Display */}
-        <View style={styles.currentLocationBox}>{content}</View>
-
         {/* Map Section with Animations */}
         <Animated.View
           style={[
@@ -640,6 +523,7 @@ const LaityPumpkinPatch = () => {
           {/* Map Header */}
           <Text style={styles.mapHeader}>How to get there?</Text>
                   {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
+                  {!!errorMsg && <Text accessibilityRole="alert">{errorMsg} Directions need your location, but you can still see the venue on the map.</Text>}
 
           {/* Map Wrapper */}
           <View style={styles.mapWrapper}>
@@ -830,6 +714,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', // Bold font weight for emphasis
     color: '#FAF4E4', // Light color for contrast
     textAlign: 'center', // Centers the text
+    paddingHorizontal: 15, // Keeps a margin when the title shrinks to fit on one line
     marginTop: 10, // Space above the title
     textTransform: 'uppercase', // Transforms text to uppercase
   },
@@ -906,54 +791,6 @@ const styles = StyleSheet.create({
     fontSize: 16, // Font size for the text
     color: '#000', // Black color for readability
     textAlign: 'justify', // Justifies the text for a neat appearance
-  },
-
-  // Current Location Box Container
-  currentLocationBox: {
-    backgroundColor: '#FAF4E4', // Light beige background
-    padding: 15, // Padding inside the container
-    borderRadius: 10, // Rounded corners
-    alignSelf: 'center', // Centers the container horizontally
-    marginVertical: 10, // Vertical margin for spacing
-    width: '90%', // Width relative to the parent container
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
-    shadowOpacity: 0.05, // Shadow opacity for iOS
-    shadowRadius: 1, // Shadow radius for iOS
-    elevation: 1, // Elevation for Android shadow
-  },
-
-  // Location Display Container
-  locationContainer: {
-    alignItems: 'center', // Centers child elements horizontally
-  },
-
-  // Location Text Style
-  locationText: {
-    fontSize: 18, // Font size for the location label
-    fontWeight: 'bold', // Bold font weight for emphasis
-    marginBottom: 10, // Space below the label
-    color: '#333', // Dark gray color for readability
-  },
-
-  // Coordinates Text Style
-  coordsText: {
-    fontSize: 16, // Font size for the coordinates
-    marginVertical: 2, // Vertical margin for spacing
-    color: '#555', // Medium gray color for readability
-  },
-
-  // Location Disabled Message Container
-  locationDisabledContainer: {
-    alignItems: 'center', // Centers child elements horizontally
-    padding: 10, // Padding inside the container
-  },
-
-  // Location Disabled Message Text
-  locationDisabledText: {
-    fontSize: 16, // Font size for the message
-    color: '#555', // Medium gray color for readability
-    textAlign: 'center', // Centers the text
   },
 
   // Map Container with Animations

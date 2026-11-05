@@ -101,6 +101,14 @@ function createHarness(options = {}) {
     });
     return renderer;
   }
+  // Stub the network: weather requests are recorded in `calls` and answered with a small canned forecast.
+  const noon = 1793880000; // a fixed epoch second; five consecutive days
+  const forecast = {
+    cod: '200',
+    city: { name: 'Testville', country: 'CA' },
+    list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
+  };
+  global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
   return { render, load, alerts, navigations, calls, documents, storage, auth, setUser, Screen };
 }
 module.exports = { createHarness, act };
