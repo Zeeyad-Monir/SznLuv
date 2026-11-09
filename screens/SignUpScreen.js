@@ -15,7 +15,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import BackButton from '../components/BackButton';
 import { AuthContext } from '../contexts/AuthContext';
 import { auth } from '../firebaseConfig';
 import { createAccountWithProfile, normalizeUsername, validUsername } from '../services/accounts';
@@ -31,6 +33,7 @@ import { firebaseErrorMessage } from '../services/firebaseErrors';
 export default function SignUpScreen() {
   // useNavigation hook provides navigation functionality to navigate between screens
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { setRegistering, setRegistrationError } = useContext(AuthContext);
   const submitting = useRef(false);
   
@@ -129,7 +132,7 @@ export default function SignUpScreen() {
     setRegistering(true);
     try {
       await createAccountWithProfile({ email: normalizedEmail, password, username: normalizedUsername });
-      navigation.navigate('Login');
+      navigation.popTo('Login'); // Pops this screen, so the completed form can't be swiped back to
       Alert.alert('Success', 'Account created successfully! Please log in with your credentials.');
     } catch (error) {
       console.error('Registration failed:', { code: error.code, stage: error.stage, cleanupErrors: error.cleanupErrors });
@@ -157,8 +160,16 @@ export default function SignUpScreen() {
       {/* Configures the status bar appearance */}
       <StatusBar barStyle="dark-content" backgroundColor="#F9F4EF" />
 
-      {/* 
-        App Logo 
+      <BackButton
+        onPress={() => navigation.goBack()}
+        label="Back to Log In"
+        tintColor="#323232"
+        disabled={loading}
+        style={[styles.backButton, { top: insets.top + 4 }]}
+      />
+
+      {/*
+        App Logo
         Displays the application name prominently on the sign-up screen.
       */}
       <Text style={styles.logoText}>SznLuv</Text>
@@ -247,7 +258,12 @@ export default function SignUpScreen() {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading} style={{ marginTop: 24 }}>
+      <TouchableOpacity
+        onPress={() => navigation.popTo('Login')}
+        disabled={loading}
+        style={styles.logInLink}
+        accessibilityRole="button"
+      >
         <Text>Already have an account? Log In</Text>
       </TouchableOpacity>
     </View>
@@ -264,6 +280,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Centers items horizontally
     justifyContent: 'center', // Centers items vertically
     paddingHorizontal: 30, // Horizontal padding for inner content
+  },
+  backButton: {
+    position: 'absolute',
+    left: 8,
+  },
+  logInLink: {
+    marginTop: 12, // With the padding below, sits where the old 24pt margin put it but has a 44pt target
+    paddingVertical: 12,
   },
   logoText: {
     fontSize: 50, // Large font size for the app logo

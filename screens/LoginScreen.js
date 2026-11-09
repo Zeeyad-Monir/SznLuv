@@ -119,9 +119,9 @@ export default function LoginScreen() {
       // Step 5: Handle specific Firebase authentication errors and provide appropriate feedback to the user
       const errorMessage = firebaseErrorMessage(error, 'login');
       Alert.alert('Login Failed', errorMessage); // Display the appropriate error message to the user
-    } finally {
-      // Step 6: Hide the loading spinner regardless of the login outcome
-      setLoading(false); // Hide the loading spinner
+
+      // Step 6: Hide the spinner on failure only. On success it keeps spinning until App swaps to the signed-in screens.
+      setLoading(false);
     }
   };
 
@@ -222,6 +222,8 @@ export default function LoginScreen() {
       <TouchableOpacity
         style={styles.signupContainer}
         onPress={() => navigation.navigate('SignUp')} // Navigates to the 'SignUp' screen on press
+        hitSlop={12}
+        accessibilityRole="button"
         accessibilityLabel="Navigate to Sign Up" // Accessibility label for screen readers
       >
         <Text style={styles.signupText}>

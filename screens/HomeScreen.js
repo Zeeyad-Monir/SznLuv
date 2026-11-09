@@ -14,15 +14,14 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Animated,
-  Easing,
   ImageBackground,
 } from 'react-native';
 
 // Importing navigation hook to navigate between screens
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import useEntrance from '../hooks/useEntrance';
 
 // Importing AuthContext to access authenticated user information
 import { AuthContext } from '../contexts/AuthContext';
@@ -30,9 +29,6 @@ import { AuthContext } from '../contexts/AuthContext';
 // Importing Firebase authentication and database functions
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar';
 
 // =========================
 // HELPER FUNCTIONS SECTION
@@ -113,34 +109,20 @@ const COVER_IMAGE_OPACITY = 0.9;
 export default function HomeScreen() {
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
 
   // Accessing the authenticated user from AuthContext
-  const { user } = useContext(AuthContext);
+  const { user, username } = useContext(AuthContext);
 
   // =========================
   // STATE VARIABLES SECTION
   // =========================
 
-  // State to store the user's name
-  const [userName, setUserName] = useState('');
+  // Known from the sign-in profile check, so the greeting is complete on the first frame
+  const [userName, setUserName] = useState(username || '');
 
-  // State to manage the loading indicator visibility
-  const [loading, setLoading] = useState(true);
-
-  // =========================
-  // ANIMATED VALUES SECTION
-  // =========================
-
-  // Animated values for the greeting text animations
-  const greetingOpacity = useRef(new Animated.Value(0)).current;
-  const greetingTranslateY = useRef(new Animated.Value(-20)).current;
-
-  // Animated values for the Vancouver card's entrance animation
-  const vancouverAnimation = {
-    translateY: useRef(new Animated.Value(30)).current,
-    opacity: useRef(new Animated.Value(0)).current,
-    scale: useRef(new Animated.Value(0.9)).current,
-  };
+  const entrance = useEntrance(2);
 
   // =========================
   // DATA FETCHING FUNCTIONS
@@ -168,96 +150,13 @@ export default function HomeScreen() {
     }
   };
 
-  /**
-   * fetchData Function
-   *
-   * Retrieves user information.
-   * Sets the loading state to false once data fetching is complete.
-   */
-  const fetchData = async () => {
-    await fetchUserName(); // Fetching user's name
-    setLoading(false); // Setting loading to false after data is fetched
-  };
-
   // =========================
   // USE EFFECTS SECTION
   // =========================
 
-  /**
-   * useEffect Hook: Fetches initial data when the component mounts.
-   */
   useEffect(() => {
-    fetchData(); // Initiates data fetching on component mount
+    if (!username) fetchUserName(); // App normally already has the name from the sign-in profile check
   }, []);
-
-  /**
-   * useEffect Hook: Triggers animations once the loading state changes.
-   *
-   * - Animates the greeting text fading in and sliding into position.
-   * - Animates the Vancouver card's entrance with fade-in, slide-up, and scaling effects.
-   */
-  useEffect(() => {
-    if (!loading) {
-      // Animating the greeting container
-      Animated.parallel([
-        Animated.timing(greetingOpacity, {
-          toValue: 1, // Final opacity
-          duration: 700, // Duration of the animation
-          useNativeDriver: true, // Enables native driver for better performance
-        }),
-        Animated.timing(greetingTranslateY, {
-          toValue: 0, // Final vertical position
-          duration: 700,
-          easing: Easing.out(Easing.ease), // Easing function for smoothness
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animating the Vancouver card
-      const delay = 500; // Delay before the animation starts
-
-      Animated.parallel([
-        // Animating opacity
-        Animated.timing(vancouverAnimation.opacity, {
-          toValue: 1, // Final opacity
-          duration: 600, // Duration of the animation
-          delay: delay, // Delay before the animation starts
-          useNativeDriver: true,
-        }),
-        // Animating vertical translation
-        Animated.timing(vancouverAnimation.translateY, {
-          toValue: 0, // Final vertical position
-          duration: 600,
-          delay: delay,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        // Animating scaling
-        Animated.spring(vancouverAnimation.scale, {
-          toValue: 1, // Final scale
-          friction: 5, // Friction for the spring effect
-          tension: 40, // Tension for the spring effect
-          delay: delay,
-          useNativeDriver: true,
-        }),
-      ]).start(); // Starting the parallel animations
-    }
-  }, [loading]);
-
-  // =========================
-  // CONDITIONAL RENDERING SECTION
-  // =========================
-
-  let content;
-
-  if (loading) {
-    // Display a loading indicator while data is being fetched
-    content = (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
 
   // =========================
   // RENDERING SECTION
@@ -265,21 +164,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Custom Navigation Bar */}
-      <NavBar />
-
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent}>
         {/* Greeting Container with Animations */}
-        <Animated.View
-          style={[
-            styles.greetingContainer, // Base styles
-            {
-              opacity: greetingOpacity, // Animated opacity
-              transform: [{ translateY: greetingTranslateY }], // Animated vertical translation
-            },
-          ]}
-        >
+        <Animated.View style={[styles.greetingContainer, entrance[0]]}>
           {/* Greeting Text */}
           <Text style={styles.greetingText}>Hello, {userName}!</Text>
 
@@ -292,21 +180,12 @@ export default function HomeScreen() {
           {/* =========================
               VANCOUVER CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: vancouverAnimation.opacity, // Animated opacity
-                transform: [
-                  { translateY: vancouverAnimation.translateY }, // Animated vertical translation
-                  { scale: vancouverAnimation.scale }, // Animated scaling
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[1]}>
             <TouchableOpacity
               style={styles.seasonTouchable} // Base styles for the touchable area
               onPress={() => navigation.navigate('VancouverScreen')} // Navigates to VancouverScreen on press
               accessible={true} // Enables accessibility
+              accessibilityRole="button"
               accessibilityLabel="Vancouver - View Vancouver" // Accessibility label for screen readers
             >
               {/* Background image for the Vancouver card */}

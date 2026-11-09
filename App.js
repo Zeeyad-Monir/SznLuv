@@ -1,9 +1,10 @@
 // App.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 // Firebase imports
 import { auth } from './firebaseConfig';
@@ -18,24 +19,9 @@ import { firebaseErrorMessage } from './services/firebaseErrors';
 // Import screens
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
-import HomeScreen from './screens/HomeScreen';
-import VancouverScreen from './screens/VancouverScreen';
-import SeasonsScreen from './screens/SeasonsScreen';
-import FallDatesScreen from './screens/FallDatesScreen';
-import SpotDetailScreen from './screens/SpotDetailScreen';
-import WinterDatesScreen from './screens/WinterDatesScreen';
-import SpringDatesScreen from './screens/SpringDatesScreen';
-import SummerDatesScreen from './screens/SummerDatesScreen';
-import AldorFamilyFarmScreen from './screens/AldorFamilyFarmScreen';
-import SpinTheWheel from './screens/SpinTheWheel';
-import Favourites from './screens/Favourites';
-import ProfileSettings from './screens/ProfileSettings'; 
-import LaityPumpkinPatch from './screens/LaityPumpkinPatch';
-import EagleAcresDairy from './screens/EagleAcresDairy'; 
-import SeasonalFavourites from './screens/SeasonalFavourites'; 
-import CustomCollectionScreen from './screens/CustomCollectionScreen'; 
-
-
+import MainTabs from './navigation/MainTabs';
+import ChooseCollectionSheet from './screens/ChooseCollectionSheet';
+import CreateCollectionSheet from './screens/CreateCollectionSheet';
 
 // Import SettingsProvider
 import { SettingsProvider } from './screens/SettingsContext';
@@ -43,7 +29,28 @@ import { SettingsProvider } from './screens/SettingsContext';
 // Create context to provide user authentication state throughout the app
 export { AuthContext } from './contexts/AuthContext';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
+
+// VoiceOver's two-finger "scrub" gesture: back out of a page or close a sheet, like the chevron or X.
+const escapeBack = () => {
+  if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
+};
+
+// The colour behind screens during a transition, so a push never flashes grey.
+const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#FFF5E4' } };
+
+// Signing in or out swaps the whole app, so it dissolves instead of sliding like a page.
+const crossDissolve = { animation: 'fade' };
+
+// Native bottom sheet, as tall as its content, dismissed by dragging down.
+const bottomSheet = {
+  presentation: 'formSheet',
+  sheetAllowedDetents: 'fitToContents',
+  sheetGrabberVisible: true,
+  sheetCornerRadius: 16,
+  contentStyle: { backgroundColor: '#fff' },
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -66,7 +73,7 @@ export default function App() {
     let cancelled = false;
     setProfile({ status: 'checking' });
     getDoc(doc(db, 'users', user.uid)).then((snapshot) => {
-      if (!cancelled) setProfile({ status: snapshot.exists() && snapshot.data().username ? 'ready' : 'missing' });
+      if (!cancelled) setProfile({ status: snapshot.exists() && snapshot.data().username ? 'ready' : 'missing', username: snapshot.data()?.username });
     }).catch((error) => {
       console.error('Profile access failed:', { code: error.code });
       if (!cancelled) setProfile({ status: 'error', message: firebaseErrorMessage(error, 'signup') });
@@ -76,64 +83,60 @@ export default function App() {
 
   const access = sessionAccess({ initializing, user, registering, registrationError, profile });
 
+  // While a sign-in's profile loads, stay on Login so the swap to Home is one smooth dissolve.
+  // Only held when coming from auth: after a blocked retry, Login would be the wrong screen.
+  const heldOnAuth = useRef(false);
+  if (access !== 'loading') heldOnAuth.current = access === 'auth';
+  const shown = access === 'loading' && heldOnAuth.current ? 'auth' : access;
+
   // Show loading spinner if app is initializing
-  if (access === 'loading') {
+  if (shown === 'loading') {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#333333" />
       </View>
     );
   }
 
   // Main app navigator with conditional rendering based on auth state
   return (
-    <AuthContext.Provider value={{ user, setUser, setRegistering, setRegistrationError }}>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+    <AuthContext.Provider value={{ user, username: profile.username, setUser, setRegistering, setRegistrationError }}>
       <SettingsProvider>
-        {access === 'blocked' ? (
+        {shown === 'blocked' ? (
           <AccountAccessScreen status={registrationError ? 'error' : profile.status} message={registrationError || profile.message}
             onRetry={() => { setRegistrationError(null); setRetry(value => value + 1); }} />
-        ) : <NavigationContainer>
+        ) : <View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {access === 'home' ? (
+            {shown === 'home' ? (
               <>
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="VancouverScreen" component={VancouverScreen} />
-                <Stack.Screen name="SeasonsScreen" component={SeasonsScreen} />
-                <Stack.Screen name="FallDatesScreen" component={FallDatesScreen} />
-                <Stack.Screen name="AldorFamilyFarmScreen" component={AldorFamilyFarmScreen} />
-                <Stack.Screen name="SpotDetailScreen" component={SpotDetailScreen} />
-                <Stack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
-                <Stack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
-                <Stack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
-                <Stack.Screen name="Favourites" component={Favourites} />
-                <Stack.Screen name="ProfileSettings" component={ProfileSettings} />
-                <Stack.Screen name="SpinTheWheel" component={SpinTheWheel} />
-                <Stack.Screen name="LaityPumpkinPatch" component={LaityPumpkinPatch} />
-                <Stack.Screen name="EagleAcresDairy" component={EagleAcresDairy} />
-                <Stack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
-                <Stack.Screen name="CustomCollectionScreen" component={CustomCollectionScreen} />
-
-
-
+                <Stack.Screen name="Main" component={MainTabs} options={crossDissolve} />
+                <Stack.Screen name="ChooseCollection" component={ChooseCollectionSheet} options={bottomSheet} />
+                <Stack.Screen name="CreateCollection" component={CreateCollectionSheet} options={bottomSheet} />
               </>
             ) : (
               <>
-                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="Login" component={LoginScreen} options={crossDissolve} />
                 <Stack.Screen name="SignUp" component={SignUpScreen} />
               </>
             )}
           </Stack.Navigator>
-        </NavigationContainer>}
+        </NavigationContainer></View>}
       </SettingsProvider>
     </AuthContext.Provider>
+    </SafeAreaProvider>
   );
 }
 
 // Style for loading screen
 const styles = StyleSheet.create({
+  app: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFF5E4',
   },
 });

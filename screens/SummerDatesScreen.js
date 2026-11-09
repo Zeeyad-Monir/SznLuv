@@ -1,5 +1,7 @@
 import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
+import { openCollectionPicker } from '../services/collectionPicker';
+import useEntrance from '../hooks/useEntrance';
 // SCREENS/SUMMERDATESSCREEN.JS
 // Detailed comments are added by ChatGPT to the existing code, making it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
@@ -8,7 +10,7 @@ import { openVenue } from '../services/venueNavigation';
 // =========================
 
 // Importing necessary modules and hooks from React
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 
 // Importing React Native components and APIs
 import {
@@ -19,16 +21,14 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
-  Easing,
   Dimensions,
-  Modal,
 } from 'react-native';
 
 // Importing Material Icons for icon usage in the UI
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Importing Firestore functions for database interactions
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 // Importing Firebase authentication and database configurations
 import { auth, db } from '../firebaseConfig'; // Firebase configuration
@@ -36,11 +36,8 @@ import { auth, db } from '../firebaseConfig'; // Firebase configuration
 // Importing AuthContext to access authenticated user information
 import { AuthContext } from '../contexts/AuthContext'; // Authentication context
 
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar'; // Import NavBar
-
-// Importing LottieView for animations
-import LottieView from 'lottie-react-native';
+// Looping seasonal background animation
+import BackgroundLottie from '../components/BackgroundLottie';
 
 // Importing the summer falling animation JSON file
 import summerFalling from '../assets/summerFalling.json'; // Ensure this file exists in your assets
@@ -81,22 +78,10 @@ export default function SummerDatesScreen({ navigation }) {
   // State to manage user's favorite spots
   const [favorites, setFavorites] = useState({}); // Local state for favorites
 
-  // NEW STATES: Notification and Modal Controls
+  // NEW STATES: Notification Controls
   const [showChooseCollectionNotification, setShowChooseCollectionNotification] = useState(false);
   const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
-  const [showChooseCollectionModal, setShowChooseCollectionModal] = useState(false);
-  const [userCollections, setUserCollections] = useState([]);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
-
-  // =========================
-  // ANIMATED VALUES SECTION
-  // =========================
-
-  // Animated value for the opacity of the title
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-
-  // Animated value for the vertical translation of the title
-  const titleTranslateY = useRef(new Animated.Value(-50)).current;
 
   // =========================
   // DATA SECTION
@@ -115,20 +100,8 @@ export default function SummerDatesScreen({ navigation }) {
     // You can add more categories and spots as needed
   ];
 
-  // Creating animated values for each category's entrance animation
-  const categoryAnimations = categories.map(() => ({
-    translateX: useRef(new Animated.Value(-50)).current, // Horizontal translation
-    opacity: useRef(new Animated.Value(0)).current,     // Opacity for fade-in effect
-  }));
-
-  // Creating animated values for each card within the categories
-  const cardAnimations = categories.map((category) =>
-    category.spots.map(() => ({
-      translateY: useRef(new Animated.Value(20)).current, // Vertical translation
-      opacity: useRef(new Animated.Value(0)).current,   // Opacity for fade-in effect
-      scale: useRef(new Animated.Value(0.8)).current,    // Scale for zoom-in effect
-    }))
-  );
+  // The header and each category section ease in together; the push itself carries the page.
+  const entrance = useEntrance(1 + categories.length);
 
   // =========================
   // EFFECTS SECTION
@@ -138,7 +111,7 @@ export default function SummerDatesScreen({ navigation }) {
    * useEffect Hook: Fetch and synchronize user's favorites from Firestore on component mount
    * 
    * This effect runs once when the component mounts. It retrieves the user's favorites from Firestore
-   * and initializes the favorites state. It also triggers animations for the title, categories, and cards.
+   * and initializes the favorites state.
    */
   useEffect(() => {
     if (!user) return;
@@ -150,109 +123,9 @@ export default function SummerDatesScreen({ navigation }) {
     });
   }, [user]);
 
-  useEffect(() => {
-    // Function to fetch user's favorites from Firestore
-
-    Animated.parallel([
-      // Animate the opacity of the title from 0 to 1
-      Animated.timing(titleOpacity, {
-        toValue: 1, // Final opacity value
-        duration: 1000, // Duration of the animation in milliseconds
-        useNativeDriver: true, // Use native driver for better performance
-      }),
-      // Animate the vertical translation of the title from -50 to 0
-      Animated.timing(titleTranslateY, {
-        toValue: 0, // Final translation value
-        duration: 1000, // Duration of the animation in milliseconds
-        easing: Easing.out(Easing.ease), // Easing function for smooth animation
-        useNativeDriver: true, // Use native driver for better performance
-      }),
-    ]).start(); // Start the parallel animations
-
-    // Animate categories and cards with consistent timing
-    categories.forEach((category, index) => {
-      const delay = 1000 + index * 500; // Delay based on category index
-
-      // Animate category slide-in and fade-in
-      Animated.parallel([
-        // Animate horizontal translation from -50 to 0
-        Animated.timing(categoryAnimations[index].translateX, {
-          toValue: 0, // Final translation value
-          duration: 500, // Duration of the animation
-          delay: delay, // Delay before the animation starts
-          easing: Easing.out(Easing.ease), // Easing function
-          useNativeDriver: true, // Use native driver
-        }),
-        // Animate opacity from 0 to 1
-        Animated.timing(categoryAnimations[index].opacity, {
-          toValue: 1, // Final opacity value
-          duration: 500, // Duration of the animation
-          delay: delay, // Delay before the animation starts
-          useNativeDriver: true, // Use native driver
-        }),
-      ]).start(); // Start the parallel animations
-
-      // Animate each card within the category
-      category.spots.forEach((spot, idx) => {
-        const cardDelay = delay + (idx + 1) * 300; // Additional delay for staggered animation
-
-        Animated.parallel([
-          // Animate vertical translation from 20 to 0
-          Animated.timing(cardAnimations[index][idx].translateY, {
-            toValue: 0, // Final translation value
-            duration: 500, // Duration of the animation
-            delay: cardDelay, // Delay before the animation starts
-            easing: Easing.out(Easing.ease), // Easing function
-            useNativeDriver: true, // Use native driver
-          }),
-          // Animate opacity from 0 to 1
-          Animated.timing(cardAnimations[index][idx].opacity, {
-            toValue: 1, // Final opacity value
-            duration: 500, // Duration of the animation
-            delay: cardDelay, // Delay before the animation starts
-            useNativeDriver: true, // Use native driver
-          }),
-          // Animate scale from 0.8 to 1 with a spring effect
-          Animated.spring(cardAnimations[index][idx].scale, {
-            toValue: 1, // Final scale value
-            friction: 5, // Friction for the spring effect
-            tension: 40, // Tension for the spring effect
-            delay: cardDelay, // Delay before the animation starts
-            useNativeDriver: true, // Use native driver
-          }),
-        ]).start(); // Start the parallel animations
-      });
-    });
-  }, []); // Empty dependency array ensures this runs only once on mount
-
   // =========================
   // FUNCTIONS SECTION
   // =========================
-
-  /**
-   * NEW FUNCTION: Fetch user-defined collections
-   * 
-   * This asynchronous function retrieves the user's collections from Firestore.
-   * It updates the `userCollections` state with the fetched data.
-   */
-  const fetchUserCollections = async () => {
-    if (!user) return;
-    try {
-      const favouritesDoc = doc(db, 'favourites', user.uid);
-      const docSnap = await getDoc(favouritesDoc);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.collections && Array.isArray(data.collections)) {
-          setUserCollections(data.collections);
-        } else {
-          setUserCollections([]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user-defined collections:', error);
-    }
-  };
 
   /**
    * NEW FUNCTION: Add spot to a specific collection
@@ -318,33 +191,27 @@ export default function SummerDatesScreen({ navigation }) {
    * NEW FUNCTION: Handle "Choose Collection" button press in notification
    * 
    * This function is triggered when the user taps on the "Choose Collection" notification.
-   * It fetches the user's collections and opens the choose collection modal.
+   * It opens the collection sheet.
    */
-  const handleChooseCollectionPress = async () => {
+  const handleChooseCollectionPress = () => {
     // Hide the notification bar
     setShowChooseCollectionNotification(false);
 
-    // Fetch user collections
-    await fetchUserCollections();
-
-    // Open the choose collection modal
-    setShowChooseCollectionModal(true);
+    // Open the collection sheet with the collections this screen already has live
+    openCollectionPicker(navigation, favorites.collections || [], handleCollectionSelect);
   };
 
   /**
-   * NEW FUNCTION: Handle user selecting a collection in the modal
+   * NEW FUNCTION: Handle user selecting a collection in the sheet
    * 
-   * This function is triggered when the user selects a collection from the modal.
-   * It adds the newly favorited spot to the selected collection.
+   * This function is triggered when the user selects a collection from the sheet.
+   * It adds the newly favorited spot to the selected collection; the sheet has already closed.
    * 
    * @param {string} collectionTitle - The title of the selected collection
    */
   const handleCollectionSelect = (collectionTitle) => {
     if (!newlyFavouritedSpot) return;
     addSpotToCollection(collectionTitle, newlyFavouritedSpot.name);
-
-    // Close the modal
-    setShowChooseCollectionModal(false);
   };
 
   // =========================
@@ -365,10 +232,8 @@ export default function SummerDatesScreen({ navigation }) {
         - style: Styling applied to the animation.
         - speed: Speed at which the animation plays.
       */}
-      <LottieView
+      <BackgroundLottie
         source={summerFalling} // Source of the animation JSON
-        autoPlay // Automatically play the animation
-        loop // Loop the animation indefinitely
         style={styles.leavesAnimation} // Styling for the animation
         speed={0.3} // Speed of the animation playback
       />
@@ -378,22 +243,11 @@ export default function SummerDatesScreen({ navigation }) {
           ========================= */}
 
       {/* 
-        Animated View for the header container, including the NavBar and title.
+        Animated View for the header container, containing the title.
         - opacity: Animated opacity value for fade-in effect.
         - transform: Animated vertical translation for slide-in effect.
       */}
-      <Animated.View
-        style={[
-          styles.headerContainer, // Base styles
-          {
-            opacity: titleOpacity, // Animated opacity
-            transform: [{ translateY: titleTranslateY }], // Animated vertical translation
-          },
-        ]}
-      >
-        {/* Integrated Navigation Bar */}
-        <NavBar />
-
+      <Animated.View style={[styles.headerContainer, entrance[0]]}>
         {/* 
           Screen Title.
           - style: Styling applied to the title text.
@@ -416,16 +270,7 @@ export default function SummerDatesScreen({ navigation }) {
           - style: Animated styles for each category section.
         */}
         {categories.map((category, index) => (
-          <Animated.View
-            key={index} // Unique key for each category
-            style={[
-              styles.categorySection, // Base styles for category section
-              {
-                transform: [{ translateX: categoryAnimations[index].translateX }], // Animated horizontal translation
-                opacity: categoryAnimations[index].opacity, // Animated opacity
-              },
-            ]}
-          >
+          <Animated.View key={index} style={[styles.categorySection, entrance[index + 1]]}>
             {/* Category Title */}
             <Text style={styles.categoryTitle}>{category.title}</Text>
 
@@ -435,19 +280,7 @@ export default function SummerDatesScreen({ navigation }) {
               - style: Animated styles for each spot card.
             */}
             {category.spots.map((spot, idx) => (
-              <Animated.View
-                key={idx} // Unique key for each spot
-                style={[
-                  styles.dateSpotCard, // Base styles for the spot card
-                  {
-                    transform: [
-                      { translateY: cardAnimations[index][idx].translateY }, // Animated vertical translation
-                      { scale: cardAnimations[index][idx].scale },         // Animated scaling
-                    ],
-                    opacity: cardAnimations[index][idx].opacity,           // Animated opacity
-                  },
-                ]}
-              >
+              <View key={idx} style={styles.dateSpotCard}>
                 {/* 
                   Touchable area for the entire spot card.
                   - style: Styling for the content area.
@@ -457,6 +290,8 @@ export default function SummerDatesScreen({ navigation }) {
                 */}
                 <TouchableOpacity
                   style={styles.dateSpotCardContent} // Styles for the content area
+                  accessibilityActions={[{ name: 'favorite', label: favorites[spot.name]?.isFavourite ? 'Remove from favourites' : 'Add to favourites' }]}
+                  onAccessibilityAction={() => toggleFavorite(spot.name, spot.address)}
                   onPress={() => handleSpotPress(spot)} // Handler for spot press
                   accessibilityLabel={`View details for ${spot.name}`} // Accessibility label for screen readers
                   accessibilityRole="button" // Accessibility role
@@ -474,6 +309,7 @@ export default function SummerDatesScreen({ navigation }) {
                   */}
                   <TouchableOpacity
                     style={styles.cardHeartIcon} // Styles for the heart icon area
+                    hitSlop={11}
                     onPress={() => toggleFavorite(spot.name, spot.address)} // Handler for toggling favorite
                     accessibilityLabel={`Favorite ${spot.name}`} // Accessibility label
                     accessibilityRole="button" // Accessibility role
@@ -527,6 +363,7 @@ export default function SummerDatesScreen({ navigation }) {
                   */}
                   <TouchableOpacity
                     style={styles.cardArrowIcon} // Styles for the arrow icon area
+                    hitSlop={13}
                     onPress={() => handleSpotPress(spot)} // Handler for arrow icon press
                     accessibilityLabel={`View details for ${spot.name}`} // Accessibility label
                     accessibilityRole="button" // Accessibility role
@@ -535,7 +372,7 @@ export default function SummerDatesScreen({ navigation }) {
                     <Icon name="chevron-right" size={18} color="#000" />
                   </TouchableOpacity>
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             ))}
           </Animated.View>
         ))}
@@ -570,59 +407,6 @@ export default function SummerDatesScreen({ navigation }) {
         </View>
       )}
 
-      {/* =========================
-          NEW: Choose Collection Modal
-          ========================= */}
-
-      {/* NEW: Choose Collection Modal */}
-      <Modal
-        visible={showChooseCollectionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowChooseCollectionModal(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            {/* Close Button */}
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowChooseCollectionModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>X</Text>
-            </TouchableOpacity>
-            {/* Modal Title */}
-            <Text style={styles.modalTitle}>Collections</Text>
-
-            {userCollections.length > 0 ? (
-              // NEW: Scrollable Container for Collections (Visible 4 at a time)
-              <View style={styles.collectionListContainer}>
-                <ScrollView>
-                  {userCollections.map((collection, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[
-                        styles.collectionButton,
-                        { backgroundColor: collection.color },
-                      ]}
-                      onPress={() => handleCollectionSelect(collection.title)}
-                      accessibilityLabel={`Add to ${collection.title} Collection`}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.collectionButtonText}>
-                        {collection.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            ) : (
-              <Text style={styles.noCollectionsText}>
-                No Collections Available. Create one first!
-              </Text>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -690,7 +474,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', // Horizontal layout for child elements
     alignItems: 'center', // Vertically centers child elements
     height: 74, // Same height for every spot card (the name is a single shrink-to-fit line)
-    padding: 14, // Padding inside the card
     marginBottom: 24.15, // Bottom margin to separate cards
     shadowColor: '#000', // Shadow color for iOS
     shadowOffset: { width: 0, height: 1 }, // Shadow offset for iOS
@@ -701,6 +484,8 @@ const styles = StyleSheet.create({
 
   // Styling for the content area within each date spot card
   dateSpotCardContent: {
+    padding: 14, // On the touchable, so the whole card responds and not just its middle
+    alignSelf: 'stretch',
     flex: 1, // Takes up the full available space
     flexDirection: 'row', // Horizontal layout for child elements
     alignItems: 'center', // Vertically centers child elements
@@ -751,83 +536,6 @@ const styles = StyleSheet.create({
   successNotificationText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
-  },
-
-  // =========================
-  // NEW: Modal Styles
-  // =========================
-
-  // NEW: Modal Styles
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '80%',
-    maxHeight: '70%', // Ensures the modal doesn't exceed 70% of screen height
-    backgroundColor: '#fff', // Light beige background
-    borderRadius: 10,
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 15,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: '#323232',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'transparent',
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseButtonText: {
-    color: '#888',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-
-  // =========================
-  // NEW: Collection List Container for Scrollable List (Visible 4 items)
-  // =========================
-
-  collectionListContainer: {
-    width: '100%',
-    height: 240, // 4 items * (50px height + 10px margin) = 240px
-  },
-  collectionButton: {
-    marginVertical: 5, // 10px total vertical gap between buttons
-    borderRadius: 8,
-    height: 50, // Fixed height per collection button
-    width: '90%',
-    alignSelf: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  collectionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  noCollectionsText: {
-    marginTop: 20,
-    textAlign: 'center',
-    color: '#555',
     fontSize: 16,
   },
 });

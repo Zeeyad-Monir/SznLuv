@@ -10,8 +10,15 @@ const { act } = TestRenderer;
 function createHarness(options = {}) {
   const cache = new Map(), listeners = new Set();
   const documents = new Map(Object.entries(options.documents || { 'users/audit': { username: 'audit' }, 'favourites/audit': { collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }] } }));
-  const alerts = [], navigations = [], calls = [];
-  const navigation = { navigate: (...args) => navigations.push(args), goBack: () => {} };
+  const alerts = [], navigations = [], calls = [], dispatches = [], timings = [];
+  const navigation = {
+    navigate: (...args) => navigations.push(args),
+    popTo: (...args) => { calls.push(['popTo', ...args]); navigations.push(args); },
+    goBack: () => calls.push(['goBack']),
+    dispatch: action => dispatches.push(action),
+    isFocused: () => options.focused !== false,
+    addListener: () => () => {},
+  };
   const route = { params: { season: 'Fall', collection: { title: 'Weekend', color: '#A7C8FF', dates: [], userId: 'audit' } } };
   const auth = { currentUser: options.user || null, onAuthStateChanged: callback => { listeners.add(callback); callback(auth.currentUser); return () => listeners.delete(callback); } };
   const setUser = user => { auth.currentUser = user; for (const callback of listeners) callback(user); };
@@ -19,7 +26,7 @@ function createHarness(options = {}) {
   const firestore = {
     doc: (_, ...segments) => ({ path: segments.join('/') }),
     collection: (_, ...segments) => ({ path: segments.join('/') }),
-    getDoc: async ref => { if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return snapshot(ref); },
+    getDoc: async ref => { if (options.beforeRead) await options.beforeRead(ref); if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return snapshot(ref); },
     onSnapshot: (ref, next) => { next(snapshot(ref)); return () => {}; },
     query: ref => ref, where: (...args) => args, orderBy: (...args) => args,
     setDoc: async (ref, data) => documents.set(ref.path, data),
@@ -41,24 +48,36 @@ function createHarness(options = {}) {
   };
   const animation = { start: callback => callback?.({ finished: true }), stop: () => {} };
   class Value { constructor(value) { this.value = value; } setValue(value) { this.value = value; } interpolate() { return this.value; } stopAnimation() {} }
-  const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: () => animation, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component };
+  const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: (value, config) => { timings.push(config); return animation; }, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component };
   const rn = new Proxy({
     View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity', ActivityIndicator: 'ActivityIndicator', Switch: 'Switch',
     StyleSheet: { create: styles => styles, flatten: styles => styles, absoluteFillObject: {} },
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
     Animated, Easing: new Proxy({}, { get: () => value => value }),
     Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: 'ios', select: value => value.ios },
+    AccessibilityInfo: { isReduceMotionEnabled: async () => !!options.reduceMotion, addEventListener: () => ({ remove() {} }) },
     SectionList: ({ sections = [], renderItem, ...props }) => React.createElement('SectionList', props, sections.flatMap(section => section.data.map((item, index) => React.createElement(React.Fragment, { key: section.title + index }, renderItem({ item, index, section }))))),
     FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
   function Screen() { return null; }
-  const nav = { useNavigation: () => navigation, useRoute: () => route, useFocusEffect: callback => React.useEffect(callback, [callback]), NavigationContainer: ({ children }) => React.createElement('NavigationContainer', null, children) };
+  const nav = {
+    useNavigation: () => navigation, useRoute: () => route, useFocusEffect: callback => React.useEffect(callback, [callback]),
+    useIsFocused: () => options.focused !== false, useScrollToTop: () => {},
+    NavigationContainer: React.forwardRef(({ children }, ref) => React.createElement('NavigationContainer', null, children)),
+    createNavigationContainerRef: () => ({ current: null, isReady: () => false, canGoBack: () => false, goBack: () => {} }),
+    DefaultTheme: { dark: false, colors: {} },
+    StackActions: { pop: count => ({ type: 'POP', payload: { count } }), popToTop: () => ({ type: 'POP_TO_TOP' }) },
+    CommonActions: { navigate: (...args) => ({ type: 'NAVIGATE', payload: args }) },
+  };
+  const navigator = () => ({ Navigator: ({ children }) => React.createElement('Navigator', null, children), Screen });
   const storage = new Map(Object.entries(options.storage || {}));
   const stubs = {
     'react': React, 'react-native': rn, 'firebase/firestore': firestore,
     'firebase/auth': { onAuthStateChanged: (instance, callback) => instance.onAuthStateChanged(callback), deleteUser: async () => setUser(null) },
     '@react-navigation/native': nav,
-    '@react-navigation/stack': { createStackNavigator: () => ({ Navigator: ({ children }) => React.createElement('Navigator', null, children), Screen }) },
+    '@react-navigation/native-stack': { createNativeStackNavigator: navigator },
+    '@react-navigation/bottom-tabs': { createBottomTabNavigator: navigator },
+    'react-native-safe-area-context': { SafeAreaProvider: ({ children }) => React.createElement('SafeAreaProvider', null, children), useSafeAreaInsets: () => ({ top: 62, bottom: 34, left: 0, right: 0 }) },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     'react-native-svg': { __esModule: true, default: 'Svg', Svg: 'Svg', Path: 'Path', G: 'G', Text: 'SvgText', TSpan: 'TSpan' },
     '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async key => storage.get(key) ?? null, setItem: async (key, value) => { storage.set(key, value); } } },
@@ -92,6 +111,7 @@ function createHarness(options = {}) {
   }
   async function render(relative, { contextUser = options.user || { uid: 'audit', email: 'codex.audit.render@example.com' }, location = false, props = {}, app = false } = {}) {
     const Component = load(relative).default;
+    await Promise.resolve(); // Lets the Reduce Motion setting, read at import, arrive before the first render
     const { AuthContext } = load('contexts/AuthContext.js');
     const { SettingsContext } = load('screens/SettingsContext.js');
     let renderer;
@@ -109,6 +129,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, load, alerts, navigations, calls, documents, storage, auth, setUser, Screen };
+  return { render, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, Screen };
 }
 module.exports = { createHarness, act };

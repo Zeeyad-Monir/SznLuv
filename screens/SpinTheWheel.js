@@ -4,6 +4,7 @@
 /* ================================ IMPORTS ================================ */
 // Importing necessary modules and components from React and React Native.
 import React, { useState, useRef, useEffect, useContext } from "react";
+import { useScrollToTop } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -17,9 +18,6 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-
-// Importing external NavBar component.
-import NavBar from "../components/NavBar"; // Adjust the path based on your project structure
 import { fallSpotNames } from "../services/spots";
 
 /* ================================ ASYNC STORAGE ================================ */
@@ -33,6 +31,8 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 /* ================================ LOTTIE IMPORTS ================================ */
 // Importing LottieView for animations.
 import LottieView from "lottie-react-native"; // Import LottieView
+import BackgroundLottie from "../components/BackgroundLottie";
+import { getReduceMotion } from "../hooks/useReduceMotion";
 
 // Importing Lottie animations statically.
 import fallingLeavesAnimation from "../assets/fallingLeaves.json";
@@ -101,7 +101,19 @@ const sectionColors = [
 /* ================================ COMPONENT DEFINITION ================================ */
 /* ================================ SPIN THE WHEEL COMPONENT ================================ */
 // Define the SpinTheWheel component which manages the spinning wheel functionality.
+// One timing for this screen's entrances: quick, and instant under Reduce Motion.
+const settle = (value, toValue, delay = 0) => Animated.timing(value, {
+  toValue,
+  duration: getReduceMotion() ? 0 : 240,
+  delay: getReduceMotion() ? 0 : delay,
+  easing: Easing.out(Easing.quad),
+  useNativeDriver: true,
+});
+
 const SpinTheWheel = () => {
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
+
   /* ================================ CONTEXT AND STATE ================================ */
   // Accessing the authenticated user from AuthContext.
   const { user } = useContext(AuthContext); // Access AuthContext
@@ -148,17 +160,14 @@ const SpinTheWheel = () => {
   // Animated values for controlling the wheel's opacity, vertical position, and scale.
   const wheelOpacity = useRef(new Animated.Value(0)).current;
   const wheelTranslateY = useRef(new Animated.Value(30)).current;
-  const wheelScale = useRef(new Animated.Value(0.9)).current;
 
   // Animated values for controlling the spin button's opacity, vertical position, and scale.
   const spinButtonOpacity = useRef(new Animated.Value(0)).current;
   const spinButtonTranslateY = useRef(new Animated.Value(30)).current;
-  const spinButtonScale = useRef(new Animated.Value(0.9)).current;
 
   // Animated values for controlling the result box's opacity, vertical position, and scale.
   const resultOpacity = useRef(new Animated.Value(0)).current;
   const resultTranslateY = useRef(new Animated.Value(30)).current;
-  const resultScale = useRef(new Animated.Value(0.9)).current;
 
   // Animated values for controlling the "Enjoy your date!" text's opacity and vertical position.
   const enjoyTextOpacity = useRef(new Animated.Value(0)).current;
@@ -273,183 +282,45 @@ const SpinTheWheel = () => {
   // Trigger animations when the component loads or when selectedDate changes.
   useEffect(() => {
     if (!selectedDate) {
-      // Reset animated values for initial load.
+      // The greeting and spin button settle in as the page arrives. The wheel has its own effect below.
       greetingOpacity.setValue(0);
       greetingTranslateY.setValue(-20);
-
-      wheelOpacity.setValue(0);
-      wheelTranslateY.setValue(30);
-      wheelScale.setValue(0.9);
-
       spinButtonOpacity.setValue(0);
       spinButtonTranslateY.setValue(30);
-      spinButtonScale.setValue(0.9);
-
-      // Animate the greeting text.
       Animated.parallel([
-        Animated.timing(greetingOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(greetingTranslateY, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate the wheel.
-      Animated.parallel([
-        Animated.timing(wheelOpacity, {
-          toValue: 1,
-          duration: 600,
-          delay: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(wheelTranslateY, {
-          toValue: 0,
-          duration: 2000,
-          delay: 1000,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.spring(wheelScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          delay: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate the spin button.
-      Animated.parallel([
-        Animated.timing(spinButtonOpacity, {
-          toValue: 1,
-          duration: 600,
-          delay: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(spinButtonTranslateY, {
-          toValue: 0,
-          duration: 600,
-          delay: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.spring(spinButtonScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          delay: 800,
-          useNativeDriver: true,
-        }),
+        settle(greetingOpacity, 1),
+        settle(greetingTranslateY, 0),
+        settle(spinButtonOpacity, 1, 40),
+        settle(spinButtonTranslateY, 0, 40),
       ]).start();
     } else {
-      // Reset result box animated values.
       resultOpacity.setValue(0);
       resultTranslateY.setValue(30);
-      resultScale.setValue(0.9);
-
       enjoyTextOpacity.setValue(0);
       enjoyTextTranslateY.setValue(20);
-
-      // When a date is selected, animate the result box.
       Animated.parallel([
-        Animated.timing(resultOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(resultTranslateY, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.spring(resultScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          useNativeDriver: true,
-        }),
+        settle(resultOpacity, 1),
+        settle(resultTranslateY, 0),
+        settle(enjoyTextOpacity, 1, 120),
+        settle(enjoyTextTranslateY, 0, 120),
       ]).start();
 
-      // Animate the "Enjoy your date!" text.
-      Animated.parallel([
-        Animated.timing(enjoyTextOpacity, {
-          toValue: 1,
-          duration: 800,
-          delay: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(enjoyTextTranslateY, {
-          toValue: 0,
-          duration: 800,
-          delay: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Play the Lottie animation when a date is selected.
-      if (lottieRef.current) {
+      // Play the celebration when a date is selected; it's decoration, so Reduce Motion skips it.
+      if (lottieRef.current && !getReduceMotion()) {
         lottieRef.current.play();
       }
     }
   }, [selectedDate]);
 
   /* ---------------------------- ANIMATE WHEEL BASED ON SEASON SELECTION ---------------------------- */
-  // Animate the wheel when a season is selected or deselected.
+  // The wheel appears once a season is chosen, and hides again if the season is cleared.
   useEffect(() => {
     if (selectedSeason) {
-      // Reset wheel animated values.
       wheelOpacity.setValue(0);
       wheelTranslateY.setValue(30);
-      wheelScale.setValue(0.9);
-
-      // Animate the wheel's appearance.
-      Animated.parallel([
-        Animated.timing(wheelOpacity, {
-          toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(wheelTranslateY, {
-          toValue: 0,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.spring(wheelScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.parallel([settle(wheelOpacity, 1), settle(wheelTranslateY, 0)]).start();
     } else {
-      // If no season is selected, optionally hide the wheel.
-      Animated.parallel([
-        Animated.timing(wheelOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(wheelTranslateY, {
-          toValue: 30,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(wheelScale, {
-          toValue: 0.9,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.parallel([settle(wheelOpacity, 0), settle(wheelTranslateY, 30)]).start();
     }
   }, [selectedSeason]);
 
@@ -515,7 +386,7 @@ const SpinTheWheel = () => {
     // Start the rotation animation.
     Animated.timing(rotation, {
       toValue: randomRotation,
-      duration: spinDuration,
+      duration: getReduceMotion() ? 0 : spinDuration, // Reduce Motion reveals the result without the spin
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
@@ -632,22 +503,15 @@ const SpinTheWheel = () => {
       {/* Background Lottie Animation */}
       {/* Conditionally render the background animation only when no date is selected. */}
       {!selectedDate && backgroundAnimation && (
-        <LottieView
+        <BackgroundLottie
           source={backgroundAnimation}
-          autoPlay
-          loop
           style={backgroundAnimationStyle}
           speed={backgroundAnimationSpeed} // Applied speed configuration.
         />
       )}
-
-      {/* ================================ NAVIGATION BAR ================================ */}
-      {/* Integrate the external NavBar component */}
-      <NavBar />
-
       {/* ================================ SCROLLABLE CONTENT ================================ */}
       {/* Scrollable Content Container */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContainer}>
         {/* ================================ GREETING TEXT ================================ */}
         {/* Animated Greeting Text */}
         <Animated.View
@@ -722,7 +586,6 @@ const SpinTheWheel = () => {
                     transform: [
                       { rotate: wheelRotation },
                       { translateY: wheelTranslateY },
-                      { scale: wheelScale },
                     ],
                   },
                   isSpinning && styles.wheelShadow, // Apply shadow if spinning.
@@ -757,7 +620,6 @@ const SpinTheWheel = () => {
                 opacity: spinButtonOpacity,
                 transform: [
                   { translateY: spinButtonTranslateY },
-                  { scale: spinButtonScale },
                 ],
               }}
             >
@@ -799,7 +661,6 @@ const SpinTheWheel = () => {
                 opacity: resultOpacity,
                 transform: [
                   { translateY: resultTranslateY },
-                  { scale: resultScale },
                 ],
               }}
             >

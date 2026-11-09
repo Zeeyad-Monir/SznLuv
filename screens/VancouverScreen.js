@@ -6,7 +6,7 @@
 // IMPORTS SECTION
 // =========================
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 
 import {
   View,
@@ -15,15 +15,12 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
-  Easing,
   ImageBackground,
 } from 'react-native';
 
 // Importing navigation hook to navigate between screens
 import { useNavigation } from '@react-navigation/native';
-
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar';
+import useEntrance from '../hooks/useEntrance';
 
 // =========================
 // CONSTANTS SECTION
@@ -47,48 +44,10 @@ export default function VancouverScreen() {
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
 
-  // Entrance animation values for the Seasons card
-  const cardAnimation = {
-    translateY: useRef(new Animated.Value(30)).current,
-    opacity: useRef(new Animated.Value(0)).current,
-    scale: useRef(new Animated.Value(0.9)).current,
-  };
-
-  /**
-   * useEffect Hook: Animates the card in (fade-in, slide-up, scale) when the screen mounts.
-   */
-  useEffect(() => {
-    const delay = 500; // Same initial delay the Home cards use
-
-    Animated.parallel([
-      Animated.timing(cardAnimation.opacity, {
-        toValue: 1,
-        duration: 600,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardAnimation.translateY, {
-        toValue: 0,
-        duration: 600,
-        delay: delay,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.spring(cardAnimation.scale, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  const entrance = useEntrance(1);
 
   return (
     <View style={styles.container}>
-      {/* Custom Navigation Bar */}
-      <NavBar />
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Heading */}
         <View style={styles.headingContainer}>
@@ -99,21 +58,12 @@ export default function VancouverScreen() {
           {/* =========================
               SEASONS CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: cardAnimation.opacity,
-                transform: [
-                  { translateY: cardAnimation.translateY },
-                  { scale: cardAnimation.scale },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[0]}>
             <TouchableOpacity
               style={styles.cardTouchable}
               onPress={() => navigation.navigate('SeasonsScreen')} // Opens the four seasons
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel="Seasons - View Seasons"
             >
               <ImageBackground

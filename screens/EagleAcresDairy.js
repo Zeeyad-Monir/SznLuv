@@ -5,7 +5,7 @@
 // =========================
 
 // Import React and necessary hooks for managing state, side effects, and context
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 
 // Import components from React Native for building the UI
 import {
@@ -20,7 +20,6 @@ import {
   FlatList,
   Alert,
   Animated,
-  Easing,
 } from 'react-native';
 
 // Import Expo's Location module to access the device's location
@@ -31,10 +30,9 @@ import MapView, { Marker } from 'react-native-maps';
 
 // Import MapViewDirections for displaying route directions on the map
 import MapViewDirections from 'react-native-maps-directions';
-
-// Import the external NavBar component
-import NavBar from '../components/NavBar'; // Adjust the path based on your project structure
 import useVenueWeather from '../hooks/useVenueWeather';
+import useEntrance from '../hooks/useEntrance';
+import useAfterTransition from '../hooks/useAfterTransition';
 
 // Import SettingsContext to access location services settings
 import { SettingsContext } from './SettingsContext'; // Adjust the path based on your project structure
@@ -92,20 +90,9 @@ const EagleAcresDairy = () => {
   // =========================
 
   // Animated values for different sections
-  const weatherOpacity = useRef(new Animated.Value(0)).current;
-  const weatherTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
-
-  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
-  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current; // Slide in from left
-
-  const imageOpacity = useRef(new Animated.Value(0)).current;
-  const imageScale = useRef(new Animated.Value(0.95)).current;
-
-  const aboutOpacity = useRef(new Animated.Value(0)).current;
-  const aboutTranslateY = useRef(new Animated.Value(30)).current; // Slide in from bottom
-
-  const mapOpacity = useRef(new Animated.Value(0)).current;
-  const mapTranslateX = useRef(new Animated.Value(50)).current; // Slide in from right
+  // Weather, details, photo, about and map ease in together once the page has its data.
+  const entrance = useEntrance(5, { ready: !loading });
+  const mapReady = useAfterTransition(); // The map mounts after the slide, so it can't stutter the push
 
   // =========================
   // LOCATION EFFECT HOOK SECTION
@@ -186,117 +173,6 @@ const EagleAcresDairy = () => {
   // ANIMATION EFFECT HOOK SECTION
   // =========================
 
-  /**
-   * useEffect Hook: Triggers animations once the loading state changes.
-   * 
-   * - Animates weather information sliding in from the right.
-   * - Animates farm information sliding in from the left.
-   * - Animates the image fading in and scaling up.
-   * - Animates the about section fading in and moving up.
-   * - Animates the map sliding in from the right.
-   */
-  useEffect(() => {
-    if (!loading) {
-      // Animate Weather Report Section
-      Animated.parallel([
-        Animated.timing(weatherOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(weatherTranslateX, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate Farm Information Section
-      Animated.parallel([
-        Animated.timing(farmInfoOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(farmInfoTranslateX, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate Image Section with a slight delay
-      Animated.parallel([
-        Animated.timing(imageOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(imageScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          delay: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate About Section with a slight delay
-      Animated.parallel([
-        Animated.timing(aboutOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(aboutTranslateY, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animate Map Section with a further delay
-      Animated.parallel([
-        Animated.timing(mapOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(mapTranslateX, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [
-    loading,
-    weatherOpacity,
-    weatherTranslateX,
-    farmInfoOpacity,
-    farmInfoTranslateX,
-    imageOpacity,
-    imageScale,
-    aboutOpacity,
-    aboutTranslateY,
-    mapOpacity,
-    mapTranslateX,
-  ]); // Include all animated values in dependencies
-
   // =========================
   // HELPER FUNCTIONS SECTION
   // =========================
@@ -330,9 +206,6 @@ const EagleAcresDairy = () => {
 
   return (
     <View style={styles.container}>
-      {/* ------------------ NAVIGATION BAR ------------------ */}
-      <NavBar />
-
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
@@ -340,10 +213,7 @@ const EagleAcresDairy = () => {
           <Animated.View
             style={[
               styles.weatherContainer,
-              {
-                opacity: weatherOpacity,
-                transform: [{ translateX: weatherTranslateX }],
-              },
+              entrance[0],
             ]}
           >
             {/* ------------------ TEMPERATURE UNIT TOGGLE ------------------ */}
@@ -426,10 +296,7 @@ const EagleAcresDairy = () => {
         <Animated.View
           style={[
             styles.farmInfoContainer,
-            {
-              opacity: farmInfoOpacity,
-              transform: [{ translateX: farmInfoTranslateX }],
-            },
+            entrance[1],
           ]}
         >
           <Text
@@ -451,10 +318,7 @@ const EagleAcresDairy = () => {
         <Animated.View
           style={[
             styles.imagePlaceholder,
-            {
-              opacity: imageOpacity,
-              transform: [{ scale: imageScale }],
-            },
+            entrance[2],
           ]}
         >
           <Image
@@ -468,10 +332,7 @@ const EagleAcresDairy = () => {
         <Animated.View
           style={[
             styles.aboutContainer,
-            {
-              opacity: aboutOpacity,
-              transform: [{ translateY: aboutTranslateY }],
-            },
+            entrance[3],
           ]}
         >
           <Text style={styles.aboutText}>
@@ -488,10 +349,7 @@ const EagleAcresDairy = () => {
         <Animated.View
           style={[
             styles.mapContainer,
-            {
-              opacity: mapOpacity,
-              transform: [{ translateX: mapTranslateX }],
-            },
+            entrance[4],
           ]}
         >
           {/* Header for Map Section */}
@@ -499,6 +357,7 @@ const EagleAcresDairy = () => {
                   {directionsError && <Text accessibilityRole="alert">Directions are currently unavailable. You can still see the venue on the map.</Text>}
                   {!!errorMsg && <Text accessibilityRole="alert">{errorMsg} Directions need your location, but you can still see the venue on the map.</Text>}
           <View style={styles.mapWrapper}>
+            {mapReady && (
             <MapView
               style={styles.map}
               initialRegion={{
@@ -529,6 +388,7 @@ const EagleAcresDairy = () => {
                 />
               )}
             </MapView>
+            )}
             {!isLocationEnabled && (
               <View style={styles.mapDisabledOverlay}>
                 <Text style={styles.mapDisabledText}>

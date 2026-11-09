@@ -1,7 +1,9 @@
 import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
+import { openCollectionPicker } from '../services/collectionPicker';
+import useEntrance from '../hooks/useEntrance';
 import { fallCategories } from '../services/spots';
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,20 +12,14 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
-  Easing,
   Dimensions,
-  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { AuthContext } from '../contexts/AuthContext';
-import NavBar from '../components/NavBar';
-import LottieView from 'lottie-react-native';
+import BackgroundLottie from '../components/BackgroundLottie';
 import fallingLeaves from '../assets/fallingLeaves.json';
-
-// Longest entrance delay (ms). With 20+ cards, uncapped staggering left late cards invisible for ~10s.
-const MAX_ANIMATION_DELAY = 2500;
 
 export default function FallDatesScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -31,31 +27,16 @@ export default function FallDatesScreen({ navigation }) {
 
   const [showChooseCollectionNotification, setShowChooseCollectionNotification] = useState(false);
   const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
-  const [showChooseCollectionModal, setShowChooseCollectionModal] = useState(false);
-  const [userCollections, setUserCollections] = useState([]);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
 
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(-50)).current;
-
   // Sections and spots come from services/spots.js so the list, venue pages, favourites and wheel stay in sync.
   const categories = fallCategories;
 
-  const categoryAnimations = categories.map(() => ({
-    translateX: useRef(new Animated.Value(-50)).current,
-    opacity: useRef(new Animated.Value(0)).current,
-  }));
-
-  const cardAnimations = categories.map((category) =>
-    category.spots.map(() => ({
-      translateY: useRef(new Animated.Value(20)).current,
-      opacity: useRef(new Animated.Value(0)).current,
-      scale: useRef(new Animated.Value(0.8)).current,
-    }))
-  );
+  // The header and each category section ease in together; the push itself carries the page.
+  const entrance = useEntrance(1 + categories.length);
 
   useEffect(() => {
     if (!user) return;
@@ -66,98 +47,6 @@ export default function FallDatesScreen({ navigation }) {
       Alert.alert('Favourites unavailable', 'Could not load your saved spots. Please check your connection and account access.');
     });
   }, [user]);
-
-  useEffect(() => {
-
-    Animated.parallel([
-      Animated.timing(titleOpacity, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(titleTranslateY, {
-        toValue: 0,
-        duration: 1000,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    let currentDelay = 500;
-
-    categories.forEach((category, categoryIndex) => {
-      const categoryDelay = Math.min(currentDelay + categoryIndex * 400, MAX_ANIMATION_DELAY);
-
-      Animated.parallel([
-        Animated.timing(categoryAnimations[categoryIndex].translateX, {
-          toValue: 0,
-          duration: 500,
-          delay: categoryDelay,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(categoryAnimations[categoryIndex].opacity, {
-          toValue: 1,
-          duration: 500,
-          delay: categoryDelay,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      category.spots.forEach((spot, spotIndex) => {
-        const spotDelay = Math.min(categoryDelay + (spotIndex + 1) * 300, MAX_ANIMATION_DELAY);
-
-        Animated.parallel([
-          Animated.timing(cardAnimations[categoryIndex][spotIndex].translateY, {
-            toValue: 0,
-            duration: 500,
-            delay: spotDelay,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(cardAnimations[categoryIndex][spotIndex].opacity, {
-            toValue: 1,
-            duration: 500,
-            delay: spotDelay,
-            useNativeDriver: true,
-          }),
-          Animated.spring(cardAnimations[categoryIndex][spotIndex].scale, {
-            toValue: 1,
-            friction: 5,
-            tension: 40,
-            delay: spotDelay,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        const spotAnimationEnd = spotDelay + 1;
-        if (spotAnimationEnd > currentDelay) {
-          currentDelay = spotAnimationEnd;
-        }
-      });
-
-      currentDelay += 1;
-    });
-  }, []);
-
-  const fetchUserCollections = async () => {
-    if (!user) return;
-    try {
-      const favouritesDoc = doc(db, "favourites", user.uid);
-      const docSnap = await getDoc(favouritesDoc);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.collections && Array.isArray(data.collections)) {
-          setUserCollections(data.collections);
-        } else {
-          setUserCollections([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user-defined collections:", error);
-    }
-  };
 
   const addSpotToCollection = async (collectionTitle, spotName) => {
     try {
@@ -191,78 +80,45 @@ export default function FallDatesScreen({ navigation }) {
 
   const handleSpotPress = (spot) => openVenue(navigation, Alert.alert, spot.name);
 
-  const handleChooseCollectionPress = async () => {
+  const handleChooseCollectionPress = () => {
     setShowChooseCollectionNotification(false);
-    await fetchUserCollections();
-    setShowChooseCollectionModal(true);
+    openCollectionPicker(navigation, favorites.collections || [], handleCollectionSelect);
   };
 
   const handleCollectionSelect = (collectionTitle) => {
     if (!newlyFavouritedSpot) return;
     addSpotToCollection(collectionTitle, newlyFavouritedSpot.name);
-    setShowChooseCollectionModal(false);
   };
 
   return (
     <View style={styles.container}>
-      <LottieView
+      <BackgroundLottie
         source={fallingLeaves}
-        autoPlay
-        loop
         style={styles.leavesAnimation}
         speed={0.6}
       />
 
-      <Animated.View
-        style={[
-          styles.headerContainer,
-          {
-            opacity: titleOpacity,
-            transform: [{ translateY: titleTranslateY }],
-          },
-        ]}
-      >
-        <NavBar />
+      <Animated.View style={[styles.headerContainer, entrance[0]]}>
         <Text style={styles.mainTitle}>Fall Dates</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
         {categories.map((category, index) => (
-          <Animated.View
-            key={index}
-            style={[
-              styles.categorySection,
-              {
-                transform: [
-                  { translateX: categoryAnimations[index].translateX },
-                ],
-                opacity: categoryAnimations[index].opacity,
-              },
-            ]}
-          >
+          <Animated.View key={index} style={[styles.categorySection, entrance[index + 1]]}>
             <Text style={styles.categoryTitle}>{category.title}</Text>
             {category.spots.map((spot, idx) => (
-              <Animated.View
-                key={idx}
-                style={[
-                  styles.dateSpotCard,
-                  {
-                    transform: [
-                      { translateY: cardAnimations[index][idx].translateY },
-                      { scale: cardAnimations[index][idx].scale },
-                    ],
-                    opacity: cardAnimations[index][idx].opacity,
-                  },
-                ]}
-              >
+              <View key={idx} style={styles.dateSpotCard}>
                 <TouchableOpacity
                   style={styles.dateSpotCardContent}
+                  accessibilityActions={[{ name: 'favorite', label: favorites[spot.name]?.isFavourite ? 'Remove from favourites' : 'Add to favourites' }]}
+                  onAccessibilityAction={() => toggleFavorite(spot.name, spot.address)}
                   onPress={() => handleSpotPress(spot)}
                   accessibilityLabel={`View details for ${spot.name}`}
                   accessibilityRole="button"
                 >
                   <TouchableOpacity
                     style={styles.cardHeartIcon}
+                    hitSlop={11}
                     onPress={() => toggleFavorite(spot.name, spot.address)}
                     accessibilityLabel={`Favorite ${spot.name}`}
                     accessibilityRole="button"
@@ -290,6 +146,7 @@ export default function FallDatesScreen({ navigation }) {
 
                   <TouchableOpacity
                     style={styles.cardArrowIcon}
+                    hitSlop={13}
                     onPress={() => handleSpotPress(spot)}
                     accessibilityLabel={`View details for ${spot.name}`}
                     accessibilityRole="button"
@@ -297,7 +154,7 @@ export default function FallDatesScreen({ navigation }) {
                     <Icon name="chevron-right" size={18} color="#000" />
                   </TouchableOpacity>
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             ))}
           </Animated.View>
         ))}
@@ -322,43 +179,6 @@ export default function FallDatesScreen({ navigation }) {
         </View>
       )}
 
-      {/* Choose Collection Modal */}
-      <Modal
-        visible={showChooseCollectionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowChooseCollectionModal(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowChooseCollectionModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>X</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Collections</Text>
-
-            {userCollections.length > 0 ? (
-              <ScrollView style={{ width: '100%' }}>
-                {userCollections.map((collection, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[styles.collectionButton, { backgroundColor: collection.color }]}
-                    onPress={() => handleCollectionSelect(collection.title)}
-                  >
-                    <Text style={styles.collectionButtonText}>{collection.title}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <Text style={{ marginTop: 20, textAlign: 'center' }}>
-                No Collections Available. Create one first!
-              </Text>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -405,7 +225,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 74, // Same height for every spot card (the name is a single shrink-to-fit line)
-    padding: 14,
     marginBottom: 24.15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -414,6 +233,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dateSpotCardContent: {
+    padding: 14, // On the touchable, so the whole card responds and not just its middle
+    alignSelf: 'stretch',
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -448,60 +269,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Modal styles
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '80%',
-    maxHeight: '70%',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 15,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: '#323232',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'transparent',
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseButtonText: {
-    color: '#888',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  collectionButton: {
-    marginVertical: 10,
-    borderRadius: 8,
-    paddingVertical: 12,
-    width: '90%',
-    alignSelf: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  collectionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 });

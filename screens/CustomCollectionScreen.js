@@ -17,10 +17,10 @@ import {
 } from "react-native";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import NavBar from "../components/NavBar";
 import { AuthContext } from '../contexts/AuthContext';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import { getReduceMotion } from "../hooks/useReduceMotion";
 
 const CustomCollectionScreen = () => {
   const route = useRoute();
@@ -78,13 +78,13 @@ const CustomCollectionScreen = () => {
       Animated.parallel([
         Animated.timing(notificationTranslateY, {
           toValue: 0,
-          duration: 500,
+          duration: getReduceMotion() ? 0 : 500,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(notificationOpacity, {
           toValue: 1,
-          duration: 500,
+          duration: getReduceMotion() ? 0 : 500,
           useNativeDriver: true,
         }),
       ]).start();
@@ -93,13 +93,13 @@ const CustomCollectionScreen = () => {
         Animated.parallel([
           Animated.timing(notificationTranslateY, {
             toValue: 50,
-            duration: 500,
+            duration: getReduceMotion() ? 0 : 500,
             easing: Easing.in(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(notificationOpacity, {
             toValue: 0,
-            duration: 500,
+            duration: getReduceMotion() ? 0 : 500,
             useNativeDriver: true,
           }),
         ]).start(() => {
@@ -132,7 +132,7 @@ const CustomCollectionScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: collection.color }]}>
         <ActivityIndicator size="large" color="#000" />
       </View>
     );
@@ -140,9 +140,6 @@ const CustomCollectionScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: collection.color }]}>
-      {/* Reuse your NavBar for consistency */}
-      <NavBar />
-
       {notificationMessage !== '' && (
         <Animated.View
           style={[
@@ -192,12 +189,13 @@ const FavouriteItem = ({ name, removeFavourite, onPress }) => (
       <Text style={styles.itemTitle}>{name}</Text>
     </TouchableOpacity>
 
-    <TouchableOpacity onPress={onPress} style={styles.arrowIcon}>
+    <TouchableOpacity onPress={onPress} style={styles.arrowIcon} hitSlop={10} accessibilityLabel={`Open ${name}`} accessibilityRole="button">
       <Icon name="chevron-right" size={24} color="#323232" />
     </TouchableOpacity>
 
     <TouchableOpacity
       style={styles.cardHeartIcon}
+      hitSlop={10}
       onPress={() => removeFavourite(name)}
       accessibilityLabel={`Remove ${name} from favourites`}
       accessibilityRole="button"

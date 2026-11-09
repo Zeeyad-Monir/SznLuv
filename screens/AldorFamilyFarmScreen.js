@@ -3,7 +3,7 @@ import { upvoteReview } from '../services/reviews';
 // IMPORTS
 // ==================================================
 
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import {
   FlatList,
   Alert,
   Animated,
-  Easing,
   TextInput,
 } from 'react-native';
 
@@ -30,8 +29,9 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
-import NavBar from '../components/NavBar';
 import useVenueWeather from '../hooks/useVenueWeather';
+import useEntrance from '../hooks/useEntrance';
+import useAfterTransition from '../hooks/useAfterTransition';
 import { SettingsContext } from './SettingsContext';
 
 // Import Firebase authentication and Firestore
@@ -121,20 +121,9 @@ const AldorFamilyFarmScreen = () => {
   // ANIMATION REFERENCES
   // ==================================================
 
-  const weatherOpacity = useRef(new Animated.Value(0)).current;
-  const weatherTranslateX = useRef(new Animated.Value(50)).current;
-
-  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
-  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current;
-
-  const imageOpacity = useRef(new Animated.Value(0)).current;
-  const imageScale = useRef(new Animated.Value(0.95)).current;
-
-  const mapOpacity = useRef(new Animated.Value(0)).current;
-  const mapTranslateX = useRef(new Animated.Value(50)).current;
-
-  const descriptionOpacity = useRef(new Animated.Value(0)).current;
-  const descriptionTranslateY = useRef(new Animated.Value(30)).current;
+  // Weather, details, photo, about and map ease in together once the page has its data.
+  const entrance = useEntrance(5, { ready: !loading });
+  const mapReady = useAfterTransition(); // The map mounts after the slide, so it can't stutter the push
 
   // ==================================================
   // USE EFFECT HOOKS
@@ -194,103 +183,6 @@ const AldorFamilyFarmScreen = () => {
 
   // Forecast for the spot itself (not the user's location), so it loads without a GPS fix
   const { weatherData, dailyData, weatherError } = useVenueWeather(farmLatitude, farmLongitude);
-
-  useEffect(() => {
-    if (!loading) {
-      Animated.parallel([
-        Animated.timing(weatherOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(weatherTranslateX, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      Animated.parallel([
-        Animated.timing(farmInfoOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(farmInfoTranslateX, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      Animated.parallel([
-        Animated.timing(imageOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(imageScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          delay: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      Animated.parallel([
-        Animated.timing(mapOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(mapTranslateX, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      Animated.parallel([
-        Animated.timing(descriptionOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(descriptionTranslateY, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [
-    loading,
-    weatherOpacity,
-    weatherTranslateX,
-    farmInfoOpacity,
-    farmInfoTranslateX,
-    imageOpacity,
-    imageScale,
-    mapOpacity,
-    mapTranslateX,
-    descriptionOpacity,
-    descriptionTranslateY,
-  ]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -417,8 +309,6 @@ const AldorFamilyFarmScreen = () => {
 
   return (
     <View style={styles.container}>
-      <NavBar />
-
       <SectionList
         sections={sections}
         keyExtractor={(item, index) => item + index}
@@ -434,10 +324,7 @@ const AldorFamilyFarmScreen = () => {
                   <Animated.View
                     style={[
                       styles.weatherContainer,
-                      {
-                        opacity: weatherOpacity,
-                        transform: [{ translateX: weatherTranslateX }],
-                      },
+                      entrance[0],
                     ]}
                   >
                     <View style={styles.unitToggle}>
@@ -518,10 +405,7 @@ const AldorFamilyFarmScreen = () => {
                 <Animated.View
                   style={[
                     styles.farmInfoContainer,
-                    {
-                      opacity: farmInfoOpacity,
-                      transform: [{ translateX: farmInfoTranslateX }],
-                    },
+                    entrance[1],
                   ]}
                 >
                   <Text
@@ -545,10 +429,7 @@ const AldorFamilyFarmScreen = () => {
                 <Animated.View
                   style={[
                     styles.imagePlaceholder,
-                    {
-                      opacity: imageOpacity,
-                      transform: [{ scale: imageScale }],
-                    },
+                    entrance[2],
                   ]}
                 >
                   <Image
@@ -561,10 +442,7 @@ const AldorFamilyFarmScreen = () => {
                 <Animated.View
                   style={[
                     styles.aboutContainer,
-                    {
-                      opacity: descriptionOpacity,
-                      transform: [{ translateY: descriptionTranslateY }],
-                    },
+                    entrance[3],
                   ]}
                 >
                   <Text
@@ -599,10 +477,7 @@ const AldorFamilyFarmScreen = () => {
                 <Animated.View
                   style={[
                     styles.mapContainer,
-                    {
-                      opacity: mapOpacity,
-                      transform: [{ translateX: mapTranslateX }],
-                    },
+                    entrance[4],
                   ]}
                 >
                   <Text style={styles.mapHeader}>How to get there?</Text>
@@ -610,6 +485,7 @@ const AldorFamilyFarmScreen = () => {
                   {!!errorMsg && <Text accessibilityRole="alert">{errorMsg} Directions need your location, but you can still see the venue on the map.</Text>}
 
                   <View style={styles.mapWrapper}>
+                    {mapReady && (
                     <MapView
                       style={styles.map}
                       initialRegion={{
@@ -641,6 +517,7 @@ const AldorFamilyFarmScreen = () => {
                         />
                       )}
                     </MapView>
+                    )}
 
                     {!isLocationEnabled && (
                       <View style={styles.mapDisabledOverlay}>

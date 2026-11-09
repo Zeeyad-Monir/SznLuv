@@ -6,17 +6,15 @@
 // IMPORTS SECTION
 // =========================
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Animated,
-  Easing,
   ImageBackground,
 } from 'react-native';
 
@@ -26,10 +24,9 @@ import { useNavigation } from '@react-navigation/native';
 // Importing Firebase database functions
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar';
 import { fallSpotNames } from '../services/spots';
+import useEntrance from '../hooks/useEntrance';
+import { canNavigate } from '../services/venueNavigation';
 
 // =========================
 // CONSTANTS SECTION
@@ -61,42 +58,18 @@ export default function SeasonsScreen() {
   // STATE VARIABLES SECTION
   // =========================
 
-  // States to store the count of active date ideas for each season
-  const [fallCount, setFallCount] = useState(0);
-  const [winterCount, setWinterCount] = useState(0);
-  const [springCount, setSpringCount] = useState(0);
-  const [summerCount, setSummerCount] = useState(0);
+  // Counts start from the local defaults so the cards are complete the moment the page arrives
+  const [fallCount, setFallCount] = useState(fallSpotNames.length);
+  const [winterCount, setWinterCount] = useState(4);
+  const [springCount, setSpringCount] = useState(4);
+  const [summerCount, setSummerCount] = useState(3);
 
-  // State to manage the loading indicator visibility
-  const [loading, setLoading] = useState(true);
+  const entrance = useEntrance(4);
 
-  // =========================
-  // ANIMATED VALUES SECTION
-  // =========================
-
-  // Animated values for each seasonal category's entrance animations
-  const seasonAnimations = [
-    {
-      translateY: useRef(new Animated.Value(30)).current,
-      opacity: useRef(new Animated.Value(0)).current,
-      scale: useRef(new Animated.Value(0.9)).current,
-    },
-    {
-      translateY: useRef(new Animated.Value(30)).current,
-      opacity: useRef(new Animated.Value(0)).current,
-      scale: useRef(new Animated.Value(0.9)).current,
-    },
-    {
-      translateY: useRef(new Animated.Value(30)).current,
-      opacity: useRef(new Animated.Value(0)).current,
-      scale: useRef(new Animated.Value(0.9)).current,
-    },
-    {
-      translateY: useRef(new Animated.Value(30)).current,
-      opacity: useRef(new Animated.Value(0)).current,
-      scale: useRef(new Animated.Value(0.9)).current,
-    },
-  ];
+  // Two quick taps on different cards must not push two pages
+  const openSeason = (route) => {
+    if (canNavigate(navigation)) navigation.navigate(route);
+  };
 
   // =========================
   // DATA FETCHING FUNCTIONS
@@ -137,81 +110,13 @@ export default function SeasonsScreen() {
     }
   };
 
-  /**
-   * fetchData Function
-   *
-   * Retrieves the date counts and sets the loading state to false once complete.
-   */
-  const fetchData = async () => {
-    await fetchDateCounts(); // Fetching date counts for each season
-    setLoading(false); // Setting loading to false after data is fetched
-  };
-
   // =========================
   // USE EFFECTS SECTION
   // =========================
 
-  /**
-   * useEffect Hook: Fetches initial data when the component mounts.
-   */
   useEffect(() => {
-    fetchData(); // Initiates data fetching on component mount
+    fetchDateCounts();
   }, []);
-
-  /**
-   * useEffect Hook: Triggers animations once the loading state changes.
-   *
-   * - Animates each seasonal category's entrance with fade-in, slide-up, and scaling effects.
-   */
-  useEffect(() => {
-    if (!loading) {
-      // Animating each seasonal category
-      seasonAnimations.forEach((anim, index) => {
-        const delay = 500 + index * 300; // Staggered delay for each animation
-
-        Animated.parallel([
-          // Animating opacity
-          Animated.timing(anim.opacity, {
-            toValue: 1, // Final opacity
-            duration: 600, // Duration of the animation
-            delay: delay, // Delay before the animation starts
-            useNativeDriver: true,
-          }),
-          // Animating vertical translation
-          Animated.timing(anim.translateY, {
-            toValue: 0, // Final vertical position
-            duration: 600,
-            delay: delay,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          // Animating scaling
-          Animated.spring(anim.scale, {
-            toValue: 1, // Final scale
-            friction: 5, // Friction for the spring effect
-            tension: 40, // Tension for the spring effect
-            delay: delay,
-            useNativeDriver: true,
-          }),
-        ]).start(); // Starting the parallel animations
-      });
-    }
-  }, [loading]);
-
-  // =========================
-  // CONDITIONAL RENDERING SECTION
-  // =========================
-
-  let content;
-
-  if (loading) {
-    // Display a loading indicator while data is being fetched
-    content = (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
 
   // =========================
   // RENDERING SECTION
@@ -219,9 +124,6 @@ export default function SeasonsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Custom Navigation Bar */}
-      <NavBar />
-
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Heading for the seasonal categories */}
@@ -234,21 +136,12 @@ export default function SeasonsScreen() {
           {/* =========================
               FALL SEASON CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: seasonAnimations[0].opacity, // Animated opacity
-                transform: [
-                  { translateY: seasonAnimations[0].translateY }, // Animated vertical translation
-                  { scale: seasonAnimations[0].scale }, // Animated scaling
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[0]}>
             <TouchableOpacity
               style={styles.seasonTouchable} // Base styles for the touchable area
-              onPress={() => navigation.navigate('FallDatesScreen')} // Navigates to FallDatesScreen on press
+              onPress={() => openSeason('FallDatesScreen')} // Navigates to FallDatesScreen on press
               accessible={true} // Enables accessibility
+              accessibilityRole="button"
               accessibilityLabel="Fall Season - View Active Date Ideas" // Accessibility label for screen readers
             >
               {/* Background Image for Fall Season */}
@@ -274,21 +167,12 @@ export default function SeasonsScreen() {
           {/* =========================
               WINTER SEASON CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: seasonAnimations[1].opacity,
-                transform: [
-                  { translateY: seasonAnimations[1].translateY },
-                  { scale: seasonAnimations[1].scale },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[1]}>
             <TouchableOpacity
               style={styles.seasonTouchable}
-              onPress={() => navigation.navigate('WinterDatesScreen')}
+              onPress={() => openSeason('WinterDatesScreen')}
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel="Winter Season - View Active Date Ideas"
             >
               <ImageBackground
@@ -309,21 +193,12 @@ export default function SeasonsScreen() {
           {/* =========================
               SPRING SEASON CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: seasonAnimations[2].opacity,
-                transform: [
-                  { translateY: seasonAnimations[2].translateY },
-                  { scale: seasonAnimations[2].scale },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[2]}>
             <TouchableOpacity
               style={styles.seasonTouchable}
-              onPress={() => navigation.navigate('SpringDatesScreen')}
+              onPress={() => openSeason('SpringDatesScreen')}
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel="Spring Season - View Active Date Ideas"
             >
               <ImageBackground
@@ -344,21 +219,12 @@ export default function SeasonsScreen() {
           {/* =========================
               SUMMER SEASON CARD
               ========================= */}
-          <Animated.View
-            style={[
-              {
-                opacity: seasonAnimations[3].opacity,
-                transform: [
-                  { translateY: seasonAnimations[3].translateY },
-                  { scale: seasonAnimations[3].scale },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={entrance[3]}>
             <TouchableOpacity
               style={styles.seasonTouchable}
-              onPress={() => navigation.navigate('SummerDatesScreen')}
+              onPress={() => openSeason('SummerDatesScreen')}
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel="Summer Season - View Active Date Ideas"
             >
               <ImageBackground

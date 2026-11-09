@@ -5,7 +5,7 @@
 // =========================
 
 // Importing necessary modules and hooks from React
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 
 // Importing React Native components and APIs
 import {
@@ -20,7 +20,6 @@ import {
   FlatList,
   Alert,
   Animated,
-  Easing,
 } from 'react-native';
 
 // Importing Expo's Location API for handling location services
@@ -31,10 +30,9 @@ import MapView, { Marker } from 'react-native-maps';
 
 // Importing MapViewDirections for displaying directions on the map
 import MapViewDirections from 'react-native-maps-directions';
-
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar';
 import useVenueWeather from '../hooks/useVenueWeather';
+import useEntrance from '../hooks/useEntrance';
+import useAfterTransition from '../hooks/useAfterTransition';
 
 // Importing SettingsContext to access location settings
 import { SettingsContext } from './SettingsContext';
@@ -107,24 +105,9 @@ const LaityPumpkinPatch = () => {
   // =========================
 
   // Animated values for weather information animations
-  const weatherOpacity = useRef(new Animated.Value(0)).current;
-  const weatherTranslateX = useRef(new Animated.Value(50)).current;
-
-  // Animated values for farm information animations
-  const farmInfoOpacity = useRef(new Animated.Value(0)).current;
-  const farmInfoTranslateX = useRef(new Animated.Value(-50)).current;
-
-  // Animated values for image animations
-  const imageOpacity = useRef(new Animated.Value(0)).current;
-  const imageScale = useRef(new Animated.Value(0.95)).current;
-
-  // Animated values for about section animations
-  const aboutOpacity = useRef(new Animated.Value(0)).current;
-  const aboutTranslateY = useRef(new Animated.Value(30)).current;
-
-  // Animated values for map animations
-  const mapOpacity = useRef(new Animated.Value(0)).current;
-  const mapTranslateX = useRef(new Animated.Value(50)).current;
+  // Weather, details, photo, about and map ease in together once the page has its data.
+  const entrance = useEntrance(5, { ready: !loading });
+  const mapReady = useAfterTransition(); // The map mounts after the slide, so it can't stutter the push
 
   // =========================
   // LOCATION EFFECT SECTION
@@ -200,117 +183,6 @@ const LaityPumpkinPatch = () => {
   // ANIMATION EFFECT SECTION
   // =========================
 
-  /**
-   * useEffect Hook: Triggers animations once the loading state changes.
-   * 
-   * - Animates weather information sliding in from the right.
-   * - Animates farm information sliding in from the left.
-   * - Animates the image fading in and scaling up.
-   * - Animates the about section fading in and moving up.
-   * - Animates the map sliding in from the right.
-   */
-  useEffect(() => {
-    if (!loading) {
-      // Animating the weather information container
-      Animated.parallel([
-        Animated.timing(weatherOpacity, {
-          toValue: 1, // Final opacity
-          duration: 700, // Duration of the animation
-          easing: Easing.out(Easing.ease), // Easing function for smoothness
-          useNativeDriver: true,
-        }),
-        Animated.timing(weatherTranslateX, {
-          toValue: 0, // Final translation
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animating the farm information container
-      Animated.parallel([
-        Animated.timing(farmInfoOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(farmInfoTranslateX, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animating the image container
-      Animated.parallel([
-        Animated.timing(imageOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 300, // Delayed start
-          useNativeDriver: true,
-        }),
-        Animated.spring(imageScale, {
-          toValue: 1, // Final scale
-          friction: 8, // Friction for the spring effect
-          tension: 40, // Tension for the spring effect
-          delay: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animating the about section
-      Animated.parallel([
-        Animated.timing(aboutOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(aboutTranslateY, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          delay: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Animating the map container
-      Animated.parallel([
-        Animated.timing(mapOpacity, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(mapTranslateX, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          delay: 600,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [
-    loading,
-    weatherOpacity,
-    weatherTranslateX,
-    farmInfoOpacity,
-    farmInfoTranslateX,
-    imageOpacity,
-    imageScale,
-    aboutOpacity,
-    aboutTranslateY,
-    mapOpacity,
-    mapTranslateX,
-  ]);
-
   // =========================
   // UTILITY FUNCTIONS SECTION
   // =========================
@@ -344,9 +216,6 @@ const LaityPumpkinPatch = () => {
 
   return (
     <View style={styles.container}>
-      {/* Custom Navigation Bar */}
-      <NavBar />
-
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {weatherData ? (
@@ -354,10 +223,7 @@ const LaityPumpkinPatch = () => {
           <Animated.View
             style={[
               styles.weatherContainer,
-              {
-                opacity: weatherOpacity, // Animated opacity
-                transform: [{ translateX: weatherTranslateX }], // Animated horizontal translation
-              },
+              entrance[0],
             ]}
           >
             {/* Unit Toggle Switch */}
@@ -447,10 +313,7 @@ const LaityPumpkinPatch = () => {
         <Animated.View
           style={[
             styles.farmInfoContainer,
-            {
-              opacity: farmInfoOpacity, // Animated opacity
-              transform: [{ translateX: farmInfoTranslateX }], // Animated horizontal translation
-            },
+            entrance[1],
           ]}
         >
           {/* Farm Title */}
@@ -477,10 +340,7 @@ const LaityPumpkinPatch = () => {
         <Animated.View
           style={[
             styles.imagePlaceholder,
-            {
-              opacity: imageOpacity, // Animated opacity
-              transform: [{ scale: imageScale }], // Animated scaling
-            },
+            entrance[2],
           ]}
         >
           {/* Displaying the farm image */}
@@ -495,10 +355,7 @@ const LaityPumpkinPatch = () => {
         <Animated.View
           style={[
             styles.aboutContainer,
-            {
-              opacity: aboutOpacity, // Animated opacity
-              transform: [{ translateY: aboutTranslateY }], // Animated vertical translation
-            },
+            entrance[3],
           ]}
         >
           {/* About Text */}
@@ -514,10 +371,7 @@ const LaityPumpkinPatch = () => {
         <Animated.View
           style={[
             styles.mapContainer,
-            {
-              opacity: mapOpacity, // Animated opacity
-              transform: [{ translateX: mapTranslateX }], // Animated horizontal translation
-            },
+            entrance[4],
           ]}
         >
           {/* Map Header */}
@@ -528,6 +382,7 @@ const LaityPumpkinPatch = () => {
           {/* Map Wrapper */}
           <View style={styles.mapWrapper}>
             {/* MapView Component */}
+            {mapReady && (
             <MapView
               style={styles.map}
               initialRegion={{
@@ -561,6 +416,7 @@ const LaityPumpkinPatch = () => {
                 />
               )}
             </MapView>
+            )}
 
             {/* Overlay Message if Location Services are Disabled */}
             {!isLocationEnabled && (

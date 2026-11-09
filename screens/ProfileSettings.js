@@ -6,7 +6,7 @@
 // =========================
 
 // Importing necessary modules and components from React and React Native
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,6 @@ import {
 // Importing Ionicons for icon usage in the UI
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-// Importing a custom navigation bar component
-import NavBar from '../components/NavBar';
-
 // Importing context providers for settings and authentication
 import { SettingsContext } from './SettingsContext';
 import { AuthContext } from '../contexts/AuthContext';
@@ -36,7 +33,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, logout } from '../firebaseConfig';
 
 // Importing navigation hook for navigating between screens
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 
 // =========================
 // CONSTANTS SECTION
@@ -79,6 +76,8 @@ const ProfileSettings = () => {
 
   // Hook to navigate between different screens
   const navigation = useNavigation();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
 
   // =========================
   // EVENT HANDLERS
@@ -195,11 +194,8 @@ const ProfileSettings = () => {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Custom Navigation Bar */}
-      <NavBar />
-
       {/* Scrollable content container */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContainer}>
         {/* PROFILE SECTION */}
         <View style={styles.profileSection}>
           {/* Profile Image Placeholder */}

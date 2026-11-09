@@ -19,10 +19,11 @@ import {
 } from "react-native";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import NavBar from '../components/NavBar';
 import { AuthContext } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
+import { getReduceMotion } from '../hooks/useReduceMotion';
 
 const SeasonalFavourites = () => {
   const route = useRoute();
@@ -34,10 +35,9 @@ const SeasonalFavourites = () => {
   const [loading, setLoading] = useState(true);
   const [notificationMessage, setNotificationMessage] = useState('');
 
-  // Animated values
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const headerTranslateY = useRef(new Animated.Value(-20)).current;
-  const [itemAnimations, setItemAnimations] = useState([]);
+  // The header eases in once; each saved spot animates only when it first appears, so returning never blanks the list.
+  const entrance = useEntrance(1, { ready: !loading });
+  const itemEntrance = useItemEntrance(favourites, { ready: !loading });
   const notificationTranslateY = useRef(new Animated.Value(50)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
 
@@ -61,93 +61,42 @@ const SeasonalFavourites = () => {
 
   // Fetch seasonal favourites
   useFocusEffect(React.useCallback(() => {
+    let current = true;
     const fetchFavourites = async () => {
       try {
         if (user) {
-          const favouritesDoc = doc(db, "favourites", user.uid);
-          const docSnap = await getDoc(favouritesDoc);
+          const docSnap = await getDoc(doc(db, "favourites", user.uid));
+          if (!current) return;
+          const data = docSnap.exists() ? docSnap.data() : {};
 
-          setFavourites([]);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-
-            // Filter favourites by season
-            const seasonalFavourites = Object.keys(data)
-              .filter((key) => data[key]?.isFavourite && data[key]?.season === season)
-              .sort((a, b) => a.localeCompare(b));
-
-            setFavourites(seasonalFavourites);
-
-            // Animations
-            const animations = seasonalFavourites.map(() => ({
-              translateY: new Animated.Value(20),
-              opacity: new Animated.Value(0),
-            }));
-            setItemAnimations(animations);
-          } else {
-            console.log("No favourites found for user.");
-          }
+          // Filter favourites by season. Replaces the list in place, so nothing flashes on return.
+          setFavourites(Object.keys(data)
+            .filter((key) => data[key]?.isFavourite && data[key]?.season === season)
+            .sort((a, b) => a.localeCompare(b)));
         }
       } catch (error) {
         console.error("Error fetching favourites:", error);
       } finally {
-        setLoading(false);
+        if (current) setLoading(false);
       }
     };
 
     fetchFavourites();
+    return () => { current = false; };
   }, [user, season]));
-
-  useEffect(() => {
-    if (!loading) {
-      Animated.parallel([
-        Animated.timing(headerOpacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(headerTranslateY, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      const animationsArray = itemAnimations.map((anim, index) => {
-        return Animated.parallel([
-          Animated.timing(anim.opacity, {
-            toValue: 1,
-            duration: 500,
-            delay: 400 + index * 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim.translateY, {
-            toValue: 0,
-            duration: 400,
-            delay: 400 + index * 150,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]);
-      });
-
-      Animated.stagger(100, animationsArray).start();
-    }
-  }, [loading, itemAnimations]);
 
   useEffect(() => {
     if (notificationMessage !== '') {
       Animated.parallel([
         Animated.timing(notificationTranslateY, {
           toValue: 0,
-          duration: 500,
+          duration: getReduceMotion() ? 0 : 500,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(notificationOpacity, {
           toValue: 1,
-          duration: 500,
+          duration: getReduceMotion() ? 0 : 500,
           useNativeDriver: true,
         }),
       ]).start();
@@ -156,13 +105,13 @@ const SeasonalFavourites = () => {
         Animated.parallel([
           Animated.timing(notificationTranslateY, {
             toValue: 50,
-            duration: 500,
+            duration: getReduceMotion() ? 0 : 500,
             easing: Easing.in(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(notificationOpacity, {
             toValue: 0,
-            duration: 500,
+            duration: getReduceMotion() ? 0 : 500,
             useNativeDriver: true,
           }),
         ]).start(() => {
@@ -194,7 +143,7 @@ const SeasonalFavourites = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: "#dbd3bd" }]}>
         <ActivityIndicator size="large" color="#000" />
       </View>
     );
@@ -202,7 +151,6 @@ const SeasonalFavourites = () => {
 
   return (
     <View style={styles.container}>
-      <NavBar />
       {notificationMessage !== '' && (
         <Animated.View
           style={[
@@ -217,15 +165,7 @@ const SeasonalFavourites = () => {
         </Animated.View>
       )}
 
-      <Animated.View
-        style={[
-          styles.headerTextContainer,
-          {
-            opacity: headerOpacity,
-            transform: [{ translateY: headerTranslateY }],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.headerTextContainer, entrance[0]]}>
         <Text style={styles.title}>Favourites</Text>
         <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
         
@@ -237,14 +177,8 @@ const SeasonalFavourites = () => {
 
       <ScrollView style={styles.favouritesList}>
         {favourites.length > 0 ? (
-          favourites.map((favourite, index) => (
-            <Animated.View
-              key={favourite}
-              style={{
-                opacity: itemAnimations[index]?.opacity || 1,
-                transform: [{ translateY: itemAnimations[index]?.translateY || 0 }],
-              }}
-            >
+          favourites.map((favourite) => (
+            <Animated.View key={favourite} style={itemEntrance.styleFor(favourite)}>
               <FavouriteItem
                 name={favourite}
                 removeFavourite={removeFavourite}
@@ -271,12 +205,13 @@ const FavouriteItem = ({ name, removeFavourite, onPress }) => (
       <Text style={styles.itemTitle}>{name}</Text>
     </TouchableOpacity>
 
-    <TouchableOpacity onPress={onPress} style={styles.arrowIcon}>
+    <TouchableOpacity onPress={onPress} style={styles.arrowIcon} hitSlop={10} accessibilityLabel={`Open ${name}`} accessibilityRole="button">
       <Icon name="chevron-right" size={24} color="#323232" />
     </TouchableOpacity>
 
     <TouchableOpacity
       style={styles.cardHeartIcon}
+      hitSlop={10}
       onPress={() => removeFavourite(name)}
       accessibilityLabel={`Remove ${name} from favourites`}
       accessibilityRole="button"
