@@ -1,5 +1,5 @@
 // The signed-in app: four sections, each remembering its own place, under one stationary top bar.
-import React from 'react';
+import React, { useContext } from 'react';
 import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -21,6 +21,8 @@ import AldorFamilyFarmScreen from '../screens/AldorFamilyFarmScreen';
 import LaityPumpkinPatch from '../screens/LaityPumpkinPatch';
 import EagleAcresDairy from '../screens/EagleAcresDairy';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
+import { AuthContext } from '../contexts/AuthContext';
+import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
 
 const Tabs = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -68,17 +70,20 @@ function FavouritesSection() {
 const renderTopBar = (props) => <NavBar {...props} />;
 
 export default function MainTabs() {
+  const { user } = useContext(AuthContext);
   return (
-    <Tabs.Navigator
-      // iOS has no hardware back; 'none' stops VoiceOver's back gesture jumping between sections.
-      backBehavior={Platform.OS === 'ios' ? 'none' : 'firstRoute'}
-      tabBar={renderTopBar}
-      screenOptions={{ headerShown: false, tabBarPosition: 'top' }}
-    >
-      <Tabs.Screen name="HomeTab" component={HomeSection} />
-      <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
-      <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
-      <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
-    </Tabs.Navigator>
+    <SpotDiscoveryProvider key={user?.uid}>
+      <Tabs.Navigator
+        // iOS has no hardware back; 'none' stops VoiceOver's back gesture jumping between sections.
+        backBehavior={Platform.OS === 'ios' ? 'none' : 'firstRoute'}
+        tabBar={renderTopBar}
+        screenOptions={{ headerShown: false, tabBarPosition: 'top' }}
+      >
+        <Tabs.Screen name="HomeTab" component={HomeSection} />
+        <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
+        <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
+        <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
+      </Tabs.Navigator>
+    </SpotDiscoveryProvider>
   );
 }

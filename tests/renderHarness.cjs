@@ -7,6 +7,9 @@ const babel = require('@babel/core');
 const repo = path.resolve(__dirname, '..');
 const { act } = TestRenderer;
 
+global.requestAnimationFrame ??= callback => setTimeout(callback, 0);
+global.cancelAnimationFrame ??= clearTimeout;
+
 function createHarness(options = {}) {
   const cache = new Map(), listeners = new Set();
   const documents = new Map(Object.entries(options.documents || { 'users/audit': { username: 'audit' }, 'favourites/audit': { collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }] } }));
@@ -48,14 +51,26 @@ function createHarness(options = {}) {
   };
   const animation = { start: callback => callback?.({ finished: true }), stop: () => {} };
   class Value { constructor(value) { this.value = value; } setValue(value) { this.value = value; } interpolate() { return this.value; } stopAnimation() {} }
-  const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: (value, config) => { timings.push(config); return animation; }, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component };
+  const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: (value, config) => { timings.push(config); return animation; }, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component, add: (a, b) => a + b.value };
+  const appStateListeners = new Set();
+  const appState = state => appStateListeners.forEach(listener => listener(state));
   const rn = new Proxy({
     View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity', ActivityIndicator: 'ActivityIndicator', Switch: 'Switch',
-    StyleSheet: { create: styles => styles, flatten: styles => styles, absoluteFillObject: {} },
+    StyleSheet: { create: styles => styles, flatten: styles => styles, absoluteFillObject: {}, hairlineWidth: 1 },
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
+    useWindowDimensions: () => ({ width: 390, height: 844 }),
+    Keyboard: { dismiss() {} },
+    AppState: { addEventListener: (_, listener) => { appStateListeners.add(listener); return { remove: () => appStateListeners.delete(listener) }; } },
+    Linking: { openSettings: async () => calls.push(['openSettings']), openURL: async url => calls.push(['openURL', url]) },
+    Modal: ({ visible, onShow, onDismiss, ...props }) => {
+      React.useEffect(() => { if (visible) onShow(); else onDismiss(); }, [visible]);
+      return visible ? React.createElement('Modal', props) : null;
+    },
+    PanResponder: { create: handlers => ({ panHandlers: handlers }) },
+    findNodeHandle: element => element?.tag ?? null,
     Animated, Easing: new Proxy({}, { get: () => value => value }),
     Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: 'ios', select: value => value.ios },
-    AccessibilityInfo: { isReduceMotionEnabled: async () => !!options.reduceMotion, addEventListener: () => ({ remove() {} }) },
+    AccessibilityInfo: { isReduceMotionEnabled: async () => !!options.reduceMotion, addEventListener: () => ({ remove() {} }), setAccessibilityFocus: tag => calls.push(['focusAccessibility', tag]) },
     SectionList: ({ sections = [], renderItem, ...props }) => React.createElement('SectionList', props, sections.flatMap(section => section.data.map((item, index) => React.createElement(React.Fragment, { key: section.title + index }, renderItem({ item, index, section }))))),
     FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
@@ -81,7 +96,14 @@ function createHarness(options = {}) {
     '@expo/vector-icons': { Ionicons: 'Icon' },
     'react-native-svg': { __esModule: true, default: 'Svg', Svg: 'Svg', Path: 'Path', G: 'G', Text: 'SvgText', TSpan: 'TSpan' },
     '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async key => storage.get(key) ?? null, setItem: async (key, value) => { storage.set(key, value); } } },
-    'expo-location': { requestForegroundPermissionsAsync: options.locationPermissions || (async () => ({ status: 'denied' })), getCurrentPositionAsync: async () => { throw new Error('Location denied'); }, watchPositionAsync: async () => { calls.push(['watchLocation']); return { remove() {} }; }, Accuracy: { High: 4 } },
+    'expo-location': {
+      requestForegroundPermissionsAsync: options.locationPermissions || (async () => ({ status: 'denied' })),
+      getForegroundPermissionsAsync: options.getLocationPermissions || (async () => ({ granted: true })),
+      hasServicesEnabledAsync: options.locationServices || (async () => true),
+      getCurrentPositionAsync: options.getPosition || (async () => { throw new Error('Location denied'); }),
+      watchPositionAsync: async () => { calls.push(['watchLocation']); return { remove() {} }; },
+      Accuracy: { Balanced: 3, High: 4 },
+    },
     'expo-linear-gradient': { LinearGradient: 'Gradient' },
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
@@ -109,17 +131,36 @@ function createHarness(options = {}) {
     module._compile(babel.transformFileSync(filename, { configFile: false, babelrc: false, presets: ['babel-preset-expo'], plugins: ['@babel/plugin-transform-modules-commonjs'] }).code, filename);
     return module.exports;
   }
-  async function render(relative, { contextUser = options.user || { uid: 'audit', email: 'codex.audit.render@example.com' }, location = false, props = {}, app = false } = {}) {
-    const Component = load(relative).default;
+  async function renderElement(element, { contextUser = options.user || { uid: 'audit', email: 'codex.audit.render@example.com' }, location = false, app = false } = {}) {
     await Promise.resolve(); // Lets the Reduce Motion setting, read at import, arrive before the first render
     const { AuthContext } = load('contexts/AuthContext.js');
     const { SettingsContext } = load('screens/SettingsContext.js');
+    const { SpotDiscoveryProvider } = load('hooks/useSpotDiscovery.js');
+    function LocationSettings({ children }) {
+      const [isLocationEnabled, setIsLocationEnabled] = React.useState(location);
+      return React.createElement(SettingsContext.Provider, {
+        value: { isLocationEnabled, setIsLocationEnabled, toggleLocationServices: async () => {} },
+      }, React.createElement(SpotDiscoveryProvider, null, children));
+    }
     let renderer;
     await act(async () => {
-      const element = React.createElement(Component, { navigation, ...props });
-      renderer = TestRenderer.create(app ? element : React.createElement(AuthContext.Provider, { value: { user: contextUser, setRegistering: value => calls.push(['setRegistering', value]), setRegistrationError: () => {} } }, React.createElement(SettingsContext.Provider, { value: { isLocationEnabled: location, toggleLocationServices: async () => {} } }, element)));
+      renderer = TestRenderer.create(app ? element : React.createElement(AuthContext.Provider, {
+        value: { user: contextUser, setRegistering: value => calls.push(['setRegistering', value]), setRegistrationError: () => {} },
+      }, React.createElement(LocationSettings, null, element)), {
+        createNodeMock: node => {
+          if (node.type === 'ScrollView') return { scrollTo() {} };
+          if (node.type === 'Text' || node.type === 'TouchableOpacity') {
+            return { tag: node.props.accessibilityLabel ?? node.props.children };
+          }
+          return null;
+        },
+      });
     });
     return renderer;
+  }
+  function render(relative, { props, ...options } = {}) {
+    const Component = load(relative).default;
+    return renderElement(React.createElement(Component, { navigation, ...props }), options);
   }
   // Stub the network: weather requests are recorded in `calls` and answered with a small canned forecast.
   const noon = 1793880000; // a fixed epoch second; five consecutive days
@@ -129,6 +170,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, Screen };
+  return { render, renderElement, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, Screen };
 }
 module.exports = { createHarness, act };

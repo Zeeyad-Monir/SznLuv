@@ -2,6 +2,8 @@ import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
 import { openCollectionPicker } from '../services/collectionPicker';
 import useEntrance from '../hooks/useEntrance';
+import useSpotDiscovery from '../hooks/useSpotDiscovery';
+import SpotDiscoveryControls, { SpotEmptyState } from '../components/SpotDiscoveryControls';
 import { fallCategories } from '../services/spots';
 import React, { useState, useContext, useEffect } from 'react';
 import {
@@ -9,6 +11,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Keyboard,
   TouchableOpacity,
   Alert,
   Animated,
@@ -37,6 +40,7 @@ export default function FallDatesScreen({ navigation }) {
 
   // The header and each category section ease in together; the push itself carries the page.
   const entrance = useEntrance(1 + categories.length);
+  const discovery = useSpotDiscovery('fall', categories);
 
   useEffect(() => {
     if (!user) return;
@@ -78,7 +82,10 @@ export default function FallDatesScreen({ navigation }) {
     }
   };
 
-  const handleSpotPress = (spot) => openVenue(navigation, Alert.alert, spot.name);
+  const handleSpotPress = (spot) => {
+    Keyboard.dismiss();
+    openVenue(navigation, Alert.alert, spot.name);
+  };
 
   const handleChooseCollectionPress = () => {
     setShowChooseCollectionNotification(false);
@@ -100,14 +107,17 @@ export default function FallDatesScreen({ navigation }) {
 
       <Animated.View style={[styles.headerContainer, entrance[0]]}>
         <Text style={styles.mainTitle}>Fall Dates</Text>
+        <SpotDiscoveryControls discovery={discovery} />
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
-        {categories.map((category, index) => (
-          <Animated.View key={index} style={[styles.categorySection, entrance[index + 1]]}>
-            <Text style={styles.categoryTitle}>{category.title}</Text>
-            {category.spots.map((spot, idx) => (
-              <View key={idx} style={styles.dateSpotCard}>
+      <ScrollView ref={discovery.listRef} contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        {discovery.count === 0 && <SpotEmptyState discovery={discovery} />}
+        {discovery.sections.map(category => (
+          <Animated.View key={category.title ?? 'sorted'} style={[styles.categorySection, entrance[category.index + 1]]}>
+            {category.title && <Text style={styles.categoryTitle}>{category.title}</Text>}
+            {category.spots.map(spot => (
+              <View key={spot.name} style={styles.dateSpotCard}>
                 <TouchableOpacity
                   style={styles.dateSpotCardContent}
                   accessibilityActions={[{ name: 'favorite', label: favorites[spot.name]?.isFavourite ? 'Remove from favourites' : 'Add to favourites' }]}
@@ -208,7 +218,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-    paddingTop: 20,
+    paddingTop: 6,
   },
   categorySection: {
     marginBottom: 40,

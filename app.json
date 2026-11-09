@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Your app needs access to your location to display directions to Aldor Acres Family Farm.",
+        "NSLocationWhenInUseUsageDescription": "SznLuv uses your location to find nearby date spots and show directions to venues.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app requires location access for enhanced navigation features."
       }
     },

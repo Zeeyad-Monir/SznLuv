@@ -31,6 +31,7 @@ import MapView, { Marker } from 'react-native-maps';
 // Import MapViewDirections for displaying route directions on the map
 import MapViewDirections from 'react-native-maps-directions';
 import useVenueWeather from '../hooks/useVenueWeather';
+import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
 import useAfterTransition from '../hooks/useAfterTransition';
 
@@ -45,6 +46,9 @@ import { SettingsContext } from './SettingsContext'; // Adjust the path based on
 
 // Google Maps API key for accessing directions and geolocation services
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA'; // GOOGLE
+
+const { latitude: farmLatitude, longitude: farmLongitude } =
+  legacyFallSpots.find(spot => spot.name === 'Eagle Acres Dairy');
 
 // =========================
 // COMPONENT DEFINITION
@@ -76,14 +80,6 @@ const EagleAcresDairy = () => {
   const [loading, setLoading] = useState(true);
   const [isMetric, setIsMetric] = useState(true);
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
-
-  // =========================
-  // FARM COORDINATES SECTION
-  // =========================
-
-  // Coordinates for the Eagle Acres Dairy & Pumpkin Patch
-  const farmLatitude = 49.15948;
-  const farmLongitude = -122.55347;
 
   // =========================
   // ANIMATION SETUP SECTION

@@ -2,6 +2,8 @@ import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
 import { openCollectionPicker } from '../services/collectionPicker';
 import useEntrance from '../hooks/useEntrance';
+import useSpotDiscovery from '../hooks/useSpotDiscovery';
+import SpotDiscoveryControls, { SpotEmptyState } from '../components/SpotDiscoveryControls';
 // SCREENS/WINTERDATESSCREEN.JS
 // Detailed comments are added by ChatGPT to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. As well as helps remember everything going on.
 
@@ -18,6 +20,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Keyboard,
   TouchableOpacity,
   Alert,
   Animated,
@@ -54,6 +57,35 @@ const screenHeight = Dimensions.get('window').height;
 // COMPONENT DEFINITION
 // =========================
 
+const categories = [
+  {
+    title: 'Ice Skating',
+    spots: [
+      {
+        name: 'Glacier Rink',
+        address: '123 Ice Lane',
+      },
+      {
+        name: 'Frosty Pond',
+        address: '456 Snowy Path',
+      },
+    ],
+  },
+  {
+    title: 'Christmas Tree Farms',
+    spots: [
+      {
+        name: 'Evergreen Acres',
+        address: '789 Pine Road',
+      },
+      {
+        name: 'Snowy Pines',
+        address: '321 Winter Blvd',
+      },
+    ],
+  },
+];
+
 /**
  * WinterDatesScreen Component
  * 
@@ -83,42 +115,9 @@ export default function WinterDatesScreen({ navigation }) {
   const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
-  // =========================
-  // DATA SECTION
-  // =========================
-
-  // Defining categories and their respective spots
-  const categories = [
-    {
-      title: 'Ice Skating',
-      spots: [
-        {
-          name: 'Glacier Rink',
-          address: '123 Ice Lane',
-        },
-        {
-          name: 'Frosty Pond',
-          address: '456 Snowy Path',
-        },
-      ],
-    },
-    {
-      title: 'Christmas Tree Farms',
-      spots: [
-        {
-          name: 'Evergreen Acres',
-          address: '789 Pine Road',
-        },
-        {
-          name: 'Snowy Pines',
-          address: '321 Winter Blvd',
-        },
-      ],
-    },
-  ];
-
   // The header and each category section ease in together; the push itself carries the page.
   const entrance = useEntrance(1 + categories.length);
+  const discovery = useSpotDiscovery('winter', categories);
 
   // =========================
   // EFFECTS SECTION
@@ -202,7 +201,10 @@ export default function WinterDatesScreen({ navigation }) {
    * 
    * @param {Object} spot - The spot object containing name and address
    */
-  const handleSpotPress = (spot) => openVenue(navigation, Alert.alert, spot.name);
+  const handleSpotPress = (spot) => {
+    Keyboard.dismiss();
+    openVenue(navigation, Alert.alert, spot.name);
+  };
 
   /**
    * NEW FUNCTION: Handle "Choose Collection" button press in notification
@@ -256,6 +258,7 @@ export default function WinterDatesScreen({ navigation }) {
       <Animated.View style={[styles.headerContainer, entrance[0]]}>
         {/* Screen Title */}
         <Text style={styles.mainTitle}>Winter Dates</Text>
+        <SpotDiscoveryControls discovery={discovery} />
       </Animated.View>
 
       {/* =========================
@@ -263,16 +266,18 @@ export default function WinterDatesScreen({ navigation }) {
           ========================= */}
 
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView contentContainerStyle={styles.contentContainer}>
+      <ScrollView ref={discovery.listRef} contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        {discovery.count === 0 && <SpotEmptyState discovery={discovery} />}
         {/* Mapping through each category to display its spots */}
-        {categories.map((category, index) => (
-          <Animated.View key={index} style={[styles.categorySection, entrance[index + 1]]}>
+        {discovery.sections.map(category => (
+          <Animated.View key={category.title ?? 'sorted'} style={[styles.categorySection, entrance[category.index + 1]]}>
             {/* Category Title */}
-            <Text style={styles.categoryTitle}>{category.title}</Text>
+            {category.title && <Text style={styles.categoryTitle}>{category.title}</Text>}
 
             {/* Mapping through each spot within the category */}
-            {category.spots.map((spot, idx) => (
-              <View key={idx} style={styles.dateSpotCard}>
+            {category.spots.map(spot => (
+              <View key={spot.name} style={styles.dateSpotCard}>
                 {/* Touchable area for the entire spot card */}
                 <TouchableOpacity
                   style={styles.dateSpotCardContent} // Styles for the content area
@@ -417,7 +422,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20, // Horizontal padding
     paddingBottom: 20, // Bottom padding to prevent content cutoff
-    paddingTop: 20, // Top padding for spacing
+    paddingTop: 6, // Top padding for spacing
   },
 
   // Styling for each category section

@@ -495,11 +495,12 @@ test('the Vancouver and Seasons cards use the cover images from the assets folde
   }
 });
 
-// ---- all 23 spot info pages: the 3 original farm screens + the 20 shared-page spots
-const legacySpotPages = ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy'].map(file => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'screens', file + '.js'), 'utf8');
-  return { label: file, file, props: {}, latitude: Number(source.match(/const farmLatitude = ([-\d.]+);/)[1]), longitude: Number(source.match(/const farmLongitude = ([-\d.]+);/)[1]) };
-});
+// The original farm pins are the expected weather locations after moving them into the catalogue.
+const legacySpotPages = [
+  ['AldorFamilyFarmScreen', 49.15313, -122.53021],
+  ['LaityPumpkinPatch', 49.23465, -122.63515],
+  ['EagleAcresDairy', 49.15948, -122.55347],
+].map(([file, latitude, longitude]) => ({ label: file, file, props: {}, latitude, longitude }));
 const sharedSpotPages = detailedFallSpots.map(spot => ({ label: spot.placeID, file: 'SpotDetailScreen', props: { route: { params: { placeID: spot.placeID } } }, latitude: spot.latitude, longitude: spot.longitude }));
 const spotPages = [...legacySpotPages, ...sharedSpotPages];
 const titleNodes = renderer => renderer.root.findAll(node => node.type === 'Text' && node.props.style && node.props.style.fontSize === 24 && node.props.style.textTransform === 'uppercase');

@@ -23,9 +23,9 @@ const fallCategoryTitles = [PATCHES, FESTIVALS, HALLOWEEN, WILDLIFE, COLOUR];
 
 // Original hand-built venue pages (routes live in venueNavigation.js).
 const legacyFallSpots = [
-  { category: PATCHES, name: 'Aldor Family Farm', address: '24990 84 Ave, Langley' },
-  { category: PATCHES, name: 'Eagle Acres Dairy', address: '8796 240 St, Langley' },
-  { category: PATCHES, name: 'Laity Pumpkin Patch', address: '12725 Laity St, Maple Ridge' },
+  { category: PATCHES, name: 'Aldor Family Farm', address: '24990 84 Ave, Langley', latitude: 49.15313, longitude: -122.53021 },
+  { category: PATCHES, name: 'Eagle Acres Dairy', address: '8796 240 St, Langley', latitude: 49.15948, longitude: -122.55347 },
+  { category: PATCHES, name: 'Laity Pumpkin Patch', address: '12725 Laity St, Maple Ridge', latitude: 49.23465, longitude: -122.63515 },
 ];
 
 // Spots rendered by the shared SpotDetailScreen.
@@ -689,7 +689,7 @@ const fallCategories = fallCategoryTitles.map(title => ({
   title,
   spots: [...legacyFallSpots, ...detailedFallSpots]
     .filter(spot => spot.category === title)
-    .map(({ name, address }) => ({ name, address })),
+    .map(({ name, address, latitude, longitude, tagline }) => ({ name, address, latitude, longitude, tagline })),
 }));
 
 const fallSpotNames = fallCategories.flatMap(category => category.spots.map(spot => spot.name));

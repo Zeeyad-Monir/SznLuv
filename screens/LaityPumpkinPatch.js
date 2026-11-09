@@ -31,6 +31,7 @@ import MapView, { Marker } from 'react-native-maps';
 // Importing MapViewDirections for displaying directions on the map
 import MapViewDirections from 'react-native-maps-directions';
 import useVenueWeather from '../hooks/useVenueWeather';
+import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
 import useAfterTransition from '../hooks/useAfterTransition';
 
@@ -45,6 +46,9 @@ import { SettingsContext } from './SettingsContext';
 
 // Google Maps API key for map directions
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
+
+const { latitude: farmLatitude, longitude: farmLongitude } =
+  legacyFallSpots.find(spot => spot.name === 'Laity Pumpkin Patch');
 
 // =========================
 // COMPONENT DEFINITION
@@ -91,14 +95,6 @@ const LaityPumpkinPatch = () => {
   const [selectedDayIndex, setSelectedDayIndex] = useState(null);
 
   // State to store processed daily weather data
-
-  // =========================
-  // LOCATION CONSTANTS SECTION
-  // =========================
-
-  // Latitude and longitude of the Laity Pumpkin Patch
-  const farmLatitude = 49.23465;
-  const farmLongitude = -122.63515;
 
   // =========================
   // ANIMATED VALUES SECTION

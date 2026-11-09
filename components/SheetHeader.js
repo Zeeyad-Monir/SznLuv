@@ -2,10 +2,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function SheetHeader({ title, onClose, closeLabel }) {
+export default function SheetHeader({ title, onClose, closeLabel, titleRef }) {
   return (
     <View style={styles.header}>
-      <Text style={styles.title} accessibilityRole="header">{title}</Text>
+      <Text ref={titleRef} style={styles.title} accessibilityRole="header">{title}</Text>
       <TouchableOpacity
         style={styles.closeButton}
         onPress={onClose}

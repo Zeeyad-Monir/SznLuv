@@ -30,6 +30,7 @@ import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
 import useVenueWeather from '../hooks/useVenueWeather';
+import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
 import useAfterTransition from '../hooks/useAfterTransition';
 import { SettingsContext } from './SettingsContext';
@@ -50,6 +51,9 @@ import {
 // ==================================================
 
 const GOOGLE_MAPS_APIKEY = 'AIzaSyAs3qjk2W3iapdfiw7HIg9CVHlfa8H8NYA';
+
+const { latitude: farmLatitude, longitude: farmLongitude } =
+  legacyFallSpots.find(spot => spot.name === 'Aldor Family Farm');
 
 // Sorting and filtering options arrays
 const sortOptions = [
@@ -109,13 +113,6 @@ const AldorFamilyFarmScreen = () => {
   // Dropdown states
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-
-  // ==================================================
-  // FARM LOCATION COORDINATES
-  // ==================================================
-
-  const farmLatitude = 49.15313;
-  const farmLongitude = -122.53021;
 
   // ==================================================
   // ANIMATION REFERENCES
