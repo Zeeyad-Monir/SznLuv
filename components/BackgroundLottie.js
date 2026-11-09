@@ -1,19 +1,11 @@
-// A looping decorative animation that rests when its screen is covered or the user prefers reduced motion.
-import React, { useEffect, useRef } from 'react';
+// A looping decorative animation that holds still when the user prefers reduced motion.
+// Playback is set only through props: React Native reuses native Lottie views between
+// screens, so a view paused by command can come back frozen on the next page.
+import React from 'react';
 import LottieView from 'lottie-react-native';
-import { useIsFocused } from '@react-navigation/native';
 import useReduceMotion from '../hooks/useReduceMotion';
 
-export default function BackgroundLottie(props) {
-  const focused = useIsFocused();
+export default function BackgroundLottie({ speed = 1, ...props }) {
   const reduceMotion = useReduceMotion();
-  const animation = useRef(null);
-  const playing = focused && !reduceMotion;
-
-  useEffect(() => {
-    if (playing) animation.current?.resume?.();
-    else animation.current?.pause?.();
-  }, [playing]);
-
-  return <LottieView ref={animation} autoPlay={!reduceMotion} loop {...props} />;
+  return <LottieView autoPlay={!reduceMotion} loop {...props} speed={reduceMotion ? 0 : speed} />;
 }

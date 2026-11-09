@@ -315,13 +315,25 @@ test('a refetched list keeps each item\'s animation and only animates what is ne
   assert.notEqual(p.result.current.styleFor('a'), original, 'a recreated item animates afresh');
   await act(async () => p.result.renderer.unmount());
 });
-test('background animations do not autoplay under Reduce Motion', async () => {
-  for (const [reduceMotion, autoPlay] of [[false, true], [true, false]]) {
+test('background animations hold still only under Reduce Motion, through props alone', async () => {
+  for (const [reduceMotion, autoPlay, speed] of [[false, true, 0.6], [true, false, 0]]) {
     const h = createHarness({ reduceMotion });
-    const renderer = await h.render('components/BackgroundLottie.js', { props: { source: 1 } });
+    const renderer = await h.render('components/BackgroundLottie.js', { props: { source: 1, speed: 0.6 } });
     assert.equal(renderer.toJSON().props.autoPlay, autoPlay);
+    assert.equal(renderer.toJSON().props.speed, speed);
+    assert.equal(renderer.toJSON().props.loop, true);
     await act(async () => renderer.unmount());
   }
+});
+test('a covered page keeps its background animation playing state', async () => {
+  // Native Lottie views are reused between screens, so pausing on blur froze the next page that got one.
+  const h = createHarness({ focused: false });
+  const renderer = await h.render('components/BackgroundLottie.js', { props: { source: 1, speed: 0.6 } });
+  assert.equal(renderer.toJSON().props.autoPlay, true);
+  assert.equal(renderer.toJSON().props.speed, 0.6);
+  const source = fs.readFileSync(path.join(__dirname, '..', 'components', 'BackgroundLottie.js'), 'utf8');
+  assert.doesNotMatch(source, /\.pause\b|\.resume\b/, 'no imperative pause or resume');
+  await act(async () => renderer.unmount());
 });
 test('the wheel spins for several seconds normally and resolves instantly under Reduce Motion', async () => {
   for (const [reduceMotion, expected] of [[false, duration => duration >= 4000], [true, duration => duration === 0]]) {
