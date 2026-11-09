@@ -21,16 +21,78 @@ function normalize(text) {
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-function createSpotIndex(sections, { categories = true, distance = true, alphabetical = true } = {}) {
+const QUERY_FILLER = new Set([
+  'a', 'an', 'the', 'and', 'in', 'at', 'on', 'with', 'near', 'around', 'for', 'to', 'of',
+  'can', 'i', 'we', 'where', 'what', 'find', 'see', 'me', 'place', 'places', 'spot', 'spots',
+  'thing', 'things', 'do', 'go', 'looking', 'visit', 'is', 'are', 'there',
+]);
+
+function queryWords(normalized) {
+  return normalized.split(' ').filter(word => word && !QUERY_FILLER.has(word));
+}
+
+function normalizeRanked(text) {
+  return normalize(text).replace(/\bbird watching\b/g, 'birdwatching').replace(/\bhay rides?\b/g, 'hayride');
+}
+
+function wordForm(word) {
+  if (word === 'leaves') return 'leaf';
+  if (word === 'autumn') return 'fall';
+  const spelling = word.replace(/^colour/, 'color');
+  if (spelling === 'color' || spelling === 'colors') return 'foliage';
+  if (spelling.length < 4) return spelling;
+  if (spelling.length > 4 && spelling.endsWith('ies')) return spelling.slice(0, -3) + 'y';
+  if (/(?:ch|sh|ss|x|zz)es$/.test(spelling)) return spelling.slice(0, -2);
+  return /[^su]s$/.test(spelling) ? spelling.slice(0, -1) : spelling;
+}
+
+function rankedEntry(spot) {
+  const name = normalizeRanked(spot.name);
+  const title = normalizeRanked(spot.title || '');
+  const fields = [
+    [name, 16],
+    [[title, spot.address, spot.detailAddress].filter(Boolean).join(' '), 8],
+    [(spot.searchTags ?? []).join(' '), 4],
+    [spot.description || spot.tagline || '', 2],
+  ].map(([text, weight]) => {
+    const words = normalizeRanked(text).split(' ').filter(Boolean);
+    return { words, forms: new Set(words.map(wordForm)), weight };
+  });
+  return { spot, name, title, fields };
+}
+
+function relevance(entry, query, terms, categoryMatch) {
+  if (entry.name === query) return Number.MAX_SAFE_INTEGER;
+  if (entry.title === query) return Number.MAX_SAFE_INTEGER - 1;
+
+  let score = 0;
+  for (const { word, form } of terms) {
+    let best = 0;
+    for (const { words, forms, weight } of entry.fields) {
+      if (forms.has(form)) {
+        best = Math.max(best, weight * 2);
+      } else if (words.some(candidate => candidate.startsWith(word))) {
+        best = Math.max(best, weight);
+      }
+    }
+    if (!best) return categoryMatch ? 0 : null;
+    score += best;
+  }
+  return score;
+}
+
+function createSpotIndex(sections, { categories = true, distance = true, alphabetical = true, rankSearch = false } = {}) {
   const categoryOptions = sections.filter(section => section.spots.length).map(section => section.title);
   return {
     categoryOptions: categories && categoryOptions.length > 1 ? categoryOptions : [],
     supportsDistance: distance && sections.some(section => section.spots.some(hasCoordinates)),
     alphabetical,
+    rankSearch,
     sections: sections.map(({ title, spots }, index) => ({
       title,
       index,
-      entries: spots.map(spot => ({
+      categoryQuery: rankSearch ? queryWords(normalizeRanked(title)).join(' ') : null,
+      entries: rankSearch ? spots.map(rankedEntry) : spots.map(spot => ({
         spot,
         searchText: normalize([spot.name, spot.address, title, spot.tagline].filter(Boolean).join(' ')),
       })),
@@ -57,7 +119,11 @@ function withoutCurrentLocation(filters) {
 }
 
 function findMatchingSpots(index, query, filters) {
-  const terms = normalize(query).split(' ').filter(Boolean);
+  const normalized = index.rankSearch ? normalizeRanked(query) : normalize(query);
+  const words = index.rankSearch ? queryWords(normalized) : normalized.split(' ').filter(Boolean);
+  const ranked = index.rankSearch && words.length > 0;
+  const terms = ranked ? words.map(word => ({ word, form: wordForm(word) })) : [];
+  const categoryQuery = ranked ? words.join(' ') : null;
   const origin = index.supportsDistance && usesOrigin(filters) && hasCoordinates(filters.origin)
     ? filters.origin : null;
   const radius = origin ? filters.radiusKm : null;
@@ -67,11 +133,15 @@ function findMatchingSpots(index, query, filters) {
   for (const section of index.sections) {
     if (categories.size && !categories.has(section.title)) continue;
     const matches = [];
-    for (const { spot, searchText } of section.entries) {
-      if (!terms.every(term => searchText.includes(term))) continue;
+    // A full category label can match the group. Individual activity words must match the spot itself.
+    const categoryMatch = ranked && categoryQuery === section.categoryQuery;
+    for (const entry of section.entries) {
+      const { spot, searchText } = entry;
+      const score = ranked ? relevance(entry, normalized, terms, categoryMatch) : 0;
+      if (score === null || (!index.rankSearch && !words.every(word => searchText.includes(word)))) continue;
       const distance = origin && hasCoordinates(spot) ? distanceKm(origin, spot) : Infinity;
       if (radius !== null && distance > radius) continue;
-      matches.push({ spot, distance });
+      matches.push({ spot, distance, score });
     }
     if (matches.length) {
       groups.push({ title: section.title, index: section.index, matches });
@@ -80,10 +150,15 @@ function findMatchingSpots(index, query, filters) {
   }
 
   const nearest = filters.sort === 'nearest' && !!origin;
-  if (count && (nearest || (filters.sort === 'alphabetical' && index.alphabetical))) {
+  const alphabetical = filters.sort === 'alphabetical' && index.alphabetical;
+  if (count && (nearest || alphabetical || ranked)) {
     const matches = groups.flatMap(group => group.matches);
-    matches.sort((a, b) => (nearest ? a.distance - b.distance : 0)
-      || a.spot.name.localeCompare(b.spot.name, 'en', { sensitivity: 'base' }));
+    if (nearest || alphabetical) {
+      matches.sort((a, b) => (nearest ? a.distance - b.distance : 0)
+        || a.spot.name.localeCompare(b.spot.name, 'en', { sensitivity: 'base' }));
+    } else {
+      matches.sort((a, b) => b.score - a.score);
+    }
     return { count, sections: [{ title: null, index: 0, spots: matches.map(match => match.spot) }] };
   }
   return {

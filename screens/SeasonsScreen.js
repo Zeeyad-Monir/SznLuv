@@ -25,6 +25,8 @@ import { useNavigation } from '@react-navigation/native';
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { fallSpotNames } from '../services/spots';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 import { canNavigate } from '../services/venueNavigation';
 
@@ -51,6 +53,7 @@ const seasonalImages = {
  * and allows navigation to the respective seasonal date screens.
  */
 export default function SeasonsScreen() {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
 
@@ -123,9 +126,9 @@ export default function SeasonsScreen() {
   // =========================
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={floatingScrollStyle}>
         {/* Heading for the seasonal categories */}
         <View style={styles.headingContainer}>
           <Text style={styles.subtext}>Seasons</Text>
@@ -246,7 +249,7 @@ export default function SeasonsScreen() {
           <View style={{ height: 20 }} />
         </View>
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 }
 

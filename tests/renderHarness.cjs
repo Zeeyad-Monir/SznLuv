@@ -54,12 +54,24 @@ function createHarness(options = {}) {
   const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: (value, config) => { timings.push(config); return animation; }, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component, add: (a, b) => a + b.value };
   const appStateListeners = new Set();
   const appState = state => appStateListeners.forEach(listener => listener(state));
+  const keyboardListeners = new Map(), accessibilityListeners = new Map();
+  const listen = (listeners, event, callback) => {
+    listeners.set(event, callback);
+    return { remove: () => listeners.delete(event) };
+  };
+  const keyboardEvent = event => keyboardListeners.get(event)?.();
+  const accessibilityEvent = (event, value) => accessibilityListeners.get(event)?.(value);
+  const platform = options.platform ?? 'ios';
   const rn = new Proxy({
     View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity', ActivityIndicator: 'ActivityIndicator', Switch: 'Switch',
     StyleSheet: { create: styles => styles, flatten: styles => styles, absoluteFillObject: {}, hairlineWidth: 1 },
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
     useWindowDimensions: () => ({ width: 390, height: 844 }),
-    Keyboard: { dismiss() {} },
+    Keyboard: {
+      dismiss() {},
+      isVisible: () => false,
+      addListener: (event, callback) => listen(keyboardListeners, event, callback),
+    },
     AppState: { addEventListener: (_, listener) => { appStateListeners.add(listener); return { remove: () => appStateListeners.delete(listener) }; } },
     Linking: { openSettings: async () => calls.push(['openSettings']), openURL: async url => calls.push(['openURL', url]) },
     Modal: ({ visible, onShow, onDismiss, ...props }) => {
@@ -69,8 +81,13 @@ function createHarness(options = {}) {
     PanResponder: { create: handlers => ({ panHandlers: handlers }) },
     findNodeHandle: element => element?.tag ?? null,
     Animated, Easing: new Proxy({}, { get: () => value => value }),
-    Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: 'ios', select: value => value.ios },
-    AccessibilityInfo: { isReduceMotionEnabled: async () => !!options.reduceMotion, addEventListener: () => ({ remove() {} }), setAccessibilityFocus: tag => calls.push(['focusAccessibility', tag]) },
+    Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: platform, select: value => value[platform] ?? value.default },
+    AccessibilityInfo: {
+      isReduceMotionEnabled: async () => !!options.reduceMotion,
+      isReduceTransparencyEnabled: async () => !!options.reduceTransparency,
+      addEventListener: (event, callback) => listen(accessibilityListeners, event, callback),
+      setAccessibilityFocus: tag => calls.push(['focusAccessibility', tag]),
+    },
     SectionList: ({ sections = [], renderItem, ...props }) => React.createElement('SectionList', props, sections.flatMap(section => section.data.map((item, index) => React.createElement(React.Fragment, { key: section.title + index }, renderItem({ item, index, section }))))),
     FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
@@ -92,7 +109,7 @@ function createHarness(options = {}) {
     '@react-navigation/native': nav,
     '@react-navigation/native-stack': { createNativeStackNavigator: navigator },
     '@react-navigation/bottom-tabs': { createBottomTabNavigator: navigator },
-    'react-native-safe-area-context': { SafeAreaProvider: ({ children }) => React.createElement('SafeAreaProvider', null, children), useSafeAreaInsets: () => ({ top: 62, bottom: 34, left: 0, right: 0 }) },
+    'react-native-safe-area-context': { SafeAreaProvider: ({ children }) => React.createElement('SafeAreaProvider', null, children), useSafeAreaInsets: () => ({ top: 62, bottom: 34, left: 0, right: 0, ...options.insets }) },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     'react-native-svg': { __esModule: true, default: 'Svg', Svg: 'Svg', Path: 'Path', G: 'G', Text: 'SvgText', TSpan: 'TSpan' },
     '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async key => storage.get(key) ?? null, setItem: async (key, value) => { storage.set(key, value); } } },
@@ -105,6 +122,8 @@ function createHarness(options = {}) {
       Accuracy: { Balanced: 3, High: 4 },
     },
     'expo-linear-gradient': { LinearGradient: 'Gradient' },
+    'expo-blur': { BlurView: 'BlurView' },
+    'expo-haptics': { selectionAsync: async () => { calls.push(['selectionHaptic']); } },
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
   };
@@ -170,6 +189,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, renderElement, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, Screen };
+  return { render, renderElement, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
 }
 module.exports = { createHarness, act };

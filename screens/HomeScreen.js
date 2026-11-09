@@ -21,6 +21,8 @@ import {
 
 // Importing navigation hook to navigate between screens
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 
 // Importing AuthContext to access authenticated user information
@@ -107,6 +109,7 @@ const COVER_IMAGE_OPACITY = 0.9;
  * The component also includes animations for a dynamic and engaging user experience.
  */
 export default function HomeScreen() {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
   const scrollRef = useRef(null);
@@ -163,9 +166,9 @@ export default function HomeScreen() {
   // =========================
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         {/* Greeting Container with Animations */}
         <Animated.View style={[styles.greetingContainer, entrance[0]]}>
           {/* Greeting Text */}
@@ -209,7 +212,7 @@ export default function HomeScreen() {
           <View style={{ height: 20 }} />
         </View>
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 }
 

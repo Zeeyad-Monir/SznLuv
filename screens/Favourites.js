@@ -15,6 +15,8 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation } from '@react-navigation/native';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { canNavigate } from '../services/venueNavigation';
 import { doc, getDoc } from "firebase/firestore";
@@ -24,6 +26,7 @@ import { db } from "../firebaseConfig";
 const { width } = Dimensions.get('window');
 
 const Favourites = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
   const navigation = useNavigation();
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
@@ -112,8 +115,8 @@ const Favourites = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.contentContainer}>
+    <SignedInScreen style={styles.container}>
+      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         {/* Header Container */}
         <Animated.View style={[styles.headerContainer, entrance[0]]}>
           <Text style={styles.title}>Favourites</Text>
@@ -249,7 +252,7 @@ const Favourites = () => {
         </View>
       </ScrollView>
 
-    </View>
+    </SignedInScreen>
   );
 };
 

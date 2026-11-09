@@ -29,6 +29,8 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useVenueWeather from '../hooks/useVenueWeather';
 import useEntrance from '../hooks/useEntrance';
 import useAfterTransition from '../hooks/useAfterTransition';
@@ -76,6 +78,7 @@ const filterOptions = [
 // ==================================================
 
 const SpotDetailScreen = ({ route }) => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   const spot = getSpotByPlaceID(route?.params?.placeID);
 
   // ==================================================
@@ -313,14 +316,14 @@ const SpotDetailScreen = ({ route }) => {
 
   if (!spot) {
     return (
-      <View style={styles.container}>
+      <SignedInScreen style={styles.container}>
         <Text style={styles.errorText}>Details unavailable for this spot.</Text>
-      </View>
+      </SignedInScreen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       <SectionList
         sections={sections}
         keyExtractor={(item, index) => item + index}
@@ -735,9 +738,9 @@ const SpotDetailScreen = ({ route }) => {
           }
         }}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={floatingScrollStyle}
       />
-    </View>
+    </SignedInScreen>
   );
 };
 

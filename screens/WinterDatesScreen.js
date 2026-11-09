@@ -1,6 +1,8 @@
 import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
 import { openCollectionPicker } from '../services/collectionPicker';
+import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 import useSpotDiscovery from '../hooks/useSpotDiscovery';
 import SpotDiscoveryControls, { SpotEmptyState } from '../components/SpotDiscoveryControls';
@@ -95,6 +97,9 @@ const categories = [
  * Additionally, users can add favorite spots to specific collections.
  */
 export default function WinterDatesScreen({ navigation }) {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
+  const navClearance = useFloatingNavClearance();
+  const notificationBottom = Math.max(styles.successNotification.bottom, navClearance);
 
   // =========================
   // CONTEXT USAGE
@@ -238,7 +243,7 @@ export default function WinterDatesScreen({ navigation }) {
   // =========================
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {/* =========================
           SNOW FALLING ANIMATION
           ========================= */}
@@ -266,7 +271,7 @@ export default function WinterDatesScreen({ navigation }) {
           ========================= */}
 
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView ref={discovery.listRef} contentContainerStyle={styles.contentContainer}
+      <ScrollView ref={discovery.listRef} contentContainerStyle={floatingScrollStyle}
         keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         {discovery.count === 0 && <SpotEmptyState discovery={discovery} />}
         {/* Mapping through each category to display its spots */}
@@ -356,7 +361,7 @@ export default function WinterDatesScreen({ navigation }) {
       {/* NEW: "Choose Collection" Notification Styled Like Success Notification */}
       {showChooseCollectionNotification && (
         <TouchableOpacity
-          style={styles.successNotification}
+          style={[styles.successNotification, { bottom: notificationBottom }]}
           onPress={handleChooseCollectionPress}
           accessibilityLabel="Choose Collection"
           accessibilityRole="button"
@@ -371,14 +376,14 @@ export default function WinterDatesScreen({ navigation }) {
 
       {/* NEW: Success Notification */}
       {showSuccessNotification && (
-        <View style={styles.successNotification}>
+        <View style={[styles.successNotification, { bottom: notificationBottom }]}>
           <Text style={styles.successNotificationText}>
             Added to Collection
           </Text>
         </View>
       )}
 
-    </View>
+    </SignedInScreen>
   );
 }
 

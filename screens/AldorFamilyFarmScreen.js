@@ -29,6 +29,8 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
 // Import custom components and context
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useVenueWeather from '../hooks/useVenueWeather';
 import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
@@ -77,6 +79,7 @@ const filterOptions = [
 // ==================================================
 
 const AldorFamilyFarmScreen = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // ==================================================
   // CONTEXT AND STATE HOOKS
   // ==================================================
@@ -305,7 +308,7 @@ const AldorFamilyFarmScreen = () => {
   ];
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       <SectionList
         sections={sections}
         keyExtractor={(item, index) => item + index}
@@ -729,9 +732,9 @@ const AldorFamilyFarmScreen = () => {
           }
         }}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={floatingScrollStyle}
       />
-    </View>
+    </SignedInScreen>
   );
 };
 

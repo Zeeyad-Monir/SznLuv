@@ -30,6 +30,8 @@ import MapView, { Marker } from 'react-native-maps';
 
 // Importing MapViewDirections for displaying directions on the map
 import MapViewDirections from 'react-native-maps-directions';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useVenueWeather from '../hooks/useVenueWeather';
 import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
@@ -67,6 +69,7 @@ const { latitude: farmLatitude, longitude: farmLongitude } =
  * to manage user favorites. Location services are handled based on user settings.
  */
 const LaityPumpkinPatch = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // Accessing the isLocationEnabled value from SettingsContext
   const { isLocationEnabled } = useContext(SettingsContext);
 
@@ -211,9 +214,9 @@ const LaityPumpkinPatch = () => {
   // =========================
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={floatingScrollStyle}>
         {weatherData ? (
           // Weather Information Section with Animations
           <Animated.View
@@ -425,7 +428,7 @@ const LaityPumpkinPatch = () => {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 

@@ -33,6 +33,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, logout } from '../firebaseConfig';
 
 // Importing navigation hook for navigating between screens
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 
 // =========================
@@ -47,6 +49,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // =========================
 
 const ProfileSettings = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContainer);
   // =========================
   // CONTEXT USAGE
   // =========================
@@ -193,9 +196,9 @@ const ProfileSettings = () => {
   // =========================
 
   return (
-    <View style={styles.mainContainer}>
+    <SignedInScreen style={styles.mainContainer}>
       {/* Scrollable content container */}
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContainer}>
+      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         {/* PROFILE SECTION */}
         <View style={styles.profileSection}>
           {/* Profile Image Placeholder */}
@@ -282,7 +285,7 @@ const ProfileSettings = () => {
         {/* Bottom Spacing to ensure content is not cut off */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 

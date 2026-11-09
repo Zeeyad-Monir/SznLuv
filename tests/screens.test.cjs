@@ -180,32 +180,144 @@ test('top bar: back names the previous page, pops the current section only, and 
   assert.deepEqual(log.dispatched, [{ type: 'POP', payload: { count: 1 }, target: 'home-stack' }]);
   await act(async () => renderer.unmount());
 });
-test('top bar: switching section navigates; re-tapping the current one only signals tabPress', async () => {
+test('top bar: Home and Profile use their existing tabs', async () => {
   const { renderer, log, control } = await renderTopBar(tabState(1));
-  await act(async () => control('Spin the Wheel').props.onPress());
-  assert.deepEqual(log.navigated, ['SpinTab']);
-  assert.deepEqual(log.emitted.at(-1), { type: 'tabPress', target: 'SpinTab-key', canPreventDefault: true });
-  log.navigated.length = 0;
-  await act(async () => control('Favourites').props.onPress());
-  assert.deepEqual(log.navigated, [], 'no navigation for the section already open');
-  assert.equal(log.emitted.at(-1).target, 'FavouritesTab-key');
+  assert.equal(control('Favorites'), undefined);
+  assert.equal(control('Explore'), undefined);
   await act(async () => control('SznLuv Home').props.onPress());
-  assert.deepEqual(log.navigated, ['HomeTab'], 'the logo goes through the same path');
-  assert.deepEqual(control('Favourites').props.accessibilityState, { selected: true });
+  await act(async () => control('Profile').props.onPress());
+  assert.deepEqual(log.navigated, ['HomeTab', 'ProfileTab']);
   assert.deepEqual(control('Profile').props.accessibilityState, { selected: false });
   await act(async () => renderer.unmount());
 });
-test('top bar: keeps its 130pt height on current iPhones and grows only if the notch demands it', async () => {
+test('top bar: has a 117pt minimum height and grows for a taller top inset', async () => {
   const height = async top => {
     const { renderer } = await renderTopBar(tabState(0), top);
-    const value = [].concat(renderer.root.findAll(node => node.type === 'View')[0].props.style).find(style => style && style.height).height;
+    const { style: [bar, layout] } = renderer.root.findAllByType('View')[0].props;
+    assert.equal(bar.position, 'absolute');
+    assert.equal(bar.backgroundColor, undefined);
     await act(async () => renderer.unmount());
-    return value;
+    return layout.minHeight;
   };
-  assert.equal(await height(20), 130);
-  assert.equal(await height(59), 130);
-  assert.equal(await height(62), 130);
-  assert.equal(await height(80), 148);
+  assert.equal(await height(20), 117);
+  assert.equal(await height(62), 117);
+  assert.equal(await height(80), 135);
+});
+
+test('signed-in layout: seasonal background fills the screen while content clears the measured header', async () => {
+  const React = require('react');
+  const h = createHarness();
+  const main = await h.render('navigation/MainTabs.js');
+  const { layout } = main.root.findAll(node => typeof node.props.tabBar === 'function')[0].props;
+  await act(async () => main.unmount());
+
+  const state = tabState(0, homeStack(['Home', 'FallDatesScreen']));
+  const FallDates = h.load('screens/FallDatesScreen.js').default;
+  const renderer = await h.renderElement(layout({
+    state,
+    navigation: h.navigation,
+    children: React.createElement(FallDates, { navigation: h.navigation }),
+  }));
+  const surfaceStyle = () => renderer.root.findAllByType('View')
+    .find(node => node.props.style?.[0]?.backgroundColor === '#F4A460').props.style;
+  assert.equal(surfaceStyle()[1].paddingTop, 117);
+  const bar = renderer.root.findAllByType('View').find(node => node.props.onLayout);
+  await act(async () => bar.props.onLayout({ nativeEvent: { layout: { height: 139 } } }));
+  assert.equal(surfaceStyle()[1].paddingTop, 139);
+  await act(async () => renderer.unmount());
+});
+
+async function renderFloatingNav(h, index, { bottom = 34, includeHome = false, nestedHome } = {}) {
+  const React = require('react');
+  const main = await h.render('navigation/MainTabs.js');
+  const { tabBar } = main.root.findAll(node => typeof node.props.tabBar === 'function')[0].props;
+  await act(async () => main.unmount());
+  const { FloatingNavigationLayoutProvider } = h.load('navigation/floatingNavigationLayout.js');
+  const Home = h.load('screens/HomeScreen.js').default;
+  const log = { emitted: [], navigated: [], dispatched: [], blocked: false };
+  const navigation = {
+    emit: event => { log.emitted.push(event); return { defaultPrevented: log.blocked }; },
+    navigate: name => log.navigated.push(name),
+    dispatch: action => log.dispatched.push(action),
+  };
+  const state = tabState(index);
+  state.routes[0].state = nestedHome;
+  const renderer = await h.renderElement(React.createElement(FloatingNavigationLayoutProvider, null,
+    includeHome && React.createElement(Home),
+    tabBar({ state, navigation, insets: { left: 0, right: 0, bottom } }),
+  ));
+  const control = label => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === label);
+  return { renderer, log, control };
+}
+
+test('floating bar: Home returns to the greeting from an inactive, nested Home stack', async () => {
+  const nestedHome = homeStack(['Home', 'VancouverScreen', 'SeasonsScreen']);
+  const { renderer, log, control } = await renderFloatingNav(createHarness(), 1, { nestedHome });
+  await act(async () => control('Home').props.onPress());
+  assert.equal(log.emitted.at(-1).target, 'HomeTab-key');
+  assert.deepEqual(log.dispatched, [{ type: 'POP_TO_TOP', target: 'home-stack' }]);
+  assert.deepEqual(log.navigated, ['HomeTab']);
+  await act(async () => renderer.unmount());
+});
+
+test('floating bar: Favorites and Explore keep their route keys and only a real switch triggers a haptic', async () => {
+  const h = createHarness();
+  const { renderer, log, control } = await renderFloatingNav(h, 1);
+  assert.deepEqual(control('Favorites').props.accessibilityState, { selected: true });
+  assert.deepEqual(control('Explore').props.accessibilityState, { selected: false });
+  await act(async () => control('Favorites').props.onPress());
+  assert.deepEqual(log.emitted.at(-1), { type: 'tabPress', target: 'FavouritesTab-key', canPreventDefault: true });
+  log.blocked = true;
+  await act(async () => control('Explore').props.onPress());
+  assert.deepEqual(log.navigated, []);
+  assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
+  log.blocked = false;
+  await act(async () => control('Explore').props.onPress());
+  assert.deepEqual(log.navigated, ['SpinTab']);
+  assert.equal(log.emitted.at(-1).target, 'SpinTab-key');
+  assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 1);
+  await act(async () => renderer.unmount());
+});
+
+test('floating bar: clears the safe area, gives scroll content room, and hides for the keyboard', async () => {
+  for (const bottom of [0, 34]) {
+    const h = createHarness({ insets: { bottom } });
+    const { renderer, control, log } = await renderFloatingNav(h, 0, { bottom, includeHome: true });
+    const dock = () => renderer.root.findAllByType('View').find(node => node.props.pointerEvents === 'box-none');
+    const scrollStyle = () => renderer.root.findByType('ScrollView').props.contentContainerStyle;
+    assert.equal(dock().props.style[1].bottom, bottom + 12);
+    assert.equal(scrollStyle()[1].paddingBottom, bottom + 102);
+    assert.deepEqual(control('Home').props.accessibilityState, { selected: true });
+    assert.deepEqual(control('Favorites').props.accessibilityState, { selected: false });
+    assert.deepEqual(control('Explore').props.accessibilityState, { selected: false });
+    await act(async () => control('Favorites').props.onPress());
+    assert.deepEqual(log.navigated, ['FavouritesTab']);
+
+    await act(async () => h.keyboardEvent('keyboardWillShow'));
+    assert.equal(dock(), undefined);
+    assert.equal(control('Favorites'), undefined);
+    assert.equal(scrollStyle().paddingBottom, 20);
+    await act(async () => h.keyboardEvent('keyboardDidHide'));
+    assert.ok(control('Favorites'));
+    await act(async () => renderer.unmount());
+  }
+});
+
+test('floating bar: respects Reduce Transparency and uses the opaque treatment on Android', async () => {
+  const ios = createHarness({ reduceTransparency: true });
+  const { renderer } = await renderFloatingNav(ios, 3);
+  assert.equal(renderer.root.findAllByType('BlurView').length, 0);
+  await act(async () => ios.accessibilityEvent('reduceTransparencyChanged', false));
+  assert.equal(renderer.root.findAllByType('BlurView').length, 1);
+  await act(async () => renderer.unmount());
+
+  const android = createHarness({ platform: 'android' });
+  const androidNav = await renderFloatingNav(android, 2);
+  assert.equal(androidNav.renderer.root.findAllByType('BlurView').length, 0);
+  assert.deepEqual(androidNav.control('Explore').props.accessibilityState, { selected: true });
+  await act(async () => androidNav.control('Favorites').props.onPress());
+  assert.equal(android.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
+  await act(async () => androidNav.renderer.unmount());
 });
 test('a second quick tap after navigation has started is ignored', async () => {
   const h = createHarness({ focused: false });
@@ -355,12 +467,14 @@ test('venue pages hold the map back until the push has finished', async () => {
   assert.equal(renderer.root.findAllByType('MapView').length, 0);
   await act(async () => renderer.unmount());
 });
-test('main tabs: four sections in a top bar, venue pages reachable from Home and Favourites', async () => {
+test('main tabs: four sections with shared navigation, venue pages reachable from Home and Favourites', async () => {
   const React = require('react'), Renderer = require('react-test-renderer');
   const h = createHarness();
   const renderer = await h.render('navigation/MainTabs.js');
   const navigator = renderer.root.findAll(node => node.props.tabBar)[0];
-  assert.equal(navigator.props.screenOptions.tabBarPosition, 'top');
+  assert.equal(navigator.props.screenOptions.tabBarPosition, 'bottom');
+  assert.equal(navigator.props.screenOptions.animation, 'fade');
+  assert.equal(typeof navigator.props.layout, 'function');
   assert.equal(navigator.props.backBehavior, 'none', 'VoiceOver back cannot jump between sections');
   const tabs = renderer.root.findAllByType(h.Screen);
   assert.deepEqual(tabs.map(node => node.props.name), SECTIONS);

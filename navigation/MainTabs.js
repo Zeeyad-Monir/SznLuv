@@ -1,10 +1,13 @@
-// The signed-in app: four sections, each remembering its own place, under one stationary top bar.
-import React, { useContext } from 'react';
-import { Platform } from 'react-native';
+// The signed-in app: four sections, each remembering its own place.
+import React, { useContext, useState } from 'react';
+import { Image, Platform, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import NavBar from '../components/NavBar';
+import NavBar, { getMinimumNavBarHeight } from '../components/NavBar';
+import FloatingTabBar from '../components/FloatingTabBar';
 import HomeScreen from '../screens/HomeScreen';
 import VancouverScreen from '../screens/VancouverScreen';
 import SeasonsScreen from '../screens/SeasonsScreen';
@@ -23,6 +26,9 @@ import EagleAcresDairy from '../screens/EagleAcresDairy';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
 import { AuthContext } from '../contexts/AuthContext';
 import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
+import useReduceMotion from '../hooks/useReduceMotion';
+import { FloatingNavigationLayoutProvider } from './floatingNavigationLayout';
+import { TopNavigationHeightContext } from './topNavigationLayout';
 
 const Tabs = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -67,23 +73,81 @@ function FavouritesSection() {
   );
 }
 
-const renderTopBar = (props) => <NavBar {...props} />;
+const bottomItems = [
+  {
+    route: 'HomeTab',
+    label: 'Home',
+    returnToRoot: true,
+    renderIcon: ({ selected, color }) => (
+      <Ionicons name={selected ? 'home' : 'home-outline'} size={26} color={color} />
+    ),
+  },
+  {
+    route: 'FavouritesTab',
+    label: 'Favorites',
+    renderIcon: ({ selected, color }) => (
+      <Ionicons name={selected ? 'heart' : 'heart-outline'} size={27} color={color} />
+    ),
+  },
+  {
+    route: 'SpinTab',
+    label: 'Explore',
+    hint: 'Opens Spin the Wheel',
+    renderIcon: () => <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.discoveryIcon} />,
+  },
+];
+
+function SignedInLayout({ children, state, navigation }) {
+  const insets = useSafeAreaInsets();
+  const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState(0);
+  const headerHeight = Math.max(getMinimumNavBarHeight(insets.top), measuredHeaderHeight);
+
+  return (
+    <TopNavigationHeightContext.Provider value={headerHeight}>
+      <View style={styles.shell}>
+        <NavBar
+          state={state}
+          navigation={navigation}
+          insets={insets}
+          onLayout={({ nativeEvent }) => setMeasuredHeaderHeight(nativeEvent.layout.height)}
+        />
+        {children}
+      </View>
+    </TopNavigationHeightContext.Provider>
+  );
+}
+
+const renderLayout = props => <SignedInLayout {...props} />;
+const renderBottomBar = props => <FloatingTabBar {...props} items={bottomItems} />;
 
 export default function MainTabs() {
   const { user } = useContext(AuthContext);
+  const reduceMotion = useReduceMotion();
   return (
     <SpotDiscoveryProvider key={user?.uid}>
-      <Tabs.Navigator
-        // iOS has no hardware back; 'none' stops VoiceOver's back gesture jumping between sections.
-        backBehavior={Platform.OS === 'ios' ? 'none' : 'firstRoute'}
-        tabBar={renderTopBar}
-        screenOptions={{ headerShown: false, tabBarPosition: 'top' }}
-      >
-        <Tabs.Screen name="HomeTab" component={HomeSection} />
-        <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
-        <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
-        <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
-      </Tabs.Navigator>
+      <FloatingNavigationLayoutProvider>
+        <Tabs.Navigator
+          // iOS has no hardware back; 'none' stops VoiceOver's back gesture jumping between sections.
+          backBehavior={Platform.OS === 'ios' ? 'none' : 'firstRoute'}
+          layout={renderLayout}
+          tabBar={renderBottomBar}
+          screenOptions={{
+            headerShown: false,
+            tabBarPosition: 'bottom',
+            animation: reduceMotion ? 'none' : 'fade',
+          }}
+        >
+          <Tabs.Screen name="HomeTab" component={HomeSection} />
+          <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
+          <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
+          <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
+        </Tabs.Navigator>
+      </FloatingNavigationLayoutProvider>
     </SpotDiscoveryProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  shell: { flex: 1, backgroundColor: '#FFF5E4' },
+  discoveryIcon: { width: 33, height: 33, resizeMode: 'contain' },
+});

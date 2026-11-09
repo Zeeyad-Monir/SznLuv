@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const React = require('react');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { fallCategories } = require('../services/spots');
+const { fallCategories, legacyFallSpots, detailedFallSpots } = require('../services/spots');
 const {
   createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasCoordinates,
 } = require('../services/spotDiscovery');
@@ -21,6 +21,8 @@ const index = createSpotIndex([
 ]);
 const matches = (query, patch) => findMatchingSpots(index, query, { ...DEFAULT_FILTERS, ...patch });
 const names = result => result.sections.flatMap(section => section.spots.map(spot => spot.name));
+const fallIndex = createSpotIndex(fallCategories, { rankSearch: true });
+const fallMatches = (query, patch) => names(findMatchingSpots(fallIndex, query, { ...DEFAULT_FILTERS, ...patch }));
 
 test('spot search combines normalized terms, category choices and an inclusive radius', () => {
   const radiusKm = distanceKm(origin, atBoundary);
@@ -40,6 +42,55 @@ test('catalogue sections keep their order and global sorts handle unknown coordi
   assert.equal(createSpotIndex([{ title: 'Only', spots: [{ name: 'Spot' }] }]).supportsDistance, false);
   assert.deepEqual(createSpotIndex(fallCategories, { distance: false, categories: false }).categoryOptions, []);
   assert.ok(fallCategories.flatMap(section => section.spots).every(hasCoordinates));
+});
+
+test('every Fall spot has ten distinct tags and appears in a search for its locality', () => {
+  const catalogue = [...legacyFallSpots, ...detailedFallSpots];
+  assert.equal(catalogue.length, 43);
+  for (const { name, address, searchTags } of catalogue) {
+    assert.equal(searchTags.length, 10, name);
+    assert.ok(searchTags.every(tag => tag.trim().length > 0), name);
+    assert.equal(new Set(searchTags.map(tag => tag.trim().toLowerCase())).size, 10, name);
+    const city = address.split(',').at(-1).trim();
+    assert.ok(searchTags.some(tag => tag.endsWith(city)), `${name} has a locality tag`);
+    assert.ok(fallMatches(city).includes(name), `${name} matches ${city}`);
+  }
+  assert.deepEqual(fallMatches('North Vancouver'), ['Canyon Frights at Capilano']);
+  assert.ok(!fallMatches('Vancouver').includes('Maan Farms'));
+});
+
+test('Fall activity searches use relevant tags and descriptions, including wording variations', () => {
+  const salmonSpots = new Set(['Tynehead Hatchery', 'Hoy Creek Hatchery', 'Kanaka Creek Fish Fence']);
+  assert.deepEqual(new Set(fallMatches('Salmon')), salmonSpots);
+  assert.deepEqual(new Set(fallMatches('Fish')), salmonSpots);
+  assert.deepEqual(fallMatches('Where can I see fish in Surrey?'), ['Tynehead Hatchery']);
+  assert.deepEqual(fallMatches('haunted houses'), [
+    'Cougar Creek House of Horrors', 'Maan Farms', 'Fright Nights at Playland',
+  ]);
+  assert.ok(fallMatches('haunted').includes('Burnaby Haunted Village'));
+  assert.ok(fallMatches('Scary places').includes('Bear Creek Halloween Train'));
+  assert.ok(!fallMatches('Scary places').includes('Burnaby Haunted Village'));
+  assert.ok(fallMatches('Pumpkins').includes('VanDusen Harvest Days'));
+  assert.ok(fallMatches('pumpkin patches').includes('Eagle Acres Dairy'));
+  assert.ok(!fallMatches('Pumpkins').includes('The Bog Cranberry Farm'));
+  assert.deepEqual(fallMatches('apple picking'), ['Taves Family Farms', 'Willow View Farms']);
+  assert.deepEqual(fallMatches('bird watching'), ['Reifel Bird Sanctuary', 'Wings Over Iona']);
+  assert.deepEqual(fallMatches('fall colors'), fallMatches('autumn foliage'));
+  assert.ok(fallMatches('corn maz').includes('Taves Family Farms'));
+  assert.deepEqual(fallMatches('biodegradable'), ['VanDusen Harvest Days']);
+  assert.deepEqual(fallMatches('R2D2'), ['Eagle Acres Dairy']);
+});
+
+test('Fall relevance puts exact names first and combines search with explicit sorts and filters', () => {
+  assert.deepEqual(fallMatches('  STANLEY PARK  '), ['Stanley Park', 'Haunted Halloween Trolley']);
+  assert.deepEqual(fallMatches('Stanley Park', { sort: 'alphabetical' }), ['Haunted Halloween Trolley', 'Stanley Park']);
+  const start = detailedFallSpots.find(spot => spot.name === 'Haunted Halloween Trolley');
+  assert.deepEqual(fallMatches('Stanley Park', { sort: 'nearest', origin: start }), [
+    'Haunted Halloween Trolley', 'Stanley Park',
+  ]);
+  assert.deepEqual(fallMatches('fish', { categories: ['Festivals & Gardens'] }), []);
+  const fishFence = detailedFallSpots.find(spot => spot.name === 'Kanaka Creek Fish Fence');
+  assert.deepEqual(fallMatches('fish', { origin: fishFence, radiusKm: 1 }), ['Kanaka Creek Fish Fence']);
 });
 
 const press = node => act(async () => { node.props.onPress(); });
@@ -77,6 +128,15 @@ for (const [season, search, expected] of [
     await act(async () => renderer.unmount());
   });
 }
+
+test('Fall live search finds a hidden tag without rendering the tag on the card', async () => {
+  const h = createHarness();
+  const renderer = await h.render('screens/FallDatesScreen.js');
+  await change(input(renderer), 'hay jumping');
+  assert.deepEqual(cards(renderer), ['Aldor Family Farm']);
+  assert.ok(!output(renderer).includes('hay jumping pile'));
+  await act(async () => renderer.unmount());
+});
 
 test('draft filters discard on dismiss and applied state survives a season remount', async () => {
   const h = createHarness({ reduceMotion: true });

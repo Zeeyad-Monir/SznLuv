@@ -22,10 +22,15 @@ import { db } from "../firebaseConfig";
 import { AuthContext } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 
 const SeasonalFavourites = () => {
+  const floatingScrollStyle = useFloatingScrollStyle();
+  const navClearance = useFloatingNavClearance();
+  const notificationBottom = Math.max(styles.notificationContainer.bottom, navClearance);
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
@@ -143,18 +148,19 @@ const SeasonalFavourites = () => {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: "#dbd3bd" }]}>
+      <SignedInScreen style={[styles.loadingContainer, { backgroundColor: "#dbd3bd" }]}>
         <ActivityIndicator size="large" color="#000" />
-      </View>
+      </SignedInScreen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {notificationMessage !== '' && (
         <Animated.View
           style={[
             styles.notificationContainer,
+            { bottom: notificationBottom },
             {
               opacity: notificationOpacity,
               transform: [{ translateY: notificationTranslateY }],
@@ -175,7 +181,7 @@ const SeasonalFavourites = () => {
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.favouritesList}>
+      <ScrollView style={styles.favouritesList} contentContainerStyle={floatingScrollStyle}>
         {favourites.length > 0 ? (
           favourites.map((favourite) => (
             <Animated.View key={favourite} style={itemEntrance.styleFor(favourite)}>
@@ -190,7 +196,7 @@ const SeasonalFavourites = () => {
           <Text style={styles.emptyText}>No favourites yet! Add some dates to get started.</Text>
         )}
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 

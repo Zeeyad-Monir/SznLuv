@@ -5,9 +5,9 @@
 // Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
 //
 // Two kinds of spots:
-//  - legacy spots: the three original farms. They keep their own hand-built screens (see venueNavigation.js),
-//    so only list-card data lives here.
+//  - legacy spots: the three original farms. They keep their own hand-built screens (see venueNavigation.js).
 //  - detailed spots: rendered by screens/SpotDetailScreen.js from the fields below.
+// Search tags describe the spot itself and include its locality. They are used only by discovery.
 //
 // `name` is the list-card name AND the favourites key AND the wheel label, so it must be unique across all
 // seasons and must not contain "." or "/" or equal "collections".
@@ -23,9 +23,42 @@ const fallCategoryTitles = [PATCHES, FESTIVALS, HALLOWEEN, WILDLIFE, COLOUR];
 
 // Original hand-built venue pages (routes live in venueNavigation.js).
 const legacyFallSpots = [
-  { category: PATCHES, name: 'Aldor Family Farm', address: '24990 84 Ave, Langley', latitude: 49.15313, longitude: -122.53021 },
-  { category: PATCHES, name: 'Eagle Acres Dairy', address: '8796 240 St, Langley', latitude: 49.15948, longitude: -122.55347 },
-  { category: PATCHES, name: 'Laity Pumpkin Patch', address: '12725 Laity St, Maple Ridge', latitude: 49.23465, longitude: -122.63515 },
+  {
+    category: PATCHES,
+    name: 'Aldor Family Farm',
+    address: '24990 84 Ave, Langley',
+    latitude: 49.15313,
+    longitude: -122.53021,
+    searchDescription: 'A working farm in Glen Valley with a pumpkin patch, hayrides, farm animals, forest walks and a seasonal market.',
+    searchTags: [
+      'Aldor Acres', 'pumpkin picking', 'tractor hayrides', 'petting zoo', 'u pick sunflowers',
+      'seasonal farm market', 'farm animals', 'hay jumping pile', 'Glen Valley', 'Langley',
+    ],
+  },
+  {
+    category: PATCHES,
+    name: 'Eagle Acres Dairy',
+    address: '8796 240 St, Langley',
+    latitude: 49.15948,
+    longitude: -122.55347,
+    searchDescription: 'Visit a working dairy farm with an R2D2 milking robot, farm animals, a corn maze and hayrides to the pumpkin patch.',
+    searchTags: [
+      'dairy farm tour', 'robot milking', 'pumpkin picking', 'covered hayride', 'corn maze',
+      'farm animals', 'pumpkin varieties', 'dairy cows', 'Fort Langley', 'Langley',
+    ],
+  },
+  {
+    category: PATCHES,
+    name: 'Laity Pumpkin Patch',
+    address: '12725 Laity St, Maple Ridge',
+    latitude: 49.23465,
+    longitude: -122.63515,
+    searchDescription: 'The South location of a family-run pumpkin farm, with a corn maze, farm animals and seasonal displays.',
+    searchTags: [
+      'pumpkin picking', 'corn maze', 'farm animals', 'family fall outing', 'autumn farm displays',
+      'October pumpkin patch', 'weekend concessions', 'farm photo spots', 'Laity South', 'Maple Ridge',
+    ],
+  },
 ];
 
 // Spots rendered by the shared SpotDetailScreen.
@@ -36,6 +69,10 @@ const detailedFallSpots = [
   // ---------------------------------------------------------------- Pumpkin Patches & Harvest Farms
   {
     placeID: 'richmond_country_farms',
+    searchTags: [
+      'pumpkin picking', 'tractor wagon ride', 'farm market', 'live music', 'food trucks',
+      'farm animals', 'harvest farm', 'family outing', 'pumpkin field', 'Richmond',
+    ],
     category: PATCHES,
     name: 'Richmond Country Farms',
     address: '12900 Steveston Hwy, Richmond',
@@ -52,6 +89,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'westham_island_herb_farm',
+    searchTags: [
+      'pumpkin picking', 'scarecrow displays', 'sunflower lane', 'free fall outing', 'produce stand',
+      'Pumpkintown', 'fall photo spots', 'farm grown vegetables', 'Ladner', 'Delta',
+    ],
     category: PATCHES,
     name: 'Westham Island Herb Farm',
     address: '4690 Kirkland Rd, Delta',
@@ -68,6 +109,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'hazelmere_pumpkin_patch',
+    searchTags: [
+      'pumpkin picking', 'tractor wagon ride', 'mini corn maze', 'farm animals', 'vintage firetruck',
+      'kids play area', 'pumpkin varieties', 'family farm outing', 'harvest farm', 'South Surrey',
+    ],
     category: PATCHES,
     name: 'Hazelmere Pumpkin Patch',
     address: '18507 20 Ave, Surrey',
@@ -84,6 +129,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'bog_riverside_cranberry',
+    searchTags: [
+      'cranberry plunge', 'flooded cranberry bog', 'berry harvest', 'self guided audio tour', 'wading in cranberries',
+      'floating berries', 'wet harvest', 'farm photography', 'Riverside Cranberry Farm', 'Langley',
+    ],
     category: PATCHES,
     name: 'The Bog Cranberry Farm',
     address: '26885 88 Ave, Langley',
@@ -100,6 +149,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'hopcott_farms',
+    searchTags: [
+      'cranberry plunge', 'cranberry bog', 'wader photos', 'berry harvest', 'agritourism',
+      'guided farm tour', 'farm bistro', 'wet harvest', 'fall farm outing', 'Pitt Meadows',
+    ],
     category: PATCHES,
     name: 'Hopcott Farms Cranberry Tours',
     address: '18385 Old Dewdney Trunk Rd, Pitt Meadows',
@@ -116,6 +169,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'maan_farms',
+    searchDescription: 'A fall fair with a forest pumpkin patch, two corn mazes, live entertainment and a zip line. The Halloween Fright Festival adds haunted attractions after dark.',
+    searchTags: [
+      'pumpkin picking', 'haunted houses', 'scary attractions', 'haunted corn maze', 'forest pumpkin patch',
+      'Halloween Fright Festival', 'zip line', 'illuminated pumpkins', 'midway rides', 'Abbotsford',
+    ],
     category: PATCHES,
     name: 'Maan Farms',
     address: '790 McKenzie Rd, Abbotsford',
@@ -133,6 +191,10 @@ const detailedFallSpots = [
 
   {
     placeID: 'taves_family_farms',
+    searchTags: [
+      'apple picking', 'pumpkin patch', 'pumpkin picking', 'corn mazes', 'apple cider tasting',
+      'petting barn', 'jumping pillows', 'giant slide', 'Magic of Fall', 'Abbotsford',
+    ],
     category: PATCHES,
     name: 'Taves Family Farms',
     address: '333 Gladwin Rd, Abbotsford',
@@ -149,6 +211,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'krause_berry_farms',
+    searchDescription: 'Explore the pumpkin patch and barley maze, take a tractor ride, and browse squash and gourds at the market.',
+    searchTags: [
+      'pumpkin picking', 'barley maze', 'tractor rides', 'fresh baked pies', 'waffle bar',
+      'estate winery', 'farm bakery', 'squash and gourds', 'produce market', 'Langley',
+    ],
     category: PATCHES,
     name: 'Krause Berry Farms',
     address: '6179 248 St, Langley',
@@ -165,6 +232,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'willow_view_farms',
+    searchTags: [
+      'apple picking', 'u pick orchard', 'giant pumpkin patch', 'apple cider slushies', 'farm animals',
+      'country store', 'Honeycrisp apples', 'pumpkin varieties', 'Big Red Barn', 'Abbotsford',
+    ],
     category: PATCHES,
     name: 'Willow View Farms',
     address: '288 McCallum Rd, Abbotsford',
@@ -182,6 +253,10 @@ const detailedFallSpots = [
   // ---------------------------------------------------------------- Festivals & Gardens
   {
     placeID: 'fort_langley_cranberry_festival',
+    searchTags: [
+      'Thanksgiving weekend', 'cranberry preserves', 'street festival', 'pancake breakfast', 'artisan vendors',
+      'live performances', 'face painting', 'cranberry stomping', 'scarecrow competition', 'Fort Langley',
+    ],
     category: FESTIVALS,
     name: 'Fort Langley Cranberry Festival',
     address: '9167 Glover Rd, Fort Langley',
@@ -198,6 +273,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'ubc_botanical_garden',
+    searchTags: [
+      'apple tasting', 'apple varieties', 'warm apple cider', 'forest canopy walkway', 'GreenHeart TreeWalk',
+      'botanical garden', 'live entertainment', 'orchard fruit', 'University of British Columbia', 'Vancouver',
+    ],
     category: FESTIVALS,
     name: 'UBC Apple Festival',
     address: '6804 SW Marine Dr, Vancouver',
@@ -214,6 +293,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'vandusen_harvest_days',
+    searchTags: [
+      'pumpkin displays', 'corn maze', 'hay bales', 'live bluegrass', 'lawn games',
+      'face painting', 'food trucks', 'sculpture stroll', 'autumn foliage', 'Vancouver',
+    ],
     category: FESTIVALS,
     name: 'VanDusen Harvest Days',
     address: '5251 Oak St, Vancouver',
@@ -230,6 +313,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'nitobe_memorial_garden',
+    searchTags: [
+      'Japanese garden', 'maple leaves', 'fall foliage', 'tea house', 'reflecting ponds',
+      'garden stroll', 'moss garden', 'leaf peeping', 'University of British Columbia', 'Vancouver',
+    ],
     category: FESTIVALS,
     name: 'Nitobe Memorial Garden',
     address: '1895 Lower Mall, Vancouver',
@@ -246,6 +333,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'sun_yat_sen_garden',
+    searchTags: [
+      'Mid Autumn Festival', 'Chinese garden', 'floating lanterns', 'lion dance', 'mooncakes',
+      'lantern riddles', 'traditional music', 'Jade Pond', 'Chinatown', 'Vancouver',
+    ],
     category: FESTIVALS,
     name: 'Sun Yat-Sen Garden Moon Palace',
     address: '578 Carrall St, Vancouver',
@@ -263,6 +354,10 @@ const detailedFallSpots = [
 
   {
     placeID: 'darts_hill_garden',
+    searchTags: [
+      'scarecrow stroll', 'heritage garden', 'fall open house', 'ikebana', 'flower arranging',
+      'garden paths', 'pasture walk', 'live music', 'early autumn outing', 'South Surrey',
+    ],
     category: FESTIVALS,
     name: 'Darts Hill Garden Park',
     address: '1633 170 St, Surrey',
@@ -279,6 +374,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'vandusen_mushroom_show',
+    searchTags: [
+      'fungi exhibit', 'wild mushrooms', 'mushroom identification', 'mycology', 'expert talks',
+      'local art', 'autumn exhibition', 'Floral Hall', 'botanical garden event', 'Vancouver',
+    ],
     category: FESTIVALS,
     name: 'VanDusen Mushroom Show',
     address: '5151 Oak St, Vancouver',
@@ -295,6 +394,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'stewart_farm_harvest_fair',
+    searchTags: [
+      'heritage farm', 'harvest celebration', 'historical reenactors', 'storytelling', 'live music',
+      'artisan market', 'hands on activities', 'food trucks', 'Indigenous Learning House', 'South Surrey',
+    ],
     category: FESTIVALS,
     name: 'Stewart Farm Harvest Fair',
     address: '13723 Crescent Rd, Surrey',
@@ -311,6 +414,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'renfrew_ravine_moon_festival',
+    searchTags: [
+      'harvest moon', 'lantern procession', 'illuminated art', 'vegetable contest', 'community festival',
+      'artisan booths', 'live music', 'Streamside Lanterns', 'Slocan Park', 'East Vancouver',
+    ],
     category: FESTIVALS,
     name: 'Renfrew Ravine Moon Festival',
     address: '2750 E 29th Ave, Vancouver',
@@ -328,6 +435,11 @@ const detailedFallSpots = [
   // ---------------------------------------------------------------- Halloween & After Dark
   {
     placeID: 'burnaby_haunted_village',
+    searchDescription: 'The open-air heritage museum dresses up after dark for a family Halloween outing with a haunted graveyard, spooky circus, dramatic lighting and shadow puppets.',
+    searchTags: [
+      'family friendly Halloween', 'spooky village', 'haunted graveyard', 'shadow puppets', 'heritage museum',
+      'costume outing', 'spooky circus', 'Halloween treats', 'trick or treating', 'Burnaby',
+    ],
     category: HALLOWEEN,
     name: 'Burnaby Haunted Village',
     address: '6501 Deer Lake Ave, Burnaby',
@@ -344,6 +456,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'playland_fright_nights',
+    searchTags: [
+      'haunted houses', 'scary attractions', 'scream park', 'amusement park rides', 'live scare actors',
+      'haunted mansion', 'Halloween night', 'jump scares', 'PNE', 'Vancouver',
+    ],
     category: HALLOWEEN,
     name: 'Fright Nights at Playland',
     address: '2901 E Hastings St, Vancouver',
@@ -360,6 +476,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'capilano_canyon_frights',
+    searchTags: [
+      'family friendly Halloween', 'suspension bridge', 'illuminated forest', 'spooky scavenger hunt', 'glowing mushrooms',
+      'giant spiders', 'treetop walk', 'skeleton displays', 'live music', 'North Vancouver',
+    ],
     category: HALLOWEEN,
     name: 'Canyon Frights at Capilano',
     address: '3735 Capilano Rd, North Vancouver',
@@ -377,6 +497,10 @@ const detailedFallSpots = [
 
   {
     placeID: 'lost_souls_gastown',
+    searchTags: [
+      'spooky walking tour', 'ghost stories', 'outdoor theatre', 'historical reenactment', 'lantern lit walk',
+      'dark history', 'Great Fire of 1886', 'Maple Tree Square', 'Gastown', 'Vancouver',
+    ],
     category: HALLOWEEN,
     name: 'Lost Souls of Gastown',
     address: '356 Water St, Vancouver',
@@ -393,6 +517,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'haunted_halloween_trolley',
+    searchTags: [
+      'spooky trolley ride', 'ghost stories', 'after dark sightseeing', 'haunted history tour', 'cemetery stories',
+      'Lady in Red', 'Halloween storytelling', 'Shaughnessy mansions', 'Canada Place', 'Vancouver',
+    ],
     category: HALLOWEEN,
     name: 'Haunted Halloween Trolley',
     address: '999 Canada Place, Vancouver',
@@ -409,6 +537,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'bear_creek_halloween_train',
+    searchTags: [
+      'pumpkin train', 'scream train', 'scary attractions', 'jump scares', 'miniature railway',
+      'costumed scare actors', 'decorated forest', 'family Halloween train', 'Halloween night ride', 'Surrey',
+    ],
     category: HALLOWEEN,
     name: 'Bear Creek Halloween Train',
     address: '13750 88 Ave, Surrey',
@@ -425,6 +557,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'cougar_creek_house_of_horrors',
+    searchTags: [
+      'haunted houses', 'scary attractions', 'jump scares', 'live scare actors', 'animatronics',
+      'Halloween night', 'Abomination haunt', 'Sinneraria haunt', 'Horrors Jr', 'Surrey',
+    ],
     category: HALLOWEEN,
     name: 'Cougar Creek House of Horrors',
     address: '12530 72 Ave, Surrey',
@@ -441,6 +577,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'grave_tales_fort_langley',
+    searchDescription: 'Spooky guided Halloween walks through the historic fort after dark range from a family youth tour to Descent into Darkness.',
+    searchTags: [
+      'ghost stories', 'scary tours', 'haunted history', 'guided night walk', 'historical storytelling',
+      'historic fort', 'Descent into Darkness', 'October ghost tour', 'youth Halloween tour', 'Fort Langley',
+    ],
     category: HALLOWEEN,
     name: 'Grave Tales at Fort Langley',
     address: '23433 Mavis Ave, Fort Langley',
@@ -458,6 +599,10 @@ const detailedFallSpots = [
   // ---------------------------------------------------------------- Salmon & Wildlife
   {
     placeID: 'tynehead_hatchery',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'chinook salmon', 'coho salmon',
+      'chum salmon', 'Serpentine River', 'Salmon Habitat Loop', 'creekside nature walk', 'Surrey',
+    ],
     category: WILDLIFE,
     name: 'Tynehead Hatchery',
     address: '16585 96 Ave, Surrey',
@@ -474,6 +619,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'hoy_creek_hatchery',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'coho salmon', 'chum salmon',
+      'Salmon Come Home', 'creekside trail', 'Hoy Creek Linear Park', 'Lafarge Lake SkyTrain', 'Coquitlam',
+    ],
     category: WILDLIFE,
     name: 'Hoy Creek Hatchery',
     address: '2985 Princess Cres, Coquitlam',
@@ -490,6 +639,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'reifel_bird_sanctuary',
+    searchDescription: 'Coastal trails and a lookout tower overlooking ocean marshes. Migratory waterfowl gather here in fall, including snow geese.',
+    searchTags: [
+      'birdwatching', 'snow geese', 'migratory birds', 'waterfowl', 'coastal marsh',
+      'lookout tower', 'wetland trails', 'wildlife photography', 'Westham Island', 'Delta',
+    ],
     category: WILDLIFE,
     name: 'Reifel Bird Sanctuary',
     address: '5191 Robertson Rd, Delta',
@@ -507,6 +661,10 @@ const detailedFallSpots = [
 
   {
     placeID: 'kanaka_creek_fish_fence',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'coho salmon', 'chum salmon',
+      'Bell Irving Hatchery', 'creekside wildlife', 'Canyon Trail', 'Cliff Falls', 'Maple Ridge',
+    ],
     category: WILDLIFE,
     name: 'Kanaka Creek Fish Fence',
     address: '11450 256 St, Maple Ridge',
@@ -523,6 +681,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'wings_over_iona',
+    searchDescription: 'A fall migration festival at Iona Beach with bird banding, live raptors and trails around the ponds.',
+    searchTags: [
+      'birdwatching', 'bird banding', 'live raptors', 'fall migration', 'shorebirds',
+      'songbirds', 'waterfowl', 'pondside trails', 'Iona Beach', 'Richmond',
+    ],
     category: WILDLIFE,
     name: 'Wings Over Iona',
     address: 'Ferguson Rd, Richmond',
@@ -540,6 +703,11 @@ const detailedFallSpots = [
   // ---------------------------------------------------------------- Fall Colour Walks
   {
     placeID: 'buntzen_lake',
+    searchDescription: 'A BC Hydro recreation area in Anmore with a beach, picnic tables and lake trails past evergreens and shoreline maples that turn colour in fall.',
+    searchTags: [
+      'lakeside hike', 'fall foliage', 'shoreline maples', 'leaf peeping', 'lake loop trail',
+      'lakeside picnic', 'South Beach', 'forest viewpoints', 'off leash dog area', 'Anmore',
+    ],
     category: COLOUR,
     name: 'Buntzen Lake',
     address: 'South Beach, Anmore',
@@ -556,6 +724,11 @@ const detailedFallSpots = [
   },
   {
     placeID: 'queen_elizabeth_park',
+    searchDescription: 'Walk through the red foliage in Quarry Garden, then take in the city skyline and mountain views from Vancouver’s highest viewpoint.',
+    searchTags: [
+      'fall foliage', 'Quarry Garden', 'city skyline viewpoint', 'mountain views', 'leaf peeping',
+      'Bloedel Conservatory', 'rainy day outing', 'garden stroll', 'autumn photography', 'Vancouver',
+    ],
     category: COLOUR,
     name: 'Queen Elizabeth Park',
     address: '4600 Cambie St, Vancouver',
@@ -572,6 +745,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'pacific_spirit_park',
+    searchTags: [
+      'fall foliage', 'bigleaf maples', 'forest hike', 'Admiralty Trail', 'Spanish Banks',
+      'forest to beach walk', 'dog walking trails', 'leaf peeping', 'evergreen forest', 'Vancouver',
+    ],
     category: COLOUR,
     name: 'Pacific Spirit Park',
     address: 'Park Centre, W 16th Ave, Vancouver',
@@ -588,6 +765,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'stanley_park_fall_walk',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'seawall stroll', 'waterfront walking', 'Lost Lagoon',
+      'Brockton Point', 'totem poles', 'autumn photography', 'West End', 'Vancouver',
+    ],
     category: COLOUR,
     name: 'Stanley Park',
     address: 'Lost Lagoon, Vancouver',
@@ -604,6 +785,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'deer_lake_park',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'lakeside boardwalk', 'lake loop walk', 'autumn reflections',
+      'Japanese maples', 'Eagles Estate Heritage Garden', 'waterfront photography', 'morning stroll', 'Burnaby',
+    ],
     category: COLOUR,
     name: 'Deer Lake Park',
     address: '6450 Deer Lake Ave, Burnaby',
@@ -620,6 +805,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'campbell_valley_park',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'Little River Loop', 'wooden boardwalks', 'fall picnic',
+      'horse trails', 'Shaggy Mane Trail', 'Little Campbell River', 'Perimeter Trail', 'Langley',
+    ],
     category: COLOUR,
     name: 'Campbell Valley Park',
     address: 'South Valley Entrance, 8 Ave, Langley',
@@ -636,6 +825,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'ubc_main_mall',
+    searchTags: [
+      'fall foliage', 'red oak avenue', 'campus stroll', 'leaf peeping', 'golden leaves',
+      'crimson trees', 'autumn photography', 'tree lined boulevard', 'University of British Columbia', 'Vancouver',
+    ],
     category: COLOUR,
     name: 'UBC Main Mall',
     address: 'Main Mall, UBC, Vancouver',
@@ -652,6 +845,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'trout_lake',
+    searchTags: [
+      'fall foliage', 'lakeside loop', 'mountain reflections', 'farmers market', 'John Hendry Park',
+      'European beech', 'leaf peeping', 'autumn photography', 'Commercial Drive area', 'East Vancouver',
+    ],
     category: COLOUR,
     name: 'Trout Lake',
     address: '3300 Victoria Dr, Vancouver',
@@ -668,6 +865,10 @@ const detailedFallSpots = [
   },
   {
     placeID: 'burnaby_mountain_park',
+    searchTags: [
+      'fall foliage', 'early autumn colour', 'Panorama Trail', 'Burrard Inlet viewpoint', 'Kamui Mintara',
+      'Playground of the Gods', 'leaf peeping', 'hilltop lookout', 'scenic drive', 'Burnaby',
+    ],
     category: COLOUR,
     name: 'Burnaby Mountain Park',
     address: '100 Centennial Way, Burnaby',
@@ -689,7 +890,11 @@ const fallCategories = fallCategoryTitles.map(title => ({
   title,
   spots: [...legacyFallSpots, ...detailedFallSpots]
     .filter(spot => spot.category === title)
-    .map(({ name, address, latitude, longitude, tagline }) => ({ name, address, latitude, longitude, tagline })),
+    .map(({ name, title, address, detailAddress, latitude, longitude, tagline, about, searchDescription, searchTags }) => ({
+      name, title, address, detailAddress, latitude, longitude, tagline, searchTags,
+      // The lead description covers the venue itself. The About section also includes logistics and nearby venues.
+      description: searchDescription ?? [tagline, about?.[0]].filter(Boolean).join(' '),
+    })),
 }));
 
 const fallSpotNames = fallCategories.flatMap(category => category.spots.map(spot => spot.name));

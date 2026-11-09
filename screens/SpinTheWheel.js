@@ -32,6 +32,8 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 // Importing LottieView for animations.
 import LottieView from "lottie-react-native"; // Import LottieView
 import BackgroundLottie from "../components/BackgroundLottie";
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { getReduceMotion } from "../hooks/useReduceMotion";
 
 // Importing Lottie animations statically.
@@ -111,6 +113,7 @@ const settle = (value, toValue, delay = 0) => Animated.timing(value, {
 });
 
 const SpinTheWheel = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContainer);
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
 
@@ -494,7 +497,7 @@ const SpinTheWheel = () => {
   /* ================================ RENDERING ================================ */
   // Render the main UI of the SpinTheWheel component.
   return (
-    <View style={styles.mainContainer}>
+    <SignedInScreen style={styles.mainContainer}>
       {/* ================================ BACKGROUND COLOR VIEW ================================ */}
       {/* Background Color View */}
       <View style={styles.backgroundColorView} />
@@ -511,7 +514,7 @@ const SpinTheWheel = () => {
       )}
       {/* ================================ SCROLLABLE CONTENT ================================ */}
       {/* Scrollable Content Container */}
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContainer}>
+      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         {/* ================================ GREETING TEXT ================================ */}
         {/* Animated Greeting Text */}
         <Animated.View
@@ -703,7 +706,7 @@ const SpinTheWheel = () => {
           </>
         )}
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 

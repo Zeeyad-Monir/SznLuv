@@ -3,7 +3,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function BackButton({ onPress, label = 'Back', tintColor = '#FFFFFF', disabled = false, style }) {
+export default function BackButton({ onPress, label = 'Back', tintColor = '#FFFFFF', iconSize = 32, disabled = false, style }) {
   return (
     <TouchableOpacity
       style={[styles.button, style]}
@@ -12,7 +12,7 @@ export default function BackButton({ onPress, label = 'Back', tintColor = '#FFFF
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name="chevron-back" size={32} color={tintColor} />
+      <Ionicons name="chevron-back" size={iconSize} color={tintColor} />
     </TouchableOpacity>
   );
 }

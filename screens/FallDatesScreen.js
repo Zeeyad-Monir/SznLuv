@@ -1,6 +1,8 @@
 import { toggleSavedSpot, updateCollection } from '../services/favourites';
 import { openVenue } from '../services/venueNavigation';
 import { openCollectionPicker } from '../services/collectionPicker';
+import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 import useSpotDiscovery from '../hooks/useSpotDiscovery';
 import SpotDiscoveryControls, { SpotEmptyState } from '../components/SpotDiscoveryControls';
@@ -24,7 +26,12 @@ import { AuthContext } from '../contexts/AuthContext';
 import BackgroundLottie from '../components/BackgroundLottie';
 import fallingLeaves from '../assets/fallingLeaves.json';
 
+const searchConfig = { rankSearch: true };
+
 export default function FallDatesScreen({ navigation }) {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
+  const navClearance = useFloatingNavClearance();
+  const notificationBottom = Math.max(styles.successNotification.bottom, navClearance);
   const { user } = useContext(AuthContext);
   const [favorites, setFavorites] = useState({});
 
@@ -40,7 +47,7 @@ export default function FallDatesScreen({ navigation }) {
 
   // The header and each category section ease in together; the push itself carries the page.
   const entrance = useEntrance(1 + categories.length);
-  const discovery = useSpotDiscovery('fall', categories);
+  const discovery = useSpotDiscovery('fall', categories, searchConfig);
 
   useEffect(() => {
     if (!user) return;
@@ -98,7 +105,7 @@ export default function FallDatesScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       <BackgroundLottie
         source={fallingLeaves}
         style={styles.leavesAnimation}
@@ -110,7 +117,7 @@ export default function FallDatesScreen({ navigation }) {
         <SpotDiscoveryControls discovery={discovery} />
       </Animated.View>
 
-      <ScrollView ref={discovery.listRef} contentContainerStyle={styles.contentContainer}
+      <ScrollView ref={discovery.listRef} contentContainerStyle={floatingScrollStyle}
         keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         {discovery.count === 0 && <SpotEmptyState discovery={discovery} />}
         {discovery.sections.map(category => (
@@ -173,7 +180,7 @@ export default function FallDatesScreen({ navigation }) {
       {/* "Choose Collection" notification styled identically to success notification */}
       {showChooseCollectionNotification && (
         <TouchableOpacity
-          style={styles.successNotification}
+          style={[styles.successNotification, { bottom: notificationBottom }]}
           onPress={handleChooseCollectionPress}
           accessibilityLabel="Choose Collection"
           accessibilityRole="button"
@@ -184,12 +191,12 @@ export default function FallDatesScreen({ navigation }) {
 
       {/* Success Notification */}
       {showSuccessNotification && (
-        <View style={styles.successNotification}>
+        <View style={[styles.successNotification, { bottom: notificationBottom }]}>
           <Text style={styles.successNotificationText}>Added to Collection</Text>
         </View>
       )}
 
-    </View>
+    </SignedInScreen>
   );
 }
 

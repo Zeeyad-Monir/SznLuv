@@ -1,15 +1,16 @@
-// The app's top bar, used as the tab bar for the four main sections so it stays still while pages slide beneath it.
+// One stationary header above the signed-in sections and their nested pages.
 import React, { useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Text, StatusBar, Animated, Dimensions } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Text, StatusBar, Animated } from 'react-native';
 import { StackActions } from '@react-navigation/native';
 import BackButton from './BackButton';
-import { getReduceMotion } from '../hooks/useReduceMotion';
+import useReduceMotion from '../hooks/useReduceMotion';
+import pressTab from '../navigation/pressTab';
 
-const ICON_SECTIONS = [
-  { route: 'FavouritesTab', label: 'Favourites', image: require('../assets/FAVOURITES.png') },
-  { route: 'SpinTab', label: 'Spin the Wheel', image: require('../assets/SPINTHEWHEEL.png') },
-  { route: 'ProfileTab', label: 'Profile', image: require('../assets/PROFILE.png') },
-];
+const CHARCOAL = '#333333';
+const ROW_HEIGHT = 44;
+const BOTTOM_PADDING = 8;
+const getTopPadding = topInset => Math.max(65, topInset + 3);
+export const getMinimumNavBarHeight = topInset => getTopPadding(topInset) + ROW_HEIGHT + BOTTOM_PADDING;
 
 // What the back button names for VoiceOver. Only pages that can have a page above them are listed.
 const PARENT_TITLES = {
@@ -26,34 +27,32 @@ const PARENT_TITLES = {
 };
 
 // Room for the back chevron beside the title; the bar's other contents don't move.
-const TITLE_SHIFT = 26;
-const COMPACT = Dimensions.get('window').width < 360;
+const TITLE_SHIFT = 32;
 const BACK_LOCK_MS = 400;
 
-export default function NavBar({ state, navigation, insets }) {
+export default function NavBar({ state, navigation, insets, onLayout }) {
   const section = state.routes[state.index].state;
   const depth = section?.index ?? 0;
   const canGoBack = depth > 0;
   const parentTitle = canGoBack ? PARENT_TITLES[section.routes[depth - 1]?.name] : undefined;
 
+  const reduceMotion = useReduceMotion();
   const backProgress = useRef(new Animated.Value(canGoBack ? 1 : 0)).current;
   const lastBackPress = useRef(0);
 
   useEffect(() => {
-    Animated.timing(backProgress, {
+    if (reduceMotion) {
+      backProgress.setValue(canGoBack ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(backProgress, {
       toValue: canGoBack ? 1 : 0,
-      duration: getReduceMotion() ? 0 : 220,
+      duration: 180,
       useNativeDriver: true,
-    }).start();
-  }, [canGoBack]);
-
-  const pressSection = (routeName) => {
-    const route = state.routes.find(candidate => candidate.name === routeName);
-    const alreadyHere = state.routes[state.index].key === route.key;
-    // tabPress lets the section's stack return to its start and its list scroll to top on a re-tap.
-    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-    if (!alreadyHere && !event.defaultPrevented) navigation.navigate(route.name);
-  };
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [backProgress, canGoBack, reduceMotion]);
 
   const goBack = () => {
     const now = Date.now();
@@ -62,20 +61,24 @@ export default function NavBar({ state, navigation, insets }) {
     navigation.dispatch({ ...StackActions.pop(1), target: section.key });
   };
 
-  const paddingTop = Math.max(65, insets.top + 3);
-  const homeSelected = state.routes[state.index].name === 'HomeTab';
+  const activeRoute = state.routes[state.index].name;
 
   return (
-    <View style={[styles.bar, { paddingTop, height: paddingTop + 65 }]}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.row}>
+    <View pointerEvents="box-none" onLayout={onLayout} style={[styles.bar, {
+      paddingTop: getTopPadding(insets.top),
+      paddingLeft: insets.left + 20,
+      paddingRight: insets.right + 20,
+      minHeight: getMinimumNavBarHeight(insets.top),
+    }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <View pointerEvents="box-none" style={styles.row}>
         <Animated.View
           style={[styles.back, { opacity: backProgress }]}
           pointerEvents={canGoBack ? 'auto' : 'none'}
           accessibilityElementsHidden={!canGoBack}
           importantForAccessibility={canGoBack ? 'auto' : 'no-hide-descendants'}
         >
-          <BackButton onPress={goBack} label={parentTitle ? `Back to ${parentTitle}` : 'Back'} />
+          <BackButton onPress={goBack} label={parentTitle ? `Back to ${parentTitle}` : 'Back'} tintColor={CHARCOAL} iconSize={28} />
         </Animated.View>
 
         <Animated.View
@@ -83,28 +86,26 @@ export default function NavBar({ state, navigation, insets }) {
         >
           <TouchableOpacity
             style={styles.titleButton}
-            onPress={() => pressSection('HomeTab')}
+            onPress={() => pressTab(state, navigation, 'HomeTab')}
             accessibilityRole="tab"
             accessibilityLabel="SznLuv Home"
-            accessibilityState={{ selected: homeSelected }}
+            accessibilityState={{ selected: activeRoute === 'HomeTab' }}
           >
             <Text style={styles.title}>SznLuv</Text>
           </TouchableOpacity>
         </Animated.View>
 
-        <View style={[styles.icons, COMPACT && styles.iconsCompact]}>
-          {ICON_SECTIONS.map(({ route, label, image }) => (
-            <TouchableOpacity
-              key={route}
-              onPress={() => pressSection(route)}
-              accessibilityRole="tab"
-              accessibilityLabel={label}
-              accessibilityState={{ selected: state.routes[state.index].name === route }}
-            >
-              <Image source={image} style={[styles.icon, COMPACT && styles.iconCompact]} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => pressTab(state, navigation, 'ProfileTab')}
+          accessibilityRole="tab"
+          accessibilityLabel="Profile"
+          accessibilityState={{ selected: activeRoute === 'ProfileTab' }}
+        >
+          <View style={[styles.profileBadge, activeRoute === 'ProfileTab' && styles.profileSelected]}>
+            <Image source={require('../assets/PROFILE.png')} style={styles.profileIcon} />
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -112,12 +113,15 @@ export default function NavBar({ state, navigation, insets }) {
 
 const styles = StyleSheet.create({
   bar: {
-    width: '100%',
-    backgroundColor: '#333333',
-    paddingHorizontal: 20,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    paddingBottom: BOTTOM_PADDING,
   },
   row: {
-    height: 45,
+    minHeight: ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -129,28 +133,36 @@ const styles = StyleSheet.create({
   },
   titleButton: {
     minHeight: 44,
+    minWidth: 44,
     justifyContent: 'center',
   },
   title: {
-    color: '#FFFFFF',
-    fontSize: 32,
+    color: CHARCOAL,
+    fontSize: 29,
     fontWeight: 'bold',
   },
-  icons: {
-    flexDirection: 'row',
+  profileButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: 15,
+    justifyContent: 'center',
   },
-  iconsCompact: {
-    gap: 8,
-  },
-  icon: {
-    width: 45,
-    height: 45,
-    resizeMode: 'contain',
-  },
-  iconCompact: {
+  profileBadge: {
     width: 38,
     height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8EDD9',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileSelected: {
+    borderColor: '#B59B75',
+  },
+  profileIcon: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
   },
 });

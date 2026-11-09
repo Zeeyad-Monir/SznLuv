@@ -20,6 +20,8 @@ import {
 
 // Importing navigation hook to navigate between screens
 import { useNavigation } from '@react-navigation/native';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 
 // =========================
@@ -41,14 +43,15 @@ const COVER_IMAGE_OPACITY = 0.9;
  * which opens the SeasonsScreen with the four seasonal date lists.
  */
 export default function VancouverScreen() {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
 
   const entrance = useEntrance(1);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SignedInScreen style={styles.container}>
+      <ScrollView contentContainerStyle={floatingScrollStyle}>
         {/* Heading */}
         <View style={styles.headingContainer}>
           <Text style={styles.subtext}>Vancouver</Text>
@@ -85,7 +88,7 @@ export default function VancouverScreen() {
           <View style={{ height: 20 }} />
         </View>
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 }
 

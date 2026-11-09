@@ -30,6 +30,8 @@ import MapView, { Marker } from 'react-native-maps';
 
 // Import MapViewDirections for displaying route directions on the map
 import MapViewDirections from 'react-native-maps-directions';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useVenueWeather from '../hooks/useVenueWeather';
 import { legacyFallSpots } from '../services/spots';
 import useEntrance from '../hooks/useEntrance';
@@ -62,6 +64,7 @@ const { latitude: farmLatitude, longitude: farmLongitude } =
  * It handles location permissions and provides interactive animations.
  */
 const EagleAcresDairy = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
   // =========================
   // CONTEXT ACCESS SECTION
   // =========================
@@ -201,9 +204,9 @@ const EagleAcresDairy = () => {
   // =========================
 
   return (
-    <View style={styles.container}>
+    <SignedInScreen style={styles.container}>
       {/* ------------------ MAIN SCROLLABLE CONTENT ------------------ */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={floatingScrollStyle}>
         {/* ------------------ WEATHER REPORT SECTION ------------------ */}
         {weatherData ? (
           <Animated.View
@@ -395,7 +398,7 @@ const EagleAcresDairy = () => {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 

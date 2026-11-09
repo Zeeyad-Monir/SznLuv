@@ -20,9 +20,14 @@ import { db } from "../firebaseConfig";
 import { AuthContext } from '../contexts/AuthContext';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { getReduceMotion } from "../hooks/useReduceMotion";
 
 const CustomCollectionScreen = () => {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
+  const navClearance = useFloatingNavClearance();
+  const notificationBottom = Math.max(styles.notificationContainer.bottom, navClearance);
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
@@ -132,18 +137,19 @@ const CustomCollectionScreen = () => {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: collection.color }]}>
+      <SignedInScreen style={[styles.loadingContainer, { backgroundColor: collection.color }]}>
         <ActivityIndicator size="large" color="#000" />
-      </View>
+      </SignedInScreen>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: collection.color }]}>
+    <SignedInScreen style={[styles.container, { backgroundColor: collection.color }]}>
       {notificationMessage !== '' && (
         <Animated.View
           style={[
             styles.notificationContainer,
+            { bottom: notificationBottom },
             {
               opacity: notificationOpacity,
               transform: [{ translateY: notificationTranslateY }],
@@ -154,7 +160,7 @@ const CustomCollectionScreen = () => {
         </Animated.View>
       )}
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
+      <ScrollView contentContainerStyle={floatingScrollStyle}>
         <Text style={styles.title}>{collection.title}</Text>
         <Text style={styles.subtitle}>Your favorited spots:</Text>
 
@@ -173,7 +179,7 @@ const CustomCollectionScreen = () => {
           </Text>
         )}
       </ScrollView>
-    </View>
+    </SignedInScreen>
   );
 };
 
