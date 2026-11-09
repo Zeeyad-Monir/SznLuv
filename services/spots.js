@@ -1,7 +1,7 @@
 // Fall spot data for the season list, venue pages, favourites and the wheel.
 // Plain CommonJS (no React, no assets) so it can be unit-tested directly.
 //
-// Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03; ten more added 2026-11-09).
+// Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03; twenty more added 2026-11-09).
 // Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
 //
 // Two kinds of spots:
@@ -277,6 +277,54 @@ const detailedFallSpots = [
       'Good to know: In 2026 the garden was open Friday to Sunday from 10 am to 4 pm until September 27, so go early in the season. The Scarecrow Stroll ran September 4 to 27 and the free fall open house was on September 19. General admission has been by donation, so bring cash because there is no nearby ATM. Dates change each year, so check before you go.',
     ],
   },
+  {
+    placeID: 'vandusen_mushroom_show',
+    category: FESTIVALS,
+    name: 'VanDusen Mushroom Show',
+    address: '5151 Oak St, Vancouver',
+    title: 'Fall Mushroom Show at VanDusen',
+    detailAddress: '5151 Oak St, Vancouver, BC',
+    latitude: 49.23907,
+    longitude: -123.13460,
+    tagline: 'Wild mushroom displays, expert IDs, and vendors!',
+    about: [
+      "Every fall, the Vancouver Mycological Society holds its annual mushroom show in VanDusen's Floral Hall and Cedar Room. Past shows have featured mushroom identification, presentations, local art, and vendors.",
+      'It lasts just one day and makes an unusual autumn date. Pair it with a walk through the garden while the leaves are turning.',
+      'Good to know: In 2026 the show ran on October 25 from 10 am to 5 pm, by donation. VanDusen garden admission is separate. In 2024 show admission was $5 and kids under 12 were free. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'stewart_farm_harvest_fair',
+    category: FESTIVALS,
+    name: 'Stewart Farm Harvest Fair',
+    address: '13723 Crescent Rd, Surrey',
+    title: 'Harvest Fair at Historic Stewart Farm',
+    detailAddress: '13723 Crescent Rd, Surrey, BC',
+    latitude: 49.06507,
+    longitude: -122.84202,
+    tagline: 'A free harvest celebration at a heritage farm!',
+    about: [
+      'Historic Stewart Farm celebrates the harvest each September with a free fair, co-hosted in 2026 with Totest Aleng: Indigenous Learning House. Expect live music, storytelling, heritage re-enactors, and hands-on activities.',
+      'More than 24 market vendors and a few food trucks make it an easy afternoon out at the farm in South Surrey.',
+      'Good to know: In 2026 the fair ran on September 19 from noon to 4 pm, with free admission. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'renfrew_ravine_moon_festival',
+    category: FESTIVALS,
+    name: 'Renfrew Ravine Moon Festival',
+    address: '2750 E 29th Ave, Vancouver',
+    title: 'Renfrew Ravine Moon Festival',
+    detailAddress: '2750 E 29th Ave, Vancouver, BC',
+    latitude: 49.24378,
+    longitude: -123.04752,
+    tagline: 'Giant lanterns and a twilight harvest procession!',
+    about: [
+      'This East Vancouver community festival honours the harvest moon with live music, giant lanterns, and illuminated art in and around Renfrew Ravine.',
+      'The main day starts with a Harvest Fair at Slocan Park, with artisan booths and a Harvest Veggie Contest. In the evening, a lantern procession leads from the fair to Streamside Lanterns at Renfrew Community Park.',
+      'Good to know: In 2026 the festival ran September 7 to 26. The Harvest Fair was on September 26 from 4 to 7 pm, followed by the 7 pm procession, and both were free with an RSVP appreciated. Some workshops cost extra and sold out early. Dates change each year, so check before you go.',
+    ],
+  },
   // ---------------------------------------------------------------- Halloween & After Dark
   {
     placeID: 'burnaby_haunted_village',
@@ -359,6 +407,54 @@ const detailedFallSpots = [
       'Good to know: In 2026 the tour ran on select dates from October 8 to November 1, with a 6 pm departure from 999 Canada Place, and lasted 2 to 2.5 hours. It is designed for ages 13 and up and uses flashing lights. Book ahead, because all sales are final. In 2025 tickets were from $37 for youth and $67 for adults. Dates and prices change each year, so check before you go.',
     ],
   },
+  {
+    placeID: 'bear_creek_halloween_train',
+    category: HALLOWEEN,
+    name: 'Bear Creek Halloween Train',
+    address: '13750 88 Ave, Surrey',
+    title: 'Bear Creek Halloween Train',
+    detailAddress: '13750 88 Ave, Surrey, BC',
+    latitude: 49.16235,
+    longitude: -122.84205,
+    tagline: 'A decorated forest by day, screams after dark!',
+    about: [
+      'Every October the train at Bear Creek Park goes Halloween. By day, the Pumpkin Train rolls through a decorated forest, and the ride includes a treat and a pumpkin.',
+      'After dark it becomes the Scream Train, with costumed actors and jump scares that are best for ages 12 and up. Pick the version that suits your date.',
+      'Good to know: In 2026 the Pumpkin Train ran October 1 to 31 from 10 am to 5 pm, and the Scream Train ran from mid-October through Halloween from 6 to 10 pm. Tickets were $12 for day trains and $18 for night trains, and children two and under were free. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'cougar_creek_house_of_horrors',
+    category: HALLOWEEN,
+    name: 'Cougar Creek House of Horrors',
+    address: '12530 72 Ave, Surrey',
+    title: "Cougar Creek's House of Horrors",
+    detailAddress: '12530 72 Ave, Surrey, BC',
+    latitude: 49.13400,
+    longitude: -122.87560,
+    tagline: 'Five haunted houses packed with live scares!',
+    about: [
+      "Cougar Creek's House of Horrors is a long-running Surrey Halloween tradition with five haunted houses, including Abomination, Sinneraria, and Astroparasitix. Expect live actors, animatronics, and plenty of jump scares.",
+      'It also collects food for the Surrey Food Bank. A gentler Horrors Jr. show with no actors runs on weekends for younger guests.',
+      'Good to know: In 2026 it ran on select nights in October through Halloween. Tickets were listed at $19.99 to $69.99 plus fees and sold online, and on-site parking was free. The main show is not recommended for children under 14, and anyone 13 and under needs an adult with them. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'grave_tales_fort_langley',
+    category: HALLOWEEN,
+    name: 'Grave Tales at Fort Langley',
+    address: '23433 Mavis Ave, Fort Langley',
+    title: 'Grave Tales at Fort Langley',
+    detailAddress: '23433 Mavis Ave, Fort Langley, BC',
+    latitude: 49.16763,
+    longitude: -122.57232,
+    tagline: 'Spooky after-dark tours of a historic fort!',
+    about: [
+      'Each October, Fort Langley National Historic Site opens after dark for Grave Tales, a set of Halloween tours. There are four to choose from, ranging from a youth tour for families to the intense Descent into Darkness.',
+      'It is a different kind of scare from a haunted house, set on real historic grounds. Choose the tour that matches how much of a fright you want.',
+      'Good to know: In 2026 Grave Tales ran October 16 to 31, mostly in the evenings, at about $25 to $45 per person depending on the tour. Pre-booking is required. Youth tours were for ages 8 and up, and adults had to register too. Dates and prices change each year, so check with Parks Canada before you go.',
+    ],
+  },
   // ---------------------------------------------------------------- Salmon & Wildlife
   {
     placeID: 'tynehead_hatchery',
@@ -423,6 +519,22 @@ const detailedFallSpots = [
       'Each fall, chum and coho salmon return up Kanaka Creek to the fish fence beside the Bell-Irving Hatchery, where they are counted and most are released to spawn. Mid-October to mid-November is usually the best time to see them.',
       'From the hatchery, the Canyon Trail runs 1.2 km one way to Cliff Falls, with some challenging hills. Stay back from the cliff edges and keep out of the creek and canyon.',
       "Good to know: The fish fence usually operates from the end of September to early December. In 2026 the park was open 7 am to 6 pm from November 3 to December 31. Dogs must be on a leash, and please don't disturb the fish at the fence. Salmon timing changes each year, so check with the hatchery before you go.",
+    ],
+  },
+  {
+    placeID: 'wings_over_iona',
+    category: WILDLIFE,
+    name: 'Wings Over Iona',
+    address: 'Ferguson Rd, Richmond',
+    title: 'Wings Over Iona at Iona Beach',
+    detailAddress: 'Iona Beach, Ferguson Rd, Richmond, BC',
+    latitude: 49.21416,
+    longitude: -123.18733,
+    tagline: 'Bird banding and live raptors for fall migration!',
+    about: [
+      'Each September, Metro Vancouver celebrates the fall migration of shorebirds, songbirds, and waterfowl with a free day at Iona Beach. Expect bird banding demonstrations, live raptors, and hands-on activities.',
+      'The paths around the north and south ponds are great for birdwatching, so it is worth coming back as the migration continues through fall.',
+      'Good to know: In 2026 Wings Over Iona ran on September 12 from 11 am to 2 pm. It was free, with limited parking and a free shuttle from Templeton SkyTrain Station. The park has no regular transit. Dogs are not allowed around the ponds, and the viewing structure at the end of Iona Jetty was closed because of storm damage. Dates change each year, so check before you go.',
     ],
   },
   // ---------------------------------------------------------------- Fall Colour Walks
@@ -520,6 +632,54 @@ const detailedFallSpots = [
       "Campbell Valley is one of Langley's top spots for fall foliage, with trails lined in golden and crimson leaves. The flat Little River Loop is about 2.3 km return and crosses the Little Campbell River twice on raised boardwalks.",
       'For a longer outing, the Perimeter Trail runs nearly 9 km and the Shaggy Mane Trail is an 11 km loop shared with horses. It is also a peaceful place for a fall picnic.',
       "Good to know: From November 3 to December 31 the park is open 7 am to 6 pm. Dogs must be on a leash except in the leash-optional area next to 4 Avenue. Part of the eastern McLean Pond area and its trails is closed for trail and parking lot construction, so check Metro Vancouver's park alerts before you go.",
+    ],
+  },
+  {
+    placeID: 'ubc_main_mall',
+    category: COLOUR,
+    name: 'UBC Main Mall',
+    address: 'Main Mall, UBC, Vancouver',
+    title: 'UBC Main Mall Red Oaks',
+    detailAddress: 'Main Mall, UBC, Vancouver, BC',
+    latitude: 49.26761,
+    longitude: -123.25511,
+    tagline: 'An avenue of red oaks turning gold and crimson!',
+    about: [
+      'In autumn, the red oaks lining Main Mall turn gold and crimson and give the UBC campus an East Coast feel. The wide boulevard runs through the middle of campus and makes for an easy, scenic walk.',
+      'It pairs well with the Carolinian Forest at UBC Botanical Garden or a visit to Nitobe Memorial Garden, both on the same campus.',
+      'Good to know: Main Mall is free and open all the time. Colour usually peaks in late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'trout_lake',
+    category: COLOUR,
+    name: 'Trout Lake',
+    address: '3300 Victoria Dr, Vancouver',
+    title: 'Trout Lake at John Hendry Park',
+    detailAddress: '3300 Victoria Dr, Vancouver, BC',
+    latitude: 49.25572,
+    longitude: -123.06252,
+    tagline: 'Lakeside colour and mountain views in East Van!',
+    about: [
+      'Trout Lake, officially John Hendry Park, is a 27-acre escape in East Vancouver. An easy path circles the lake past maples, willows, oaks, and birches, with mountain views across the water.',
+      'Make a morning of it when the Saturday farmers market is on, then look for the European beech trees along East 19th Avenue.',
+      'Good to know: The park is free to enter. In 2026 the Saturday farmers market ran until October 31. Colour usually peaks in late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'burnaby_mountain_park',
+    category: COLOUR,
+    name: 'Burnaby Mountain Park',
+    address: '100 Centennial Way, Burnaby',
+    title: 'Burnaby Mountain Park',
+    detailAddress: '100 Centennial Way, Burnaby, BC',
+    latitude: 49.28287,
+    longitude: -122.93466,
+    tagline: 'Early fall colour and big Burrard Inlet views!',
+    about: [
+      'Burnaby Mountain sits higher than the city, so its colour usually arrives earlier, which makes it a great first fall walk of the season. The Panorama Trail passes the Kamui Mintara sculptures, known as the Playground of the Gods, with views over Burrard Inlet.',
+      'Colourful trees are scattered throughout the park, and the lookout at the top is worth the walk or the drive.',
+      'Good to know: The park is free and open from dawn to dusk, and colour usually peaks in early to mid October. View the Kamui Mintara poles from outside the fence while they are assessed for age-related damage. Centennial Way and the parking lot were closed November 9 to 13, 2026 for upgrades, weather permitting, and part of the Velodrome trail is closed indefinitely.',
     ],
   },
 ];

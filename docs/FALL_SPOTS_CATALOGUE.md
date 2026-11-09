@@ -16,7 +16,7 @@ Researched 2026-11-03. Research only, no code changes. Twenty new fall spots, ea
 
 ## Implementation status (2026-11-04)
 
-These 20 spots are now in the app. Ten more were added on 2026-11-09; see section 9.
+These 20 spots are now in the app. Twenty more were added on 2026-11-09; see sections 9 and 10.
 
 - **Data:** `services/spots.js` holds all 23 Fall spots (the original three farms plus these 20). The Fall list, the venue pages, the wheel pool and the Fall count on the Seasons screen all read from it. The list-card name and address below match what the app shows.
 - **Venue pages:** every new spot opens `screens/SpotDetailScreen.js`, a data-driven copy of the Aldor page layout (weather, title, address, activity box, photo, expandable About, map with directions, reviews). The three original farms keep their own screens.
@@ -574,3 +574,49 @@ All ten are in `services/spots.js`, bringing Fall to 33 spots. Each has the full
 | Dovercourt Crypt | A haunted house at a private home. |
 
 **Sources:** tavesfamilyfarms.com; krauseberryfarms.com; Tourism Langley (fall guide and Krause listing, 2026); willowviewfarms.com; Daily Hive and Valley Family Adventures (2026 farm guides); City of Surrey event listings and Family Fun Canada (Darts Hill); forbiddenvancouver.ca; greatcanadiantrolley.com; Destination Vancouver (Halloween and fall colour guides, 2026); Miss604 (2025 trolley prices); Metro Vancouver park pages and brochure (Kanaka Creek, Campbell Valley); keeps.org; Watershed Watch; burnaby.ca; FanVancouver (fall colours, 2026). Geocoding: OpenStreetMap Nominatim.
+
+---
+
+## 10. Third batch: ten more spots (researched 2026-11-09)
+
+Selection rule for this batch: public access confirmed, and fall has to be the actual reason to go. No more pumpkin patches were added, since Fall already had 12 and the remaining ones weren't different enough. All ten are in `services/spots.js`, bringing Fall to 43 spots. Photos are still placeholders. All 2026 dates below have passed.
+
+| Spot | City | Category | Why it's fall | Coordinates | Confidence |
+|---|---|---|---|---|---|
+| VanDusen Mushroom Show | Vancouver | Festivals & Gardens | Vancouver Mycological Society's annual fall show | 49.23907, -123.13460 | High |
+| Stewart Farm Harvest Fair | Surrey | Festivals & Gardens | Free harvest fair at a heritage farm | 49.06507, -122.84202 | Medium-High |
+| Renfrew Ravine Moon Festival | Vancouver | Festivals & Gardens | Harvest moon festival with a lantern procession | 49.24378, -123.04752 | High |
+| Bear Creek Halloween Train | Surrey | Halloween & After Dark | Pumpkin Train by day, Scream Train by night | 49.16235, -122.84205 | Medium-High |
+| Cougar Creek House of Horrors | Surrey | Halloween & After Dark | Five haunted houses, October only | 49.13400, -122.87560 (≈) | High |
+| Grave Tales at Fort Langley | Fort Langley | Halloween & After Dark | After-dark Halloween tours of the national historic site | 49.16763, -122.57232 | High |
+| Wings Over Iona | Richmond | Salmon & Wildlife | Free celebration of the fall bird migration | 49.21416, -123.18733 (≈) | High |
+| UBC Main Mall | Vancouver | Fall Colour Walks | Avenue of red oaks, late October peak | 49.26761, -123.25511 | Medium-High |
+| Trout Lake | Vancouver | Fall Colour Walks | Lakeside deciduous trees, late October peak | 49.25572, -123.06252 | Medium-High |
+| Burnaby Mountain Park | Burnaby | Fall Colour Walks | Earliest colour of the list, early to mid October | 49.28287, -122.93466 | Medium-High |
+
+Pins marked ≈: Cougar Creek's is estimated along 72 Ave because geocoders don't know the house number; Iona's is the park centroid. Eyeball both on a map.
+
+**Open items**
+- **Bear Creek:** the operator's site now shows only its Christmas train, so Halloween details come from two 2026 listings.
+- **Grave Tales:** sources give slightly different tour schedules, so the app gives only the overall dates and a price range.
+- **Mushroom Show:** 2026 price is "by donation" per VanDusen; the $5 figure is from 2024.
+- **Iona:** listings give both 900 and 5980 Ferguson Rd, so the app uses the road name without a number.
+- **Burnaby Mountain:** its November 9 to 13, 2026 road closure should be removed from the About text at the next yearly refresh.
+
+**Considered and excluded in this round**
+
+| Spot | Why not |
+|---|---|
+| Harvest Haus | Sources conflict on dates, times and venue. Essentially an Oktoberfest. |
+| Haunted Cellar Tea at Notch8 | A hotel restaurant's seasonal promotion. |
+| Harris Pumpkin Patch, Loft Country Farms | No confirmed 2026 details; patches are already well covered. |
+| Serpentine Fen, Blackie Spit | Good birding, but year-round rather than fall-specific. |
+| Little Campbell River, Noons Creek, Still Creek | No current public-access source found. |
+| Campbell Valley Country Celebration | No 2026 date found. |
+| Vancouver Alpen Club Oktoberfest | Club under redevelopment; no 2026 event found. |
+| Reapers (Chilliwack) | Outside Greater Vancouver. |
+| Coquitlam, Lansdowne and Henderson moon festivals | Sun Yat-Sen and Renfrew Ravine already cover this, with more character. |
+| Richmond Farm Fest | Agriculture event, not framed as fall or harvest. |
+| Ghosts of New Westminster, Vancouver Horror Show Film Festival | Very short runs or thin details; Halloween is well covered. |
+
+**Sources:** vandusengarden.org; vanmyco.org; Cloverdale Reporter (Sept 3, 2026); stillmoonarts.ca; Miss604 (Renfrew Ravine, 2026); Family Fun Canada and Daily Hive (Bear Creek and Cougar Creek, 2026); cougarcreekhouseofhorrors.com; bctrains.com; Parks Canada Fort Langley calendar; Metro Vancouver (Iona, events calendar); Eventbrite and Visit Richmond (Wings Over Iona 2026); Destination Vancouver and FanVancouver (fall colours, 2026); Curiocity; burnaby.ca. Geocoding: OpenStreetMap Nominatim and Photon.
