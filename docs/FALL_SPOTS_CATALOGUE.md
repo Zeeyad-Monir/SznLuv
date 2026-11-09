@@ -16,7 +16,7 @@ Researched 2026-11-03. Research only, no code changes. Twenty new fall spots, ea
 
 ## Implementation status (2026-11-04)
 
-These 20 spots are now in the app.
+These 20 spots are now in the app. Ten more were added on 2026-11-09; see section 9.
 
 - **Data:** `services/spots.js` holds all 23 Fall spots (the original three farms plus these 20). The Fall list, the venue pages, the wheel pool and the Fall count on the Seasons screen all read from it. The list-card name and address below match what the app shows.
 - **Venue pages:** every new spot opens `screens/SpotDetailScreen.js`, a data-driven copy of the Aldor page layout (weather, title, address, activity box, photo, expandable About, map with directions, reviews). The three original farms keep their own screens.
@@ -528,3 +528,49 @@ Local guides and listings: FanVancouver (pumpkin patches, salmon run, Fright Nig
 Official or near-official pages read directly: burnaby.ca Haunted Village; reifelbirdsanctuary.com planning page; hopcottfarms.ca; botanicalgarden.ubc.ca (garden and Nitobe pages); hoyscottcreeks.org; tyneheadhatchery.ca; metrovancouver.org (Pacific Spirit); bchydro.com (Buntzen); capbridge.com (Canyon Frights); thefraservalley.ca (Cranberry Festival); Destination Vancouver and City of Vancouver event notices.
 
 Geocoding: OpenStreetMap Nominatim.
+
+---
+
+## 9. Second batch: ten more spots (researched 2026-11-09)
+
+All ten are in `services/spots.js`, bringing Fall to 33 spots. Each has the full record the app needs: list name and address, venue title and address, coordinates, tagline, and three About paragraphs ending in "Good to know". Photos are still "coming soon" placeholders. All 2026 seasons below have ended, so re-check dates and prices each year.
+
+| Spot | City | Category | Why it's fall | Coordinates | Confidence |
+|---|---|---|---|---|---|
+| Taves Family Farms | Abbotsford ⚠ | Pumpkin & Harvest | Magic of Fall: pumpkin garden, three corn mazes, u-pick apples, fall ciders | 49.00867, -122.31852 | High |
+| Krause Berry Farms | Langley | Pumpkin & Harvest | Pumpkin patch, barley maze, tractor rides, fall pies | 49.11302, -122.54028 | Medium |
+| Willow View Farms | Abbotsford ⚠ | Pumpkin & Harvest | U-pick apples, 50+ pumpkin varieties, fresh-pressed cider | 49.00739, -122.29286 | Medium-High |
+| Darts Hill Garden Park | Surrey | Festivals & Gardens | September Scarecrow Stroll and fall open house | 49.03185, -122.75431 (≈) | Medium |
+| Lost Souls of Gastown | Vancouver | Halloween & After Dark | Lamplit theatre walk, nightly through Halloween | 49.28452, -123.11044 | High |
+| Haunted Halloween Trolley | Vancouver | Halloween & After Dark | Halloween-season night tour with a storyteller | 49.28790, -123.11305 | Medium-High |
+| Kanaka Creek Fish Fence | Maple Ridge | Salmon & Wildlife | Chum and coho return, roughly mid-Oct to mid-Nov | 49.21080, -122.50690 | Medium-High |
+| Stanley Park | Vancouver | Fall Colour Walks | Lost Lagoon to the Rowing Club, mid to late Oct peak | 49.29560, -123.14074 (≈) | Medium-High |
+| Deer Lake Park | Burnaby | Fall Colour Walks | 5 km lake loop with reflections, mid to late Oct peak | 49.24054, -122.96880 | High |
+| Campbell Valley Park | Langley | Fall Colour Walks | Named by Tourism Langley as a must-visit for foliage | 49.02094, -122.65805 (≈) | Medium-High |
+
+⚠ Abbotsford is in the Fraser Valley, about an hour from downtown, like Maan Farms. Pins marked ≈ are park or lagoon centroids, not entrances.
+
+**Open items**
+- **Krause:** pumpkin patch dates and any activity fees weren't published. The farm's own homepage doesn't list its fall activities; they come from Tourism Langley (Sept 2026).
+- **Lost Souls:** the operator's two pages give different prices ($33 and $35 adult), so the app gives a range.
+- **Haunted Trolley:** no 2026 price was found; the app quotes 2025 and says so.
+- **Darts Hill:** the official pages couldn't be opened directly, so dates come from search listings of the City of Surrey pages. Its season ends in late September, the earliest of any spot.
+- **Campbell Valley:** the address uses the South Valley Entrance, but the pin is the park centroid. Eyeball it on a map.
+- **Deer Lake:** the boat launch boardwalk is being replaced until winter 2027.
+
+**Considered and excluded in this round**
+
+| Spot | Why not |
+|---|---|
+| Capilano River Hatchery | Still closed to visitors until further notice (DFO page, modified 2026-10-01). |
+| Stanley Park Ghost Train | Still not running in 2026. |
+| Minnekhada Regional Park | A hiking guide says it isn't full of vivid autumn colour. |
+| Fraser Valley Cider Company | Year-round cidery; no fall event or pressing day could be verified. |
+| Annie's Orchard (Langley) | Named in one roundup, but no current listing could be found. |
+| Port Kells Nurseries, Rondriso Farms | Listed dates don't match the 2026 calendar, so they look carried over from an earlier year. |
+| Richmond Farm Fest | Mid-September agriculture event, not framed as fall or harvest. |
+| Barnside Harvest Festival | A music and craft beer festival, despite the name. |
+| Chilliwack farms (Greendale, Petey's) | Outside Greater Vancouver. |
+| Dovercourt Crypt | A haunted house at a private home. |
+
+**Sources:** tavesfamilyfarms.com; krauseberryfarms.com; Tourism Langley (fall guide and Krause listing, 2026); willowviewfarms.com; Daily Hive and Valley Family Adventures (2026 farm guides); City of Surrey event listings and Family Fun Canada (Darts Hill); forbiddenvancouver.ca; greatcanadiantrolley.com; Destination Vancouver (Halloween and fall colour guides, 2026); Miss604 (2025 trolley prices); Metro Vancouver park pages and brochure (Kanaka Creek, Campbell Valley); keeps.org; Watershed Watch; burnaby.ca; FanVancouver (fall colours, 2026). Geocoding: OpenStreetMap Nominatim.

@@ -503,7 +503,7 @@ const legacySpotPages = ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcr
 const sharedSpotPages = detailedFallSpots.map(spot => ({ label: spot.placeID, file: 'SpotDetailScreen', props: { route: { params: { placeID: spot.placeID } } }, latitude: spot.latitude, longitude: spot.longitude }));
 const spotPages = [...legacySpotPages, ...sharedSpotPages];
 const titleNodes = renderer => renderer.root.findAll(node => node.type === 'Text' && node.props.style && node.props.style.fontSize === 24 && node.props.style.textTransform === 'uppercase');
-test('there are 23 spot info pages under test', () => assert.equal(spotPages.length, 23));
+test('there are 33 spot info pages under test', () => assert.equal(spotPages.length, 33));
 for (const page of spotPages) {
   test(`${page.label}: one-line title, forecast for the spot without a GPS fix, no blank location bar`, async () => {
     const h = createHarness();

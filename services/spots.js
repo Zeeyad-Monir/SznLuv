@@ -1,7 +1,7 @@
 // Fall spot data for the season list, venue pages, favourites and the wheel.
 // Plain CommonJS (no React, no assets) so it can be unit-tested directly.
 //
-// Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03).
+// Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03; ten more added 2026-11-09).
 // Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
 //
 // Two kinds of spots:
@@ -131,6 +131,54 @@ const detailedFallSpots = [
     ],
   },
 
+  {
+    placeID: 'taves_family_farms',
+    category: PATCHES,
+    name: 'Taves Family Farms',
+    address: '333 Gladwin Rd, Abbotsford',
+    title: 'Taves Family Farms Applebarn',
+    detailAddress: '333 Gladwin Rd, Abbotsford, BC',
+    latitude: 49.00867,
+    longitude: -122.31852,
+    tagline: 'Giant pumpkin garden, corn mazes, and u-pick apples!',
+    about: [
+      "Every fall, Taves turns its Abbotsford farm into the Magic of Fall, with more than 30 acres to wander. Stroll Autumn's Avenue, take on three corn mazes, and choose a pumpkin from the huge pumpkin garden.",
+      'The u-pick orchards sell apples by the bag, and there is a petting barn, jumping pillows, and a 150-foot slide. Taves Estate Cidery pours fall-themed ciders with and without alcohol, which makes a good last stop for two.',
+      'Good to know: In 2026 the Magic of Fall ran from September 12 to October 31, 10 am to 5:30 pm on weekdays and 9:30 am to 6 pm on weekends and holidays. Passes were sold online and cost $3 more at the gate, and weekend pumpkin picking needed a Picking Pass booked ahead. The farm is about an hour from downtown Vancouver and is closed until spring 2027. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'krause_berry_farms',
+    category: PATCHES,
+    name: 'Krause Berry Farms',
+    address: '6179 248 St, Langley',
+    title: 'Krause Berry Farms & Estate Winery',
+    detailAddress: '6179 248 St, Langley, BC',
+    latitude: 49.11302,
+    longitude: -122.54028,
+    tagline: 'Pumpkin patch, barley maze, and fresh fall pies!',
+    about: [
+      'In fall, this Langley farm is all about apples and pumpkins. Explore the pumpkin patch and barley maze, take a tractor ride, and browse the squash and gourds at the market.',
+      'The bakery fills up with fresh pies for the season, and the Waffle Bar and estate winery make it easy to turn the visit into a slow afternoon date.',
+      "Good to know: The farm is open year-round. In 2026 it was open Wednesday to Sunday from 9:30 am to 5 pm, with the Waffle Bar closing at 3:30 pm. Pets and outside food are not allowed. Pumpkin patch dates and any activity fees weren't published, so check with the farm before you go.",
+    ],
+  },
+  {
+    placeID: 'willow_view_farms',
+    category: PATCHES,
+    name: 'Willow View Farms',
+    address: '288 McCallum Rd, Abbotsford',
+    title: 'Willow View Farms',
+    detailAddress: '288 McCallum Rd, Abbotsford, BC',
+    latitude: 49.00739,
+    longitude: -122.29286,
+    tagline: 'U-pick apples, giant pumpkins, and fresh-pressed cider!',
+    about: [
+      'Willow View is a family-owned u-pick apple orchard in Abbotsford that has sold directly from the farm for 33 years. It grows more than 15 apple varieties, including Honeycrisp and Jonagold.',
+      'October brings more than 50 varieties of pumpkins, some weighing over 100 pounds, and a Big Red Barn with farm animals. Stop at the country store for fresh-pressed apple cider or a cider slushie.',
+      'Good to know: In 2026 the farm was listed as open Tuesday to Sunday plus Thanksgiving Monday, from 10 am to 5:30 pm during pumpkin season. Pets are not allowed. Apples can sell out, and the farm is now closed until August 2027. Dates change each year, so check before you go.',
+    ],
+  },
   // ---------------------------------------------------------------- Festivals & Gardens
   {
     placeID: 'fort_langley_cranberry_festival',
@@ -213,6 +261,22 @@ const detailedFallSpots = [
     ],
   },
 
+  {
+    placeID: 'darts_hill_garden',
+    category: FESTIVALS,
+    name: 'Darts Hill Garden Park',
+    address: '1633 170 St, Surrey',
+    title: 'Darts Hill Garden Park',
+    detailAddress: '1633 170 St, Surrey, BC',
+    latitude: 49.03185,
+    longitude: -122.75431,
+    tagline: 'A scarecrow stroll through a heritage garden!',
+    about: [
+      'Darts Hill is a 7.5-acre garden in South Surrey that Edwin and Francisca Darts donated to the city in 1994. Each September it welcomes fall with a Scarecrow Stroll through the pasture.',
+      "The garden's fall open house adds live music, an ikebana display, and garden activities, which makes it a relaxed way to start the season together.",
+      'Good to know: In 2026 the garden was open Friday to Sunday from 10 am to 4 pm until September 27, so go early in the season. The Scarecrow Stroll ran September 4 to 27 and the free fall open house was on September 19. General admission has been by donation, so bring cash because there is no nearby ATM. Dates change each year, so check before you go.',
+    ],
+  },
   // ---------------------------------------------------------------- Halloween & After Dark
   {
     placeID: 'burnaby_haunted_village',
@@ -263,6 +327,38 @@ const detailedFallSpots = [
     ],
   },
 
+  {
+    placeID: 'lost_souls_gastown',
+    category: HALLOWEEN,
+    name: 'Lost Souls of Gastown',
+    address: '356 Water St, Vancouver',
+    title: 'Lost Souls of Gastown Tour',
+    detailAddress: '356 Water St, Vancouver, BC',
+    latitude: 49.28452,
+    longitude: -123.11044,
+    tagline: "Lamplit theatre through Gastown's darkest history!",
+    about: [
+      "This Halloween-season walk is live theatre more than a ghost tour. A professional actor leads you by lamplight through Gastown and turns documented stories from the city's early days into drama, including the Great Fire of 1886 and an 1898 murder.",
+      'The route covers about 1.5 km in 90 minutes to two hours, starting outside Monaco Cafe and ending at Maple Tree Square. It is a moody pick for a dark October night.',
+      'Good to know: In 2026 the tour ran nightly through Halloween, starting at 7 pm with extra times added. Tickets were about $33 to $35 for adults and $30 to $32 for youth and seniors, booked online. It is not recommended for children under 12, and minors need an adult with them. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'haunted_halloween_trolley',
+    category: HALLOWEEN,
+    name: 'Haunted Halloween Trolley',
+    address: '999 Canada Place, Vancouver',
+    title: 'Haunted Halloween Trolley Tour',
+    detailAddress: '999 Canada Place, Vancouver, BC',
+    latitude: 49.28790,
+    longitude: -123.11305,
+    tagline: 'Spooky local stories on a trolley after dark!',
+    about: [
+      'The Great Canadian Trolley Company runs this after-dark tour each Halloween season. An onboard storyteller shares eerie local tales on a route that visits Stanley Park, Gastown, and Mountain View Cemetery.',
+      'Stories include the Lady in Red at the Hotel Vancouver and the old mansions of Shaughnessy. The tour runs rain or shine, so it is an easy pick for a wet October night.',
+      'Good to know: In 2026 the tour ran on select dates from October 8 to November 1, with a 6 pm departure from 999 Canada Place, and lasted 2 to 2.5 hours. It is designed for ages 13 and up and uses flashing lights. Book ahead, because all sales are final. In 2025 tickets were from $37 for youth and $67 for adults. Dates and prices change each year, so check before you go.',
+    ],
+  },
   // ---------------------------------------------------------------- Salmon & Wildlife
   {
     placeID: 'tynehead_hatchery',
@@ -313,6 +409,22 @@ const detailedFallSpots = [
     ],
   },
 
+  {
+    placeID: 'kanaka_creek_fish_fence',
+    category: WILDLIFE,
+    name: 'Kanaka Creek Fish Fence',
+    address: '11450 256 St, Maple Ridge',
+    title: 'Kanaka Creek Hatchery & Fish Fence',
+    detailAddress: '11450 256 St, Maple Ridge, BC',
+    latitude: 49.21080,
+    longitude: -122.50690,
+    tagline: 'Returning salmon at the fence and a canyon walk!',
+    about: [
+      'Each fall, chum and coho salmon return up Kanaka Creek to the fish fence beside the Bell-Irving Hatchery, where they are counted and most are released to spawn. Mid-October to mid-November is usually the best time to see them.',
+      'From the hatchery, the Canyon Trail runs 1.2 km one way to Cliff Falls, with some challenging hills. Stay back from the cliff edges and keep out of the creek and canyon.',
+      "Good to know: The fish fence usually operates from the end of September to early December. In 2026 the park was open 7 am to 6 pm from November 3 to December 31. Dogs must be on a leash, and please don't disturb the fish at the fence. Salmon timing changes each year, so check with the hatchery before you go.",
+    ],
+  },
   // ---------------------------------------------------------------- Fall Colour Walks
   {
     placeID: 'buntzen_lake',
@@ -360,6 +472,54 @@ const detailedFallSpots = [
       'Pacific Spirit is mostly evergreen forest, but the bigleaf maples along the Admiralty Trail near Spanish Banks turn golden each fall. The park has more than 55 km of trails, which makes it one of the area\'s best autumn foliage walks.',
       'The park is free to enter. Dogs are allowed on some trails and must be leashed on others, so check the trail signs.',
       'Good to know: The park is open 7 am to 7 pm until early November, then 7 am to 6 pm, with beaches closing at sunset. In late 2026 the Admiralty Trail between Salish Trail and West Canyon Trail was closed for about four weeks from November 2, so use an alternate trail to reach Spanish Banks until it reopens.',
+    ],
+  },
+  {
+    placeID: 'stanley_park_fall_walk',
+    category: COLOUR,
+    name: 'Stanley Park',
+    address: 'Lost Lagoon, Vancouver',
+    title: 'Stanley Park Fall Colour Walk',
+    detailAddress: 'Lost Lagoon, Stanley Park, Vancouver, BC',
+    latitude: 49.29560,
+    longitude: -123.14074,
+    tagline: 'Lost Lagoon and golden trees along the seawall!',
+    about: [
+      "Start at Lost Lagoon at the foot of Georgia Street, then walk to the Vancouver Rowing Club, where the trees along the seawall put on some of the park's best colour.",
+      'The full seawall is about 9 km, but the prettiest autumn stretch takes only around half an hour on foot. Keep going to the totem poles at Brockton Point if you want a longer walk.',
+      'Good to know: The park is free to enter, but parking inside it is paid. Colour usually peaks in mid to late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'deer_lake_park',
+    category: COLOUR,
+    name: 'Deer Lake Park',
+    address: '6450 Deer Lake Ave, Burnaby',
+    title: 'Deer Lake Park',
+    detailAddress: '6450 Deer Lake Ave, Burnaby, BC',
+    latitude: 49.24054,
+    longitude: -122.96880,
+    tagline: 'Fall colour reflected on a calm lakeside loop!',
+    about: [
+      'Trails of gravel, packed dirt, and boardwalk circle Deer Lake in about 5 km, or an hour at an easy pace. Go on a calm morning, when the fall colour reflects off the water.',
+      'The Eagles Estate Heritage Garden has Japanese maples, and the Burnaby Art Gallery and Burnaby Village Museum are right beside the park if you want to make an afternoon of it.',
+      'Good to know: The park is open from dawn to dusk year-round and parking is free. Dogs must be on a leash and are not allowed on the beach or in the picnic area. A boardwalk section by the boat launch closed on September 21 for replacement, with a detour via Sperling Avenue and Deer Lake Drive, and the work is scheduled to finish by winter 2027. Colour usually peaks in mid to late October.',
+    ],
+  },
+  {
+    placeID: 'campbell_valley_park',
+    category: COLOUR,
+    name: 'Campbell Valley Park',
+    address: 'South Valley Entrance, 8 Ave, Langley',
+    title: 'Campbell Valley Regional Park',
+    detailAddress: 'South Valley Entrance, 8 Ave, Langley, BC',
+    latitude: 49.02094,
+    longitude: -122.65805,
+    tagline: 'Golden and crimson trails in rural Langley!',
+    about: [
+      "Campbell Valley is one of Langley's top spots for fall foliage, with trails lined in golden and crimson leaves. The flat Little River Loop is about 2.3 km return and crosses the Little Campbell River twice on raised boardwalks.",
+      'For a longer outing, the Perimeter Trail runs nearly 9 km and the Shaggy Mane Trail is an 11 km loop shared with horses. It is also a peaceful place for a fall picnic.',
+      "Good to know: From November 3 to December 31 the park is open 7 am to 6 pm. Dogs must be on a leash except in the leash-optional area next to 4 Avenue. Part of the eastern McLean Pond area and its trails is closed for trail and parking lot construction, so check Metro Vancouver's park alerts before you go.",
     ],
   },
 ];

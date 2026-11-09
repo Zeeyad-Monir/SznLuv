@@ -115,7 +115,7 @@ test('venue links navigate only to registered screens and explain unavailable de
 
 const otherSeasonSpotNames = ['Glacier Rink', 'Frosty Pond', 'Evergreen Acres', 'Snowy Pines', 'Science World', 'Blossom Garden', 'VanDusen Botanical Garden', 'Spring Haven', 'River Trail', 'Meadow Path', 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
 test('fall spots: every detailed spot has the complete, consistently formatted record the venue page needs', () => {
-  assert.equal(detailedFallSpots.length, 20);
+  assert.equal(detailedFallSpots.length, 30);
   const placeIDs = new Set(), names = new Set();
   for (const spot of detailedFallSpots) {
     for (const field of ['placeID', 'category', 'name', 'address', 'title', 'detailAddress', 'tagline']) {
@@ -139,10 +139,10 @@ test('fall spots: every detailed spot has the complete, consistently formatted r
 });
 test('fall spots: names are unique across seasons and the list matches the original three venue screens', () => {
   assert.equal(new Set(fallSpotNames).size, fallSpotNames.length);
-  assert.equal(fallSpotNames.length, 23);
+  assert.equal(fallSpotNames.length, 33);
   assert.ok(fallSpotNames.every(name => !otherSeasonSpotNames.includes(name)));
   assert.deepEqual(legacyFallSpots.map(spot => spot.name).sort(), Object.keys(venueRoutes).sort());
-  assert.deepEqual(fallCategories.map(category => category.spots.length), [9, 5, 3, 3, 3]);
+  assert.deepEqual(fallCategories.map(category => category.spots.length), [12, 6, 5, 4, 6]);
   assert.ok(fallCategories.every(category => category.spots.every(spot => spot.name && spot.address)));
 });
 test('venue links open the shared detail page for every new fall spot', () => {
