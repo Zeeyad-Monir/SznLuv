@@ -4,9 +4,6 @@
 // Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03; twenty more added 2026-11-09).
 // Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
 //
-// Two kinds of spots:
-//  - legacy spots: the three original farms. They keep their own hand-built screens (see venueNavigation.js).
-//  - detailed spots: rendered by screens/SpotDetailScreen.js from the fields below.
 // Search tags describe the spot itself and include its locality. They are used only by discovery.
 //
 // `name` is the list-card name AND the favourites key AND the wheel label, so it must be unique across all
@@ -21,12 +18,21 @@ const COLOUR = 'Fall Colour Walks';
 // Order of sections on the Fall screen.
 const fallCategoryTitles = [PATCHES, FESTIVALS, HALLOWEEN, WILDLIFE, COLOUR];
 
-// Original hand-built venue pages (routes live in venueNavigation.js).
+// The three original farms. Aldor retains the ID used by its existing reviews.
 const legacyFallSpots = [
   {
+    placeID: 'aldor_farm',
     category: PATCHES,
     name: 'Aldor Family Farm',
+    title: 'Aldor Acres Family Farm',
     address: '24990 84 Ave, Langley',
+    detailAddress: '24990 84 Ave, Langley, BC',
+    tagline: 'Petting zoo, pumpkins, and more!',
+    about: [
+      'Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin patch, and more! Enjoy a day filled with family-friendly activities in the heart of Langley.',
+      'Take a scenic hayride through the beautiful countryside, explore the rustic barn filled with friendly animals, or browse the farm stand for fresh local produce and handmade goods. Whether you’re visiting to pick the perfect pumpkin, enjoy a picnic surrounded by nature, or simply soak in the peaceful farm atmosphere, Aldor Acres promises a day of fun, laughter, and cherished memories in the heart of Langley.',
+      'For those who love shopping local, the farm stand is a treasure trove of fresh produce, homemade jams, baked goods, and artisanal products. It’s the perfect place to take home a little piece of the farm with you. Beyond the activities, the farm exudes a warm and welcoming atmosphere that makes it feel like a home away from home.',
+    ],
     latitude: 49.15313,
     longitude: -122.53021,
     searchDescription: 'A working farm in Glen Valley with a pumpkin patch, hayrides, farm animals, forest walks and a seasonal market.',
@@ -38,7 +44,13 @@ const legacyFallSpots = [
   {
     category: PATCHES,
     name: 'Eagle Acres Dairy',
+    title: 'Eagle Acres Dairy & Pumpkin Patch',
     address: '8796 240 St, Langley',
+    detailAddress: '8796 240 St, Langley, BC',
+    tagline: 'Farm animals, a corn maze, and hayrides!',
+    about: [
+      'Join the cows, horse, sheep, goats, chickens, pigs, rabbits, cats & dogs for some relaxing time in the country. Look for R2D2 the Milking Robot and other cool machines working on our dairy farm. Relax on a scenic hayride that circles past the corn maze and pumpkin fields!',
+    ],
     latitude: 49.15948,
     longitude: -122.55347,
     searchDescription: 'Visit a working dairy farm with an R2D2 milking robot, farm animals, a corn maze and hayrides to the pumpkin patch.',
@@ -51,6 +63,11 @@ const legacyFallSpots = [
     category: PATCHES,
     name: 'Laity Pumpkin Patch',
     address: '12725 Laity St, Maple Ridge',
+    detailAddress: '12725 Laity St, Maple Ridge, BC',
+    tagline: 'Two pumpkin patches, corn mazes, and a pumpkin cannon!',
+    about: [
+      'We opened a brand new location across the street to our original location. The original Laity Pumpkin Patch is referred to as the North location and is designed for the younger members of your family. Our newest location is referred to as the South location and is designed to entertain your children as they get older. Both locations have attractions that the whole family can enjoy together!',
+    ],
     latitude: 49.23465,
     longitude: -122.63515,
     searchDescription: 'The South location of a family-run pumpkin farm, with a corn maze, farm animals and seasonal displays.',
@@ -885,10 +902,12 @@ const detailedFallSpots = [
   },
 ];
 
+const fallSpots = [...legacyFallSpots, ...detailedFallSpots];
+
 // Fall screen sections: legacy farms first, then the detailed spots, grouped in category order.
 const fallCategories = fallCategoryTitles.map(title => ({
   title,
-  spots: [...legacyFallSpots, ...detailedFallSpots]
+  spots: fallSpots
     .filter(spot => spot.category === title)
     .map(({ name, title, address, detailAddress, latitude, longitude, tagline, about, searchDescription, searchTags }) => ({
       name, title, address, detailAddress, latitude, longitude, tagline, searchTags,
@@ -900,11 +919,11 @@ const fallCategories = fallCategoryTitles.map(title => ({
 const fallSpotNames = fallCategories.flatMap(category => category.spots.map(spot => spot.name));
 
 function getSpotByPlaceID(placeID) {
-  return detailedFallSpots.find(spot => spot.placeID === placeID);
+  return placeID ? fallSpots.find(spot => spot.placeID === placeID) : undefined;
 }
 
 function findSpotByName(name) {
-  return detailedFallSpots.find(spot => spot.name === name);
+  return fallSpots.find(spot => spot.name === name);
 }
 
 module.exports = {

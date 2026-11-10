@@ -1,7 +1,8 @@
-// Venue photos for SpotDetailScreen, keyed by the spot's placeID.
-// Spots without an entry show a "Photo coming soon" placeholder in the same slot.
-// To add one, drop the image in /assets and add a line, e.g.:
-//   richmond_country_farms: require('../assets/RichmondCountryFarms.jpg'),
-const spotImages = {};
+// Bundled photos keyed by the catalogue name shared by cards and details.
+const spotImages = {
+  'Aldor Family Farm': require('../assets/FamilyFarm.jpg'),
+  'Eagle Acres Dairy': require('../assets/EagleAcres.png'),
+  'Laity Pumpkin Patch': require('../assets/Laity.png'),
+};
 
 export default spotImages;

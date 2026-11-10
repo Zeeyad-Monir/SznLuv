@@ -164,9 +164,9 @@ test('Saved: Add Your Own Spot sits on top; your spots come first and open their
   await screen.press('Add Your Own Spot');
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { from: 'saved' }]);
   await screen.press('View details for Hidden Sunset Viewpoint');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: sunset }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: S.linkRef(sunset) }]);
   await screen.press('View details for Secret Lake Lookout');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: { k: 'x', id: 'maya_lake', owner: 'maya', name: 'Secret Lake Lookout' } }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'x', id: 'maya_lake', owner: 'maya', name: 'Secret Lake Lookout' } }]);
 
   // Taking a spot out of Saved never deletes it.
   await screen.press('Remove Hidden Sunset Viewpoint from favourites');
@@ -367,7 +367,7 @@ test('opening Saved brings old own spots over to records once, keeping every lis
 
 test('spot page: the owner sees their latest edit and can edit or delete it; a visitor can only report it', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 }, 'spots/audit_sunset': record({ name: 'Sunset Lookout', description: 'Fresh words' }) } });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: sunset } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: sunset } });
   assert.ok(screen.texts().includes('Sunset Lookout') && screen.texts().includes('Fresh words'));
   assert.ok(screen.texts().includes('Only you can see this spot. Add it to a public list to share it.'));
   await screen.press('More options');
@@ -375,7 +375,7 @@ test('spot page: the owner sees their latest edit and can edit or delete it; a v
   await act(async () => h.menus.at(-1).pick('Edit spot'));
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { spotId: 'audit_sunset' }]);
 
-  const visitor = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: { k: 'x', id: 'maya_lake', owner: 'maya', name: 'Lake' }, addedBy: 'maya' } });
+  const visitor = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: { k: 'x', id: 'maya_lake', owner: 'maya', name: 'Lake' } } });
   await visitor.press('More options');
   assert.deepEqual(h.menus.at(-1).options, ['Report spot', 'Cancel']);
   assert.ok(!textOf(visitor.renderer.root).includes('Fresh words'));

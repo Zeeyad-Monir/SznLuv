@@ -63,7 +63,7 @@ test('spot page, my shared spot: says where it is public and shows reviews I can
     'publicSpots/audit_sunset': { ownerUid: 'audit', ownerUsername: 'audit', name: 'Hidden Sunset Viewpoint' },
     'publicSpots/audit_sunset/reviews/r1': { uid: 'maya', username: 'maya', comment: 'Worth the climb', starRating: 4, timestamp: 2, placeID: 'x:audit_sunset', thumbsUpCount: 0 },
   } });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: sunset } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: sunset } });
   const texts = screen.texts();
   assert.ok(texts.includes('Public in “Golden Hour”. People can see it and review it.'), texts.join(' | '));
   for (const line of ['Beaches', 'Always open', 'Free', 'Fall, Summer', 'Good to know', 'Bring a jacket.', 'Worth the climb', 'User Ratings: 4.0/5 ★']) {
@@ -89,7 +89,7 @@ test('spot page, someone else\'s shared spot: everything they wrote, and a revie
       description: 'A short climb to a wide view.', photos: [{ id: 'p1', path: 'spotPhotos/maya/maya_sunset/p1.jpg' }],
     },
   } });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: mayaSunset, addedBy: 'maya' } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: mayaSunset } });
   const texts = screen.texts();
   for (const line of ['1 Cliff Rd, West Vancouver', 'Added by maya', 'A short climb to a wide view.', 'Reviews', 'No reviews yet. Be the first.']) {
     assert.ok(texts.includes(line), `${line} in ${texts.join(' | ')}`);
@@ -121,10 +121,10 @@ test('spot page, someone else\'s shared spot: everything they wrote, and a revie
 
 test('spot page, someone else\'s spot that isn\'t shared: its name only, and no reviews', async () => {
   const h = createHarness({ documents: { ...base, 'publicSpots/maya_sunset/reviews/r1': { uid: 'x', username: 'x', comment: 'Hidden', starRating: 1 } } });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: mayaSunset } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: mayaSunset } });
   await flush();
   const texts = screen.texts();
-  assert.ok(texts.includes('Only the name is shown: its creator isn’t sharing this spot right now.'), texts.join(' | '));
+  assert.ok(texts.includes('Only the name is shown. Its creator isn’t sharing this spot right now.'), texts.join(' | '));
   assert.ok(!texts.includes('Reviews') && !texts.includes('Hidden'));
   assert.equal(screen.button('Directions'), undefined);
   assert.ok(screen.button('Add to list'));
@@ -137,7 +137,7 @@ test('reviews from someone the reader blocked are hidden', async () => {
     'publicSpots/maya_sunset/reviews/r1': { uid: 'troll', username: 'troll', comment: 'Rude words', starRating: 1, timestamp: 1 },
     'publicSpots/maya_sunset/reviews/r2': { uid: 'sam', username: 'sam', comment: 'Kind words', starRating: 5, timestamp: 2 },
   } });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: mayaSunset } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: mayaSunset } });
   await flush();
   assert.ok(screen.texts().includes('Kind words'));
   assert.ok(!screen.texts().includes('Rude words'));
@@ -164,7 +164,7 @@ test('deleting a spot clears it from everywhere, says so first, and makes a list
     },
     files: { [photo]: { size: 1 } },
   });
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: sunset } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: sunset } });
   await screen.press('More options');
   await act(async () => h.menus.at(-1).pick('Delete spot'));
   const [title, message, choices] = h.alerts.at(-1);
@@ -277,7 +277,7 @@ test('the sharing sheet says the spots I made are shared too, and can be reviewe
 
 test('a SznLuv spot page takes reviews through the same section, now with the reviewer\'s uid', async () => {
   const h = createHarness({ documents: base });
-  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { placeID: 'maan_farms' } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: catalogueRef('Maan Farms') } });
   await screen.press('4 stars');
   await act(async () => screen.all('TextInput').at(-1).props.onChangeText('Great corn maze'));
   await screen.press('Submit');

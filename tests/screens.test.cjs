@@ -3,9 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { detailedFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
+const { detailedFallSpots, legacyFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
+const spotProps = name => ({ route: { params: { spot: { k: 'c', name } } } });
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'ProfileSettings']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -36,10 +37,10 @@ test('home hierarchy: Home > Vancouver > Seasons > the four season screens', asy
     'Summer Season - View Active Date Ideas': ['SummerDatesScreen'],
   });
 });
-for (const screen of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
-  test(`${screen} handles denied location without starting tracking`, async () => {
-    const h = createHarness();
-    const renderer = await h.render('screens/' + screen + '.js', { location: true });
+for (const { name } of legacyFallSpots) {
+  test(`${name} handles denied location without starting tracking`, async () => {
+    const h = createHarness({ getLocationPermissions: async () => ({ granted: false }) });
+    const renderer = await h.render('screens/SpotDetailScreen.js', { location: true, props: spotProps(name) });
     assert.ok(!h.calls.some(([name]) => name === 'watchLocation'));
     assert.match(JSON.stringify(renderer.toJSON()), /denied/i);
     await act(async () => renderer.unmount());
@@ -219,7 +220,7 @@ test('signed-in layout: seasonal background fills the screen while content clear
     children: React.createElement(FallDates, { navigation: h.navigation }),
   }));
   const surfaceStyle = () => renderer.root.findAllByType('View')
-    .find(node => node.props.style?.[0]?.backgroundColor === '#F4A460').props.style;
+    .find(node => [node.props.style].flat(Infinity).some(style => style?.backgroundColor === '#F4A460')).props.style;
   assert.equal(surfaceStyle()[1].paddingTop, 117);
   const bar = renderer.root.findAllByType('View').find(node => node.props.onLayout);
   await act(async () => bar.props.onLayout({ nativeEvent: { layout: { height: 139 } } }));
@@ -347,8 +348,8 @@ test('a spot card offers its heart to VoiceOver as a custom action', async () =>
   const h = createHarness();
   const renderer = await h.render('screens/FallDatesScreen.js');
   const card = renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === 'View details for Aldor Family Farm');
-  assert.deepEqual(card.props.accessibilityActions.map(action => action.name), ['favorite']);
-  await act(async () => card.props.onAccessibilityAction());
+  assert.deepEqual(card.props.accessibilityActions.map(action => action.name), ['save']);
+  await act(async () => card.props.onAccessibilityAction({ nativeEvent: { actionName: 'save' } }));
   assert.ok(h.documents.get('favourites/audit')['Aldor Family Farm'].isFavourite, 'the action saves the favourite');
   await act(async () => renderer.unmount());
 });
@@ -424,7 +425,7 @@ test('the wheel spins for several seconds normally and resolves instantly under 
 });
 test('venue pages hold the map back until the push has finished', async () => {
   const h = createHarness();
-  const renderer = await h.render('screens/AldorFamilyFarmScreen.js');
+  const renderer = await h.render('screens/SpotDetailScreen.js', { props: spotProps('Aldor Family Farm') });
   assert.equal(renderer.root.findAllByType('MapView').length, 0);
   await act(async () => renderer.unmount());
 });
@@ -444,7 +445,7 @@ test('main tabs: five sections with shared navigation; venue and list pages reac
     await act(async () => { section = Renderer.create(React.createElement(tabs[index].props.component)); });
     const names = section.root.findAllByType(h.Screen).map(node => node.props.name);
     assert.equal(names[0], root, 'the section starts on its own root screen');
-    for (const venue of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy', 'SpotDetailScreen', 'ListScreen', 'OwnSpotScreen', 'CustomSpotScreen']) assert.ok(names.includes(venue), `${root} section opens ${venue}`);
+    for (const venue of ['SpotDetailScreen', 'ListScreen', 'OwnSpotScreen']) assert.ok(names.includes(venue), `${root} section opens ${venue}`);
     await act(async () => section.unmount());
   }
   await act(async () => renderer.unmount());
@@ -486,14 +487,14 @@ test('denied profile access shows retry/signout instead of Home or an endless sp
   await act(async () => renderer.unmount());
 });
 
-for (const screen of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
-  test(`${screen} cannot start tracking after unmount while permission is pending`, async () => {
+for (const { name } of legacyFallSpots) {
+  test(`${name} cannot start tracking after unmount while permission is pending`, async () => {
     let grant;
     const permission = new Promise(resolve => { grant = resolve; });
-    const h = createHarness({ locationPermissions: () => permission });
-    const renderer = await h.render('screens/' + screen + '.js', { location: true });
+    const h = createHarness({ getLocationPermissions: () => permission });
+    const renderer = await h.render('screens/SpotDetailScreen.js', { location: true, props: spotProps(name) });
     await act(async () => renderer.unmount());
-    await act(async () => grant({ status: 'granted' }));
+    await act(async () => grant({ granted: true }));
     assert.ok(!h.calls.some(([name]) => name === 'watchLocation'));
   });
 }
@@ -501,7 +502,7 @@ for (const screen of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresD
 for (const spot of detailedFallSpots) {
   test(`SpotDetailScreen renders ${spot.placeID} with its own title, address, tagline and photo placeholder`, async () => {
     const h = createHarness();
-    const renderer = await h.render('screens/SpotDetailScreen.js', { props: { route: { params: { placeID: spot.placeID } } } });
+    const renderer = await h.render('screens/SpotDetailScreen.js', { props: spotProps(spot.name) });
     const output = JSON.stringify(renderer.toJSON());
     for (const text of [spot.title, spot.detailAddress, spot.tagline, 'Photo coming soon']) assert.ok(output.includes(text), `${spot.placeID} shows ${text}`);
     await act(async () => renderer.unmount());
@@ -509,8 +510,8 @@ for (const spot of detailedFallSpots) {
 }
 test('SpotDetailScreen explains an unknown spot instead of querying reviews for it', async () => {
   const h = createHarness();
-  const renderer = await h.render('screens/SpotDetailScreen.js', { props: { route: { params: { placeID: 'nope' } } } });
-  assert.match(JSON.stringify(renderer.toJSON()), /Details unavailable for this spot/);
+  const renderer = await h.render('screens/SpotDetailScreen.js', { props: spotProps('Unknown spot') });
+  assert.match(JSON.stringify(renderer.toJSON()), /This spot isn’t available/);
   await act(async () => renderer.unmount());
 });
 test('Fall screen lists every spot in category order and opens the right venue page', async () => {
@@ -524,7 +525,7 @@ test('Fall screen lists every spot in category order and opens the right venue p
   const detail = name => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
   await act(async () => detail('Aldor Family Farm').props.onPress());
   await act(async () => detail('Reifel Bird Sanctuary').props.onPress());
-  assert.deepEqual(h.navigations, [['AldorFamilyFarmScreen'], ['SpotDetailScreen', { placeID: 'reifel_bird_sanctuary' }]]);
+  assert.deepEqual(h.navigations, ['Aldor Family Farm', 'Reifel Bird Sanctuary'].map(name => ['SpotDetailScreen', { spot: { k: 'c', name } }]));
   await act(async () => renderer.unmount());
 });
 test('Seasons screen shows the same Fall count as the Fall list', async () => {
@@ -535,23 +536,21 @@ test('Seasons screen shows the same Fall count as the Fall list', async () => {
 });
 
 for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
-  test(`${season} spot cards are one size, show only a one-line shrink-to-fit name, and no address`, async () => {
+  test(`${season} uses shared spot cards and accessible Spots and Map tabs`, async () => {
     const h = createHarness();
     const renderer = await h.render(`screens/${season}DatesScreen.js`);
-    const cards = renderer.root.findAll(node => node.type === 'View' && [].concat(node.props.style).some(style => style && style.borderRadius === 14));
+    const cards = renderer.root.findAllByType(h.load('components/SpotCard.js').default);
     assert.ok(cards.length > 0, 'cards render');
-    const heights = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).height));
-    assert.deepEqual([...heights], [74], 'every card has the same fixed height (15% taller than the earlier 64)');
-    const gaps = new Set(cards.map(card => [].concat(card.props.style).find(style => style && style.borderRadius === 14).marginBottom));
-    assert.deepEqual([...gaps], [24.15], 'space between cards is 15% more than the earlier 21');
-    const hearts = renderer.root.findAll(node => ['favorite', 'favorite-border'].includes(node.props.name));
-    assert.equal(hearts.length, cards.length, 'one heart per card');
-    assert.ok(hearts.every(node => node.props.size === 23), 'hearts are 15% larger than the original 20');
-    const names = renderer.root.findAll(node => node.type === 'Text' && node.props.numberOfLines === 1 && node.props.adjustsFontSizeToFit);
-    assert.equal(names.length, cards.length, 'one shrink-to-fit single-line name per card');
-    assert.ok(names.every(node => node.props.minimumFontScale > 0 && node.props.minimumFontScale < 1));
-    const addressLines = renderer.root.findAll(node => node.type === 'Text' && [].concat(node.props.style).some(style => style && style.color === '#696969'));
-    assert.equal(addressLines.length, 0, 'no address line on the card front');
+    for (const card of cards) {
+      const title = card.findAllByType('Text').find(node => node.props.children === card.props.spot.name);
+      assert.equal(title.props.numberOfLines, 1, 'long titles stay on one line');
+      assert.equal(title.props.adjustsFontSizeToFit, true, 'long titles shrink to fit');
+      assert.ok(!card.props.spot.meta.includes(season), `the ${season} screen doesn't repeat the season on its cards`);
+      const heart = card.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `Save ${card.props.spot.name}`);
+      assert.ok(heart, 'each card has its own save control');
+    }
+    const tabs = renderer.root.findAll(node => node.type === 'TouchableOpacity' && node.props.accessibilityRole === 'tab');
+    assert.deepEqual(tabs.map(node => [node.props.accessibilityLabel, node.props.accessibilityState.selected]), [['Spots', true], ['Map', false]]);
     await act(async () => renderer.unmount());
   });
 }
@@ -570,24 +569,20 @@ test('the Vancouver and Seasons cards use the cover images from the assets folde
   }
 });
 
-// The original farm pins are the expected weather locations after moving them into the catalogue.
-const legacySpotPages = [
-  ['AldorFamilyFarmScreen', 49.15313, -122.53021],
-  ['LaityPumpkinPatch', 49.23465, -122.63515],
-  ['EagleAcresDairy', 49.15948, -122.55347],
-].map(([file, latitude, longitude]) => ({ label: file, file, props: {}, latitude, longitude }));
-const sharedSpotPages = detailedFallSpots.map(spot => ({ label: spot.placeID, file: 'SpotDetailScreen', props: { route: { params: { placeID: spot.placeID } } }, latitude: spot.latitude, longitude: spot.longitude }));
-const spotPages = [...legacySpotPages, ...sharedSpotPages];
-const titleNodes = renderer => renderer.root.findAll(node => node.type === 'Text' && node.props.style && node.props.style.fontSize === 24 && node.props.style.textTransform === 'uppercase');
+// Keep the original farm forecast coordinates as well as the catalogue venues.
+const spotPages = [...legacyFallSpots, ...detailedFallSpots].map(spot => ({
+  label: spot.placeID ?? spot.name, title: spot.title ?? spot.name, props: spotProps(spot.name),
+  latitude: spot.latitude, longitude: spot.longitude,
+}));
 test('there are 43 spot info pages under test', () => assert.equal(spotPages.length, 43));
 for (const page of spotPages) {
-  test(`${page.label}: one-line title, forecast for the spot without a GPS fix, no blank location bar`, async () => {
+  test(`${page.label}: shared title and a forecast for the spot without a GPS fix`, async () => {
     const h = createHarness();
-    const renderer = await h.render(`screens/${page.file}.js`, { props: page.props });
-    const titles = titleNodes(renderer);
-    assert.equal(titles.length, 1, 'one title');
-    assert.equal(titles[0].props.numberOfLines, 1);
-    assert.ok(titles[0].props.adjustsFontSizeToFit && titles[0].props.minimumFontScale > 0 && titles[0].props.minimumFontScale < 1);
+    const renderer = await h.render('screens/SpotDetailScreen.js', { props: page.props });
+    const title = renderer.root.findAllByType('Text').find(node => node.props.accessibilityRole === 'header' && node.props.children === page.title);
+    assert.ok(title, 'one shared spot title');
+    assert.equal(title.props.numberOfLines, 1, 'titles stay on one line');
+    assert.equal(title.props.adjustsFontSizeToFit, true, 'long titles shrink to fit');
     const requests = h.calls.filter(([name]) => name === 'fetch');
     assert.equal(requests.length, 1, 'one forecast request');
     assert.ok(requests[0][1].includes(`lat=${page.latitude}&lon=${page.longitude}`), `forecast is for the spot (${requests[0][1]})`);
@@ -602,7 +597,7 @@ for (const page of spotPages) {
     const realError = console.error;
     console.error = () => {};
     try {
-      const renderer = await h.render(`screens/${page.file}.js`, { props: page.props });
+      const renderer = await h.render('screens/SpotDetailScreen.js', { props: page.props });
       assert.match(JSON.stringify(renderer.toJSON()), /Weather is unavailable right now/);
       assert.equal(renderer.root.findAllByType('ActivityIndicator').length, 0);
       await act(async () => renderer.unmount());
@@ -610,8 +605,8 @@ for (const page of spotPages) {
   });
 }
 test('a denied location permission is explained under the map on the shared page too, and tracking never starts', async () => {
-  const h = createHarness();
-  const renderer = await h.render('screens/SpotDetailScreen.js', { location: true, props: sharedSpotPages[0].props });
+  const h = createHarness({ getLocationPermissions: async () => ({ granted: false }) });
+  const renderer = await h.render('screens/SpotDetailScreen.js', { location: true, props: spotProps('Richmond Country Farms') });
   assert.ok(!h.calls.some(([name]) => name === 'watchLocation'));
   assert.match(JSON.stringify(renderer.toJSON()), /Permission to access location was denied/);
   await act(async () => renderer.unmount());

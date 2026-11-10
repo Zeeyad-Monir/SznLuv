@@ -13,7 +13,8 @@ export default function ReadMoreText({ children, lines = 5, style }) {
         {children}
       </Text>
       {long && (
-        <TouchableOpacity style={styles.toggle} onPress={() => setOpen(value => !value)} accessibilityRole="button">
+        <TouchableOpacity style={styles.toggle} onPress={() => setOpen(value => !value)}
+          accessibilityRole="button" accessibilityState={{ expanded: open }}>
           <Text style={styles.toggleText}>{open ? 'Read less' : 'Read more'}</Text>
         </TouchableOpacity>
       )}

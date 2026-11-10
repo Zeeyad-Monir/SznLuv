@@ -32,7 +32,7 @@ function ListGrid({ lists, size, onOpen, keyPrefix = '' }) {
   return (
     <View style={styles.grid}>
       {lists.map(list => (
-        <ListTile key={keyPrefix + list.id} list={list} size={size} caption={`by ${list.ownerUsername ?? 'someone'}`}
+        <ListTile key={keyPrefix + list.id} list={list} size={size}
           onPress={() => onOpen(list)} />
       ))}
     </View>

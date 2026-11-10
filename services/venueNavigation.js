@@ -1,24 +1,15 @@
-const { findSpotByName } = require('./spots');
+const { catalogueRef } = require('./catalogue');
+const { linkRef } = require('./customSpotsState');
 
-// Original hand-built venue screens, keyed by the spot's list-card name.
-const venueRoutes = {
-  'Aldor Family Farm': 'AldorFamilyFarmScreen',
-  'Laity Pumpkin Patch': 'LaityPumpkinPatch',
-  'Eagle Acres Dairy': 'EagleAcresDairy',
-};
-
-// Route shared by every spot defined in services/spots.js.
 const SPOT_DETAIL_ROUTE = 'SpotDetailScreen';
 
 // Once a tap starts navigating this screen loses focus, so a second quick tap on another card is ignored.
 const canNavigate = navigation => navigation.isFocused?.() !== false;
 
-function openVenue(navigation, alert, name) {
+function openSpot(navigation, ref, sourceListId) {
   if (!canNavigate(navigation)) return undefined;
-  const route = venueRoutes[name];
-  if (route) return navigation.navigate(route);
-  const spot = findSpotByName(name);
-  if (spot) return navigation.navigate(SPOT_DETAIL_ROUTE, { placeID: spot.placeID });
-  return alert('Details unavailable', `Details for ${name} are not available yet.`);
+  const spot = ref.k === 'x' ? linkRef(ref) : catalogueRef(ref.name);
+  return navigation.navigate(SPOT_DETAIL_ROUTE, { spot, ...(sourceListId ? { sourceListId } : {}) });
 }
-module.exports = { openVenue, canNavigate, venueRoutes, SPOT_DETAIL_ROUTE };
+
+module.exports = { openSpot, canNavigate, SPOT_DETAIL_ROUTE };

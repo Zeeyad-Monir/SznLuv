@@ -14,21 +14,28 @@ import { catalogueRef, findCatalogueSpot, isOwnSpot } from '../services/catalogu
 import { linkRef, savedEntry, savedKey } from '../services/customSpotsState';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
+const EMPTY = {};
 
 // Live copy of the user's saved spots, keyed by spot name. `onError` runs if they can't be loaded.
 export function useFavouriteSpots(onError) {
   const { user } = useContext(AuthContext);
-  const [favourites, setFavourites] = useState({});
+  const uid = user?.uid;
+  const currentUid = useRef(uid);
+  currentUid.current = uid;
+  const [loaded, setLoaded] = useState(null);
+  const setFavourites = useCallback(favourites => {
+    if (currentUid.current === uid) setLoaded({ uid, favourites });
+  }, [uid]);
   useEffect(() => {
-    if (!user) return undefined;
-    return onSnapshot(doc(db, 'favourites', user.uid), snapshot => {
-      setFavourites(snapshot.exists() ? snapshot.data() : {});
+    if (!uid) return undefined;
+    return onSnapshot(doc(db, 'favourites', uid), snapshot => {
+      setFavourites(snapshot.exists() ? snapshot.data() : EMPTY);
     }, error => {
       console.error('Favourites subscription failed:', { code: error.code });
       onError?.(error);
     });
-  }, [user]);
-  return [favourites, setFavourites];
+  }, [uid, setFavourites]);
+  return [loaded?.uid === uid ? loaded?.favourites ?? EMPTY : EMPTY, setFavourites];
 }
 
 // `sourceListId`: the public list the spots are being saved from, if any, for the launch metrics.

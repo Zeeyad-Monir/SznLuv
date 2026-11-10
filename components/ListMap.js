@@ -1,37 +1,67 @@
-// A list's spots on a map, numbered in list order. Shown instead of the cards when "Map" is chosen.
-import React, { useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { hasCoordinates } from '../services/spotDiscovery';
+import { colors, text } from './theme';
 
-// The spots that can be drawn: [{ spot, item, number }], numbered by their place in the list.
-export function mappable(spots) {
-  return spots.map((entry, index) => ({ ...entry, number: index + 1 })).filter(entry => hasCoordinates(entry.spot));
+export function mappable(entries) {
+  return entries.map((entry, index) => ({ ...entry, number: index + 1 }))
+    .filter(entry => hasCoordinates(entry.spot));
 }
 
-export default function ListMap({ spots, onOpen }) {
+const closeRegion = coordinate => ({ ...coordinate, latitudeDelta: 0.03, longitudeDelta: 0.03 });
+const edgePadding = { top: 60, right: 50, bottom: 50, left: 50 };
+
+export default function ListMap({ points, onOpen }) {
   const map = useRef(null);
-  const points = mappable(spots);
-  const fit = () => map.current?.fitToCoordinates(
-    points.map(({ spot }) => ({ latitude: spot.latitude, longitude: spot.longitude })),
-    { edgePadding: { top: 60, right: 50, bottom: 50, left: 50 }, animated: false },
-  );
+  const [ready, setReady] = useState(false);
+  const [laidOut, setLaidOut] = useState(false);
+  const coordinates = points.map(({ spot }) => ({ latitude: spot.latitude, longitude: spot.longitude }));
+  const coordinateKey = JSON.stringify(coordinates);
+  const initialRegion = useRef(closeRegion(coordinates[0]));
+  useEffect(() => {
+    if (!ready || !laidOut) return;
+    const locations = JSON.parse(coordinateKey);
+    const first = locations[0];
+    if (locations.every(point => point.latitude === first.latitude && point.longitude === first.longitude)) {
+      map.current?.animateToRegion(closeRegion(first), 0);
+    } else {
+      map.current?.fitToCoordinates(locations, { edgePadding, animated: false });
+    }
+  }, [coordinateKey, ready, laidOut]);
+
   return (
-    <View style={styles.frame}>
-      <MapView ref={map} style={styles.map} onMapReady={fit} onLayout={fit}
-        initialRegion={{ latitude: points[0].spot.latitude, longitude: points[0].spot.longitude, latitudeDelta: 0.4, longitudeDelta: 0.4 }}>
-        {points.map(entry => (
-          <Marker key={entry.spot.key}
-            coordinate={{ latitude: entry.spot.latitude, longitude: entry.spot.longitude }}
-            title={`${entry.number}. ${entry.spot.name}`} description={entry.item.note || entry.spot.meta}
-            onCalloutPress={() => onOpen(entry)} />
-        ))}
-      </MapView>
-    </View>
+    <>
+      <View style={styles.frame}>
+        <MapView ref={map} style={styles.map} initialRegion={initialRegion.current}
+          onMapReady={() => setReady(true)} onLayout={() => setLaidOut(true)}>
+          {points.map((entry, index) => (
+            <Marker key={entry.spot.key} coordinate={coordinates[index]} title={entry.spot.name}
+              onPress={() => onOpen(entry.ref)} onCalloutPress={() => onOpen(entry.ref)}>
+              <View style={styles.pin}>
+                <Text style={styles.number} allowFontScaling={false}>{entry.number}</Text>
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      </View>
+      {points.map(entry => (
+        <TouchableOpacity key={entry.spot.key} style={styles.link} onPress={() => onOpen(entry.ref)}
+          accessibilityRole="button" accessibilityLabel={`Map spot ${entry.number}, ${entry.spot.name}`}>
+          <Text style={text.summary}>{entry.number}. {entry.spot.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   frame: { height: 420, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E8E1D5' },
   map: { flex: 1 },
+  pin: {
+    minWidth: 30, height: 30, paddingHorizontal: 4, borderRadius: 15, borderWidth: 2,
+    borderColor: colors.white, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
+  },
+  number: { color: colors.white, fontSize: 13, fontWeight: '800' },
+  link: { minHeight: 44, justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 12 },
 });

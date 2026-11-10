@@ -21,14 +21,10 @@ import SeasonalFavourites from '../screens/SeasonalFavourites';
 import ExploreScreen from '../screens/ExploreScreen';
 import ListScreen from '../screens/ListScreen';
 import OwnSpotScreen from '../screens/OwnSpotScreen';
-import CustomSpotScreen from '../screens/CustomSpotScreen';
 import SpinTheWheel from '../screens/SpinTheWheel';
 import ProfileSettings from '../screens/ProfileSettings';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonScreen from '../screens/PersonScreen';
-import AldorFamilyFarmScreen from '../screens/AldorFamilyFarmScreen';
-import LaityPumpkinPatch from '../screens/LaityPumpkinPatch';
-import EagleAcresDairy from '../screens/EagleAcresDairy';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
 import { AuthContext } from '../contexts/AuthContext';
 import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
@@ -46,9 +42,6 @@ const stackOptions = { headerShown: false };
 
 // Venue pages open from both the seasonal lists and saved favourites, inside whichever section you're in.
 export const venueScreens = [
-  ['AldorFamilyFarmScreen', AldorFamilyFarmScreen],
-  ['LaityPumpkinPatch', LaityPumpkinPatch],
-  ['EagleAcresDairy', EagleAcresDairy],
   ['SpotDetailScreen', SpotDetailScreen],
 ];
 // Lists and the pages they lead to, likewise available inside whichever section opened them.
@@ -56,7 +49,6 @@ export const socialScreens = [
   ['ListScreen', ListScreen],
   ['PersonScreen', PersonScreen],
   ['OwnSpotScreen', OwnSpotScreen],
-  ['CustomSpotScreen', CustomSpotScreen],
 ];
 // A collection's own page: from the season cards at home, and from My lists once it has been saved.
 export const collectionScreens = [

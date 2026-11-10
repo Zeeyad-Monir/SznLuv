@@ -1,35 +1,39 @@
 // Someone else's profile: their public Top 4 and public lists, and a button to follow them.
 // Opened with { uid } or, from a link, { username }.
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+  ActivityIndicator, Alert, Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
-import Avatar from '../components/Avatar';
 import EmptyCard from '../components/EmptyCard';
-import ListTile from '../components/ListTile';
+import { ProfileHeading, ProfileIdentity, PublicListTiles } from '../components/ProfileSections';
 import { useSnackbar } from '../components/Snackbar';
 import Top4Grid from '../components/Top4Grid';
-import { GUTTER, colors, controls, text, tileWidth } from '../components/theme';
+import { GUTTER, colors, controls, tileWidth } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
-import { DEFAULT_CITY, isOwnSpot } from '../services/catalogue';
+import { DEFAULT_CITY } from '../services/catalogue';
 import { followPerson, isFollowingPerson, unfollowPerson } from '../services/follows';
 import { getPublicListsBy } from '../services/lists';
 import { blockUser, getBlocked } from '../services/moderation';
 import { findProfileByUsername, getProfile } from '../services/profiles';
-import { canNavigate, openVenue } from '../services/venueNavigation';
+import { openSpot } from '../services/venueNavigation';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 
 export default function PersonScreen({ navigation, route }) {
   const { uid: targetUid, username: targetUsername } = route.params;
   const { user } = useContext(AuthContext);
-  const uid = user?.uid;
+  return <PublicProfile key={JSON.stringify([user?.uid, targetUid, targetUsername])}
+    navigation={navigation} uid={user?.uid} targetUid={targetUid} targetUsername={targetUsername} />;
+}
+
+function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
   const snackbar = useSnackbar();
   const { width } = useWindowDimensions();
   const size = tileWidth(width);
@@ -38,26 +42,32 @@ export default function PersonScreen({ navigation, route }) {
   // undefined: loading. null: not available (no public profile, or blocked).
   const [person, setPerson] = useState(undefined);
   const [lists, setLists] = useState([]);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [following, setFollowingState] = useState(false);
   const followingNow = useRef(false);
   const setFollowing = value => { followingNow.current = value; setFollowingState(value); };
   const working = useRef(false);
   const entrance = useEntrance(3, { ready: !!person });
 
-  const load = useCallback(async () => {
-    try {
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    const load = async () => {
       const profile = targetUid ? await getProfile(targetUid) : await findProfileByUsername(targetUsername);
-      if (!profile || (await getBlocked(uid)).includes(profile.uid)) return setPerson(null);
+      if (!profile || (await getBlocked(uid)).includes(profile.uid)) {
+        if (active) { setFailed(false); setPerson(null); }
+        return;
+      }
       const [theirLists, isFollowing] = await Promise.all([getPublicListsBy(profile.uid), isFollowingPerson(uid, profile.uid)]);
+      if (!active) return;
       setLists(theirLists);
       setFollowing(isFollowing);
-      return setPerson(profile);
-    } catch (error) {
-      console.error('Profile unavailable:', { code: error?.code });
-      return setPerson(null);
-    }
-  }, [targetUid, targetUsername, uid]);
-  useEffect(() => { load(); }, [load]);
+      setFailed(false);
+      setPerson(profile);
+    };
+    load().catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [targetUid, targetUsername, uid, attempt]));
 
   const toggleFollow = async () => {
     if (working.current) return;
@@ -112,24 +122,23 @@ export default function PersonScreen({ navigation, route }) {
     ],
   });
 
-  const openPick = ref => {
-    if (!canNavigate(navigation)) return;
-    if (isOwnSpot(ref)) navigation.navigate('CustomSpotScreen', { spot: ref, addedBy: person.username });
-    else openVenue(navigation, Alert.alert, ref.name);
-  };
-
-  if (person === undefined) {
+  if (!failed && person === undefined) {
     return (
       <SignedInScreen style={[styles.container, styles.centred]}>
-        <ActivityIndicator size="large" color={colors.ink} />
+        <ActivityIndicator size="large" color={colors.ink} accessibilityLabel="Loading profile" />
       </SignedInScreen>
     );
   }
-  if (!person) {
+  if (failed || !person) {
     return (
       <SignedInScreen style={[styles.container, styles.unavailable]}>
-        <EmptyCard icon="person-off" title="This profile isn’t available"
-          actionLabel="Back to Explore" onAction={() => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
+        <EmptyCard icon={failed ? 'cloud-off' : 'person-off'}
+          title={failed ? 'Couldn’t open this profile' : 'This profile isn’t available'}
+          text={failed ? 'Check your connection and try again.' : undefined}
+          actionLabel={failed ? 'Try again' : 'Back to Explore'}
+          onAction={failed
+            ? () => { setPerson(undefined); setFailed(false); setAttempt(value => value + 1); }
+            : () => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
       </SignedInScreen>
     );
   }
@@ -140,13 +149,7 @@ export default function PersonScreen({ navigation, route }) {
   return (
     <SignedInScreen style={styles.container}>
       <ScrollView contentContainerStyle={floatingScrollStyle}>
-        <Animated.View style={[styles.identity, entrance[0]]}>
-          <Avatar username={person.username} color={person.avatarColor} size={72} />
-          <View style={styles.identityWords}>
-            <Text style={styles.username} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} accessibilityRole="header">{person.username}</Text>
-            {!!person.bio && <Text style={[text.body, styles.bio]}>{person.bio}</Text>}
-          </View>
-        </Animated.View>
+        <ProfileIdentity username={person.username} avatarColor={person.avatarColor} bio={person.bio} style={entrance[0]} />
 
         {!isMe && (
           <Animated.View style={[styles.actions, entrance[1]]}>
@@ -166,26 +169,11 @@ export default function PersonScreen({ navigation, route }) {
         <Animated.View style={entrance[2]}>
           {picks.length > 0 && (
             <>
-              <View style={styles.sectionHead}>
-                <Text style={text.sectionLabel} accessibilityRole="header">Top 4</Text>
-                <Text style={text.meta}>{DEFAULT_CITY.name}</Text>
-              </View>
-              <Top4Grid picks={picks} size={size} onPressPick={openPick} />
+              <ProfileHeading title="Top 4" caption={DEFAULT_CITY.name} />
+              <Top4Grid picks={picks} size={size} onPressPick={ref => openSpot(navigation, ref)} />
             </>
           )}
-          <View style={styles.sectionHead}>
-            <Text style={text.sectionLabel} accessibilityRole="header">Lists</Text>
-          </View>
-          {lists.length === 0 ? (
-            <Text style={[text.body, styles.none]}>No public lists yet.</Text>
-          ) : (
-            <View style={styles.grid}>
-              {lists.map(list => (
-                <ListTile key={list.id} list={list} size={size}
-                  onPress={() => { if (canNavigate(navigation)) navigation.navigate('ListScreen', { listId: list.id }); }} />
-              ))}
-            </View>
-          )}
+          <PublicListTiles lists={lists} size={size} navigation={navigation} empty="No public lists yet." />
         </Animated.View>
       </ScrollView>
     </SignedInScreen>
@@ -197,15 +185,8 @@ const styles = StyleSheet.create({
   centred: { alignItems: 'center', justifyContent: 'center' },
   unavailable: { justifyContent: 'center', paddingHorizontal: 20 },
   content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  identityWords: { flex: 1 },
-  username: { fontSize: 28, fontWeight: '700', color: colors.ink },
-  bio: { marginTop: 2 },
   actions: { flexDirection: 'row', gap: 8, marginTop: 20 },
   grow: { flex: 1 },
   withIcon: { flexDirection: 'row', gap: 6 },
   square: { width: 48, paddingHorizontal: 0 },
-  sectionHead: { marginTop: 28, marginBottom: 12, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  none: { color: colors.muted },
 });

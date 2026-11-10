@@ -2,7 +2,7 @@
 // lists they made and the seasonal collections they chose to keep. "Following" is other people's lists.
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+  ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useScrollToTop } from '@react-navigation/native';
 import EmptyCard from '../components/EmptyCard';
@@ -17,17 +17,17 @@ import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useMySpots from '../hooks/useMySpots';
-import usePublicSpots from '../hooks/usePublicSpots';
-import { isMine, savedCustomSpots, toRef } from '../services/customSpotsState';
+import useSpotEntries from '../hooks/useSpotEntries';
+import { savedCustomSpots } from '../services/customSpotsState';
 import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollections';
-import { catalogueRef, locality, resolveSpot } from '../services/catalogue';
+import { catalogueRef, resolveSpot } from '../services/catalogue';
 import { collectionById, collectionCaption } from '../services/collections';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import PersonRow from '../components/PersonRow';
 import { loadFollowedLists, loadFollowedPeople } from '../services/follows';
 import { getPublicList } from '../services/lists';
-import { canNavigate, openVenue } from '../services/venueNavigation';
+import { canNavigate, openSpot } from '../services/venueNavigation';
 
 const SEGMENTS = [
   { value: 'saved', label: 'Saved' },
@@ -99,24 +99,15 @@ export default function Favourites({ route }) {
 // Removing one from here offers Undo, and never deletes a spot the user made.
 function Saved({ onExplore }) {
   const navigation = useNavigation();
-  const { user } = useContext(AuthContext);
   const [favourites, setFavourites] = useFavouriteSpots();
   const { toggleFavouriteSpot, toggleCustomSpot } = useSaveSpot(favourites, setFavourites);
-  const { byId } = useMySpots();
+  const privateSpots = useMySpots();
 
   // Newest first, so a spot just made is at the top. Someone else's is shown from its public copy.
-  const entries = savedCustomSpots(favourites)
-    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)));
-  const copies = usePublicSpots(entries.filter(entry => entry.owner && entry.owner !== user?.uid).map(entry => entry.id));
-  const custom = entries.map(entry => {
-    const record = byId[entry.id];
-    const ref = record ? toRef(entry.id, record) : { k: 'x', id: entry.id, ...(entry.owner ? { owner: entry.owner } : {}), name: entry.name };
-    const resolved = resolveSpot(ref);
-    if (isMine(ref, user?.uid)) return { ref, cover: record?.photos?.[0] ?? null, spot: { ...resolved, meta: record?.category || resolved.meta } };
-    const copy = copies[entry.id];
-    const meta = copy ? (copy.category || locality(copy.address) || 'Shared spot') : copy === null ? 'No longer shared' : 'Shared spot';
-    return { ref, cover: copy?.photos?.[0] ?? null, spot: { ...resolved, name: copy?.name ?? resolved.name, meta } };
-  });
+  const refs = savedCustomSpots(favourites)
+    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)))
+    .map(({ id, owner, name }) => ({ k: 'x', id, owner, name }));
+  const { entries: custom } = useSpotEntries(refs, { privateSpots });
   const groups = SEASON_ORDER.map(season => ({
     season,
     entries: Object.entries(favourites)
@@ -150,10 +141,10 @@ function Saved({ onExplore }) {
       {custom.length > 0 && (
         <View>
           <Text style={styles.sectionLabel} accessibilityRole="header">Your spots</Text>
-          {custom.map(({ ref, spot, cover }) => (
+          {custom.map(({ ref, spot, details, status }) => (
             <Animated.View key={ref.id} style={entrance.styleFor(ref.id)}>
-              <SpotCard spot={spot} saved thumbnail={cover}
-                onPress={() => { if (canNavigate(navigation)) navigation.navigate('CustomSpotScreen', { spot: ref }); }}
+              <SpotCard spot={status === 'unavailable' ? { ...spot, meta: 'No longer shared' } : spot}
+                saved thumbnail={details?.photos?.[0]} onPress={() => openSpot(navigation, ref)}
                 onToggleSave={() => toggleCustomSpot(ref)} />
             </Animated.View>
           ))}
@@ -165,11 +156,11 @@ function Saved({ onExplore }) {
           {entries.map(({ name, entry }) => {
             // A spot SznLuv no longer lists stays here, so it can still be removed.
             const resolved = resolveSpot(catalogueRef(name));
-            const spot = { ...resolved, missing: false, meta: resolved.missing ? 'No longer listed' : resolved.locality };
+            const spot = { ...resolved, missing: false };
             return (
               <Animated.View key={name} style={entrance.styleFor(name)}>
                 <SpotCard spot={spot} saved
-                  onPress={() => openVenue(navigation, Alert.alert, name)}
+                  onPress={() => openSpot(navigation, catalogueRef(name))}
                   onToggleSave={() => toggleFavouriteSpot({ name, season: entry.season, address: entry.location })} />
               </Animated.View>
             );
@@ -312,11 +303,10 @@ function Following({ size, onOpen, onOpenPerson, onExplore }) {
       <View style={styles.grid}>
         {state.lists.map(({ pointer, list, updated }) => {
           // A list that couldn't be re-read just now is shown from what was saved when it was followed.
-          const shown = list ?? { ...pointer, items: [] };
-          const by = `by ${shown.ownerUsername ?? 'someone'}`;
+          const shown = list ?? pointer;
           return (
             <Animated.View key={pointer.id} style={entrance.styleFor(pointer.id)}>
-              <ListTile list={shown} size={size} caption={updated ? `Updated · ${by}` : by} badge={updated ? 'dot' : null}
+              <ListTile list={shown} size={size} updated={updated}
                 onPress={() => onOpen(pointer)} />
             </Animated.View>
           );

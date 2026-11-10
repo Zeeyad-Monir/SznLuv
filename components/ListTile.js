@@ -8,31 +8,33 @@ import { cardShadow, colors } from './theme';
 
 export const spotCount = count => `${count} ${count === 1 ? 'spot' : 'spots'}`;
 
-// `caption` replaces the spot count; `badge="dot"` marks a followed list that changed since it was last opened.
-export default function ListTile({ list, size, onPress, caption, badge }) {
+export default function ListTile({ list, size, onPress, caption, updated = false }) {
   const art = seasonArt(list.cover);
-  const count = list.spotCount ?? list.items?.length ?? 0;
-  const footer = caption ?? spotCount(count);
-  const privacy = list.public ? 'public' : 'private';
+  const draft = 'public' in list;
+  const count = draft ? list.items?.length : list.spotCount ?? list.items?.length;
+  const footer = caption ?? (count == null ? null : spotCount(count));
+  const creator = !draft && list.ownerUsername ? `by ${list.ownerUsername}` : null;
+  const privacy = draft ? (list.public ? 'public list' : 'private list') : null;
   const body = (
     <View style={styles.body}>
-      {badge === 'dot' && <View style={styles.dot} />}
-      {!badge && 'public' in list && !caption && (
-        <View style={[styles.badge, art && styles.badgeOnArt]}>
-          <Ionicons name={list.public ? 'globe-outline' : 'lock-closed'} size={13} color={colors.ink} />
+      {(updated || draft) && (
+        <View style={styles.badge}>
+          {updated ? <Text style={styles.updated}>Updated</Text>
+            : <Ionicons name={list.public ? 'globe-outline' : 'lock-closed'} size={13} color={colors.ink} />}
         </View>
       )}
-      <Text style={[styles.title, art && styles.onArt]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
-        {list.title}
-      </Text>
-      <Text style={[styles.caption, art && styles.onArt]} numberOfLines={1}>{footer}</Text>
+      <View style={styles.words}>
+        <Text style={[styles.title, art && styles.onArt]}>{list.title}</Text>
+        {!!footer && <Text style={[styles.caption, art && styles.onArt]}>{footer}</Text>}
+        {!!creator && <Text style={[styles.caption, art && styles.onArt]} numberOfLines={2}>{creator}</Text>}
+      </View>
     </View>
   );
   return (
     <TouchableOpacity
-      style={[styles.tile, { width: size, height: size, backgroundColor: coverBackground(list.cover) }]}
+      style={[styles.tile, { width: size, minHeight: size, backgroundColor: coverBackground(list.cover) }]}
       activeOpacity={0.8} onPress={onPress} accessibilityRole="button"
-      accessibilityLabel={`${list.title}, ${'public' in list && !caption ? `${privacy} list, ` : ''}${footer}`}
+      accessibilityLabel={[list.title, privacy, footer, creator, updated && 'Updated'].filter(Boolean).join(', ')}
     >
       {art ? (
         <ImageBackground source={art} style={styles.art} imageStyle={styles.artImage}>{body}</ImageBackground>
@@ -53,15 +55,15 @@ export function NewListTile({ size, onPress }) {
 
 const styles = StyleSheet.create({
   tile: { borderRadius: 15, marginBottom: 16, ...cardShadow },
-  art: { flex: 1 },
+  art: { flexGrow: 1 },
   artImage: { borderRadius: 15, opacity: 0.85 },
-  body: { flex: 1, padding: 14, justifyContent: 'flex-end' },
+  body: { flexGrow: 1, padding: 14, justifyContent: 'flex-end' },
+  words: { flexGrow: 1, justifyContent: 'flex-end' },
   badge: {
-    position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    alignSelf: 'flex-end', minWidth: 26, minHeight: 26, paddingHorizontal: 6, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
-  dot: { position: 'absolute', top: 12, right: 12, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.white },
-  badgeOnArt: { backgroundColor: 'rgba(255, 255, 255, 0.8)' },
+  updated: { color: colors.ink, fontSize: 12, fontWeight: '700' },
   title: { fontSize: 20, fontWeight: '700', color: colors.ink },
   caption: { marginTop: 4, fontSize: 13, fontWeight: '600', color: colors.summary },
   onArt: {

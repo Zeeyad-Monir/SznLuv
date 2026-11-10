@@ -48,7 +48,7 @@ test('library: Saved no longer shows season tiles; it lists hearted spots by sea
   assert.ok(screen.texts().includes('Maan Farms'));
   assert.ok(screen.texts().includes('No longer listed'), 'a spot SznLuv dropped stays, so it can be removed');
   await screen.press('View details for Maan Farms');
-  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { placeID: 'maan_farms' }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: maan }]);
 
   await screen.press('Remove Gone Farm from favourites');
   assert.equal(h.documents.get('favourites/audit')['Gone Farm'], undefined);
@@ -109,14 +109,14 @@ test('library: no lists yet shows an invitation, and a load failure can be retri
 test('heart: saves with a snackbar instead of an alert, and offers Add to list', async () => {
   const h = createHarness();
   const screen = await mount(h, 'screens/FallDatesScreen.js');
-  await screen.press('Favorite Aldor Family Farm');
+  await screen.press('Save Aldor Family Farm');
   assert.equal(h.alerts.length, 0, 'no blocking alert');
   assert.equal(h.documents.get('favourites/audit')['Aldor Family Farm'].season, 'Fall');
   assert.deepEqual(screen.snackbar(), ['Saved to Fall favourites', 'Add to list']);
   await screen.press('Add to list');
   assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: farm }]);
 
-  await screen.press('Favorite Aldor Family Farm');
+  await screen.press('Remove Aldor Family Farm from favourites');
   assert.equal(h.documents.get('favourites/audit')['Aldor Family Farm'], undefined);
   assert.deepEqual(screen.snackbar(), ['Removed from favourites', 'Undo']);
   await screen.press('Undo');
@@ -126,7 +126,7 @@ test('heart: saves with a snackbar instead of an alert, and offers Add to list',
 test('heart: a failed save puts the heart back and says so', async () => {
   const h = createHarness({ writeError: 'unavailable' });
   const screen = await mount(h, 'screens/WinterDatesScreen.js');
-  await quiet(() => screen.press('Favorite Glacier Rink'));
+  await quiet(() => screen.press('Save Glacier Rink'));
   assert.equal(h.documents.get('favourites/audit')['Glacier Rink'], undefined);
   assert.deepEqual(screen.snackbar(), ['Couldn’t save. Check your connection.']);
   assert.equal(h.alerts.length, 0);
@@ -266,9 +266,9 @@ test('list page: shows the title, place, count, description and each spot with i
   assert.ok(coloured, 'the page takes the list\'s cover colour');
 
   await screen.press('View details for Aldor Family Farm');
-  assert.deepEqual(h.navigations.at(-1), ['AldorFamilyFarmScreen']);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: farm }]);
   await screen.press('View details for Waterfront steps');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: steps, addedBy: null }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'x', id: steps.id, owner: steps.owner, name: steps.name } }]);
 });
 
 test('list page: the heart saves an app spot to its season and a spot of your own to Saved', async () => {
@@ -418,9 +418,9 @@ test('add your own spot: a typed address is kept as written; a name the app list
 });
 
 test('own spot page: shows where it is, opens directions, and offers Add to list', async () => {
-  const h = createHarness();
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: steps } });
-  assert.deepEqual(screen.texts().slice(0, 3), ['Add up to 3 photos', 'Waterfront steps', 'Dropped pin (49.2865, -123.1120)']);
+  const h = createHarness({ documents: { ...withLists({}), 'spots/audit_steps1': stepsRecord } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: steps } });
+  assert.deepEqual(screen.texts().slice(0, 3), ['Waterfront steps', 'Dropped pin (49.2865, -123.1120)', 'Added by you']);
   await screen.press('Directions');
   assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=49.28651%2C-123.112']);
   await screen.press('Add to list');

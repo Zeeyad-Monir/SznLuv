@@ -43,10 +43,10 @@ test('a list made public by one person is found by another in Explore search, an
   await sheet.press('Make public');
   assert.ok(h.documents.get('publicLists/a').searchTerms.includes('rainy'));
 
-  assert.deepEqual(await find('rainy'), ['Rainy day plans, by audit'], 'by a word in the title');
-  assert.deepEqual(await find('rai'), ['Rainy day plans, by audit'], 'by the start of a word');
-  assert.deepEqual(await find('langley'), ['Rainy day plans, by audit'], 'by a spot\'s town');
-  assert.deepEqual(await find('audit'), ['audit, profile', 'Rainy day plans, by audit'], 'by creator: the person and their list');
+  assert.deepEqual(await find('rainy'), ['Rainy day plans, 2 spots, by audit'], 'by a word in the title');
+  assert.deepEqual(await find('rai'), ['Rainy day plans, 2 spots, by audit'], 'by the start of a word');
+  assert.deepEqual(await find('langley'), ['Rainy day plans, 2 spots, by audit'], 'by a spot\'s town');
+  assert.deepEqual(await find('audit'), ['audit, profile', 'Rainy day plans, 2 spots, by audit'], 'by creator: the person and their list');
 
   const confirm = await mount(h, 'screens/SharingSheet.js', { params: { listId: 'a', confirmPrivate: true } });
   await confirm.press('Make private');
@@ -57,13 +57,14 @@ test('a list made public by one person is found by another in Explore search, an
 
 test('profile: Top 4 starts as four open slots, fills from the search sheet, and stays private until shown', async () => {
   const h = createHarness({ documents: {
-    ...base, 'lists/a': { ...draft('Mine', [steps]), public: true, publishedAt: 5 },
+    ...base, 'lists/a': { ...draft('Mine', [farm, steps]), public: true, publishedAt: 5 },
+    'publicLists/a': publicCopy('Mine', [farm], 'audit', 'audit', 5),
     'spots/audit_steps1': { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [], createdAt: 1 },
   } });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.equal(labels(screen).filter(label => label === 'Add a pick').length, 4);
   assert.ok(screen.texts().includes('Pick up to four favourite spots.'));
-  assert.ok(screen.button('Mine, public list, 1 spot'), 'public lists are shown');
+  assert.ok(screen.button('Mine, 1 spot, by audit'), 'public lists are shown');
 
   await screen.press('Add a pick');
   await flush();
@@ -139,18 +140,18 @@ test('person: shows their bio, public picks without empty slots, and public list
   assert.deepEqual(screen.texts().slice(0, 3), ['M', 'maya', 'Long evenings.']);
   assert.ok(screen.button('Number 1: Aldor Family Farm, Langley · Fall') && screen.button('Number 2: Waterfront steps, Dropped pin'));
   assert.equal(screen.button('Add a pick'), undefined, 'a visitor never sees open slots');
-  assert.deepEqual(labels(screen).filter(label => /spots?$/.test(label)), ['Slow Sundays, 1 spot', 'Golden Hour, 2 spots']);
+  assert.deepEqual(labels(screen).filter(label => /spots?, by maya$/.test(label)), ['Slow Sundays, 1 spot, by maya', 'Golden Hour, 2 spots, by maya']);
 
   await screen.press('Number 2: Waterfront steps, Dropped pin');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: steps, addedBy: 'maya' }]);
-  await screen.press('Golden Hour, 2 spots');
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'x', id: steps.id, owner: steps.owner, name: steps.name } }]);
+  await screen.press('Golden Hour, 2 spots, by maya');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'm1' }]);
 
   // No public picks: the Top 4 section is simply not there.
   h.documents.set('profiles/maya-uid', { username: 'maya' });
   const bare = await mount(h, 'screens/PersonScreen.js', { params: { username: 'maya' } });
   assert.equal(bare.texts().includes('Top 4'), false);
-  assert.ok(bare.texts().includes('Lists'));
+  assert.ok(bare.texts().includes('Public lists'));
 });
 
 test('person: following is separate from following their lists, and names where to find them', async () => {
@@ -221,10 +222,10 @@ test('explore: search finds people by the start of their username; followed peop
   const screen = await mount(h, 'screens/ExploreScreen.js');
   const headings = () => screen.texts().filter(line => ['From people you follow', 'New in Vancouver', 'People'].includes(line));
   assert.deepEqual(headings(), ['From people you follow', 'New in Vancouver']);
-  assert.deepEqual(labels(screen).filter(label => / by /.test(label)).slice(0, 2), ['Slow Sundays, by maya', 'Golden Hour, by maya']);
+  assert.deepEqual(labels(screen).filter(label => / by /.test(label)).slice(0, 2), ['Slow Sundays, 1 spot, by maya', 'Golden Hour, 2 spots, by maya']);
   // Lists are square tiles, two to a row, the same size as the Favourites grid.
-  const tile = screen.all('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Golden Hour, by maya');
-  assert.deepEqual([tile.props.style[1].width, tile.props.style[1].height], [167, 167]);
+  const tile = screen.all('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Golden Hour, 2 spots, by maya');
+  assert.deepEqual([tile.props.style[1].width, tile.props.style[1].minHeight], [167, 167]);
 
   t.mock.timers.enable({ apis: ['setTimeout'] });
   await act(async () => screen.all('TextInput')[0].props.onChangeText('ma'));
@@ -317,22 +318,87 @@ test('explore: lists you already follow are left out of "From people you follow"
 
 // ---------------------------------------------------------------- Map
 
-test('list page: Spots and Map switch appears only when two or more spots can be mapped', async () => {
-  const h = createHarness({ documents: { ...base, ...maya, 'publicLists/one': publicCopy('One place', [farm, rink], 'maya-uid', 'maya') } });
-  const screen = await mount(h, 'screens/ListScreen.js', { params: { listId: 'm1' } });
-  assert.ok(screen.button('Spots') && screen.button('Map'));
+test('list page: Spots and Map handle zero, one and multiple pins in spot order', async () => {
+  const h = createHarness({ documents: {
+    ...base, ...maya,
+    'publicLists/one': publicCopy('One pin', [rink, farm], 'maya-uid', 'maya'),
+    'publicLists/zero': publicCopy('No pins', [rink], 'maya-uid', 'maya'),
+  } });
+  const open = listId => mount(h, 'screens/ListScreen.js', { params: { listId } });
+  const screen = await open('m1');
+  assert.equal(screen.button('Spots').props.accessibilityState.selected, true);
   assert.equal(screen.all('MapView').length, 0);
   await screen.press('Map');
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
-  const markers = screen.all('Marker').map(marker => marker.props.title);
-  assert.deepEqual(markers, ['1. Aldor Family Farm', '2. Maan Farms']);
-  assert.equal(screen.button('View details for Aldor Family Farm'), undefined, 'the cards give way to the map');
-  await act(async () => screen.all('Marker')[1].props.onCalloutPress());
-  assert.equal(h.navigations.at(-1)[0], 'SpotDetailScreen');
+  assert.equal(screen.button('Map').props.accessibilityState.selected, true);
+  const map = screen.all('MapView')[0];
+  await act(async () => { map.props.onLayout(); map.props.onMapReady(); });
+  assert.equal(h.calls.find(([name]) => name === 'fitToCoordinates')[1].length, 2);
+  assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), [farm.name, maan.name]);
+  await act(async () => screen.all('Marker')[1].props.onPress());
+  const opened = h.navigations.at(-1);
+  assert.deepEqual(opened, ['SpotDetailScreen', { spot: maan, sourceListId: 'm1' }]);
+  await screen.press('Map spot 2, Maan Farms');
+  assert.deepEqual(h.navigations.at(-1), opened);
   await screen.press('Spots');
-  assert.ok(screen.button('View details for Aldor Family Farm'));
+  await screen.press('View details for Maan Farms');
+  assert.deepEqual(h.navigations.at(-1), opened);
+  await act(async () => screen.renderer.unmount());
 
-  // Glacier Rink has no coordinates, so only one spot could be drawn: no switch.
-  const single = await mount(h, 'screens/ListScreen.js', { params: { listId: 'one' } });
-  assert.equal(single.button('Map'), undefined);
+  const single = await open('one');
+  await single.press('Map');
+  assert.ok(single.texts().includes('1 of 2 spots on the map'));
+  assert.ok(single.button('Map spot 2, Aldor Family Farm'), 'number matches the card position');
+  assert.equal(single.all('MapView')[0].props.initialRegion.latitude, single.all('Marker')[0].props.coordinate.latitude);
+  await act(async () => single.renderer.unmount());
+
+  const zero = await open('zero');
+  await zero.press('Map');
+  assert.equal(zero.all('MapView').length, 0);
+  assert.ok(zero.texts().includes('No locations to map'));
+  await zero.press('Back to Spots');
+  assert.ok(zero.button('View details for Glacier Rink'));
+  await act(async () => zero.renderer.unmount());
+});
+
+test('owner Map survives edit mode and uses live private coordinates', async () => {
+  const h = createHarness({ documents: {
+    ...base, 'lists/a': draft('Mine', [steps]),
+    'spots/audit_steps1': { ownerUid: 'audit', name: steps.name, lat: 49.4, lng: -123.4, publicListIds: [] },
+  } });
+  const screen = await mount(h, 'screens/ListScreen.js', { params: { listId: 'a' } });
+  await screen.press('Map');
+  assert.deepEqual(screen.all('Marker')[0].props.coordinate, { latitude: 49.4, longitude: -123.4 });
+  await screen.press('More options');
+  await act(async () => h.menus.at(-1).pick('Edit spots'));
+  assert.equal(screen.button('Map'), undefined);
+  assert.ok(screen.button('Remove Waterfront steps'));
+  await screen.press('Done');
+  assert.equal(screen.button('Map').props.accessibilityState.selected, true);
+  await act(async () => screen.renderer.unmount());
+});
+
+test('a visitor’s open map follows publication and withdrawal without using the draft', async () => {
+  const h = createHarness({ documents: {
+    ...base, 'users/viewer': { username: 'viewer' },
+    'lists/a': draft('Weekend', [farm]),
+    'spots/audit_steps1': { ownerUid: 'audit', name: steps.name, lat: steps.lat, lng: steps.lng, publicListIds: [], photos: [] },
+  } });
+  const lists = h.load('services/lists.js');
+  await lists.publishList('audit', 'audit', 'a');
+  const owner = await mount(h, 'screens/ListScreen.js', { params: { listId: 'a' } });
+  const visitor = await mount(h, 'screens/ListScreen.js', {
+    user: { uid: 'viewer' }, username: 'viewer', params: { listId: 'a', from: 'link' },
+  });
+  await owner.press('Map');
+  await visitor.press('Map');
+  await act(async () => lists.mutateList('a', list => addSpot(list, steps)));
+  assert.equal(owner.all('Marker').length, 2);
+  assert.equal(visitor.all('Marker').length, 1);
+  await act(async () => lists.publishList('audit', 'audit', 'a'));
+  assert.equal(visitor.all('Marker').length, 2);
+  await act(async () => lists.unpublishList('a'));
+  assert.equal(visitor.all('Marker').length, 0);
+  assert.ok(visitor.texts().includes('This list isn’t available'));
+  assert.equal(owner.all('Marker').length, 2, 'the owner still has their draft');
+  await act(async () => { owner.renderer.unmount(); visitor.renderer.unmount(); });
 });

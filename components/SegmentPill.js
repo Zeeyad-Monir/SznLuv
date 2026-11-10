@@ -47,7 +47,7 @@ export default function SegmentPill({ options, value, onChange, style }) {
         <TouchableOpacity key={option.value} style={styles.option} activeOpacity={0.65}
           accessibilityRole="tab" accessibilityLabel={option.label}
           accessibilityState={{ selected: option.value === value }} onPress={() => select(option)}>
-          <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={1.3}>{option.label}</Text>
+          <Text style={styles.label}>{option.label}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -56,13 +56,13 @@ export default function SegmentPill({ options, value, onChange, style }) {
 
 const styles = StyleSheet.create({
   track: {
-    height: 44, borderRadius: 22, padding: INSET, flexDirection: 'row', alignItems: 'center',
+    borderRadius: 26, padding: INSET, flexDirection: 'row', alignItems: 'stretch',
     backgroundColor: colors.segmentTrack,
   },
   highlight: {
     position: 'absolute', left: INSET, top: INSET, bottom: INSET, borderRadius: 18,
     backgroundColor: colors.segmentHighlight, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.segmentRim,
   },
-  option: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
-  label: { color: colors.ink, fontSize: 15, fontWeight: '600' },
+  option: { flex: 1, minHeight: 44, padding: 4, alignItems: 'center', justifyContent: 'center' },
+  label: { color: colors.ink, fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });

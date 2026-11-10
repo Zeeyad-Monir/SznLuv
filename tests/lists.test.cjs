@@ -402,7 +402,7 @@ test('spot card: opens the spot, saves with the heart, and offers the save to Vo
     spot: resolveSpot(farm), note: 'Go around 7.', saved: false,
     onPress: () => log.push('open'), onToggleSave: () => log.push('save'),
   }));
-  const [card, heart] = renderer.root.findAllByType('TouchableOpacity');
+  const [heart, card] = renderer.root.findAllByType('TouchableOpacity');
   assert.equal(card.props.accessibilityLabel, 'View details for Aldor Family Farm');
   assert.equal(heart.props.accessibilityLabel, 'Save Aldor Family Farm');
   assert.deepEqual(card.props.accessibilityActions, [{ name: 'save', label: 'Save spot' }]);

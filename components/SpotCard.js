@@ -1,18 +1,20 @@
 // The cream spot card from the season screens, for lists: heart, name, where it is, an optional note.
 // In edit mode the heart gives way to move and remove controls and the note becomes tappable.
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HeartButton from './HeartButton';
 import StoragePhoto from './StoragePhoto';
 import { cardShadow, colors, text } from './theme';
+import spotImages from '../screens/spotImages';
 
-// `thumbnail`: a spot someone made shows its cover photo ({ path }), or a placeholder (null). Left out, none.
+// Custom spots supply an authorized Storage photo. Catalogue spots use their bundled photo.
 export default function SpotCard({
   spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
   const disabled = spot.missing;
+  const bundledPhoto = !spot.own && Object.hasOwn(spotImages, spot.name) && spotImages[spot.name];
   const toggleSave = () => onToggleSave?.();
 
   const actions = editing
@@ -28,8 +30,12 @@ export default function SpotCard({
 
   return (
     <View style={[styles.card, disabled && styles.cardMissing]}>
+      {!editing && onToggleSave && !disabled && (
+        <HeartButton style={styles.heart} saved={saved} onPress={toggleSave} hitSlop={0}
+          label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />
+      )}
       <TouchableOpacity
-        style={styles.content}
+        style={[styles.content, !editing && !note && styles.fixed, !editing && onToggleSave && !disabled && styles.withHeart]}
         onPress={onPress}
         onLongPress={onLongPress}
         disabled={disabled || editing}
@@ -38,14 +44,11 @@ export default function SpotCard({
         accessibilityActions={actions}
         onAccessibilityAction={runAction}
       >
-        {!editing && onToggleSave && !disabled && (
-          <HeartButton style={styles.heart} saved={saved} onPress={toggleSave}
-            label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />
-        )}
-
-        {thumbnail !== undefined && <StoragePhoto path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
+        {bundledPhoto
+          ? <Image source={bundledPhoto} style={styles.thumb} resizeMode="cover" accessible={false} />
+          : <StoragePhoto key={thumbnail?.path} path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
         <View style={styles.words}>
-          <Text style={text.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} maxFontSizeMultiplier={1.2}>
+          <Text style={text.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} ellipsizeMode="tail">
             {spot.name}
           </Text>
           {!!spot.meta && <Text style={[text.meta, styles.meta]} numberOfLines={1}>{spot.meta}</Text>}
@@ -85,8 +88,11 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 14, marginBottom: 16, ...cardShadow },
   cardMissing: { opacity: 0.55 },
   // Padding is on the touchable, so the whole card responds and not just its middle.
-  content: { minHeight: 74, padding: 14, flexDirection: 'row', alignItems: 'center' },
-  heart: { marginRight: 16 },
+  content: { minHeight: 80, padding: 12, flexDirection: 'row', alignItems: 'center' },
+  // Every plain card is the same height, however long its name is.
+  fixed: { height: 80 },
+  withHeart: { paddingLeft: 50 },
+  heart: { width: 44, height: 44, position: 'absolute', zIndex: 1, top: 18, left: 4, alignItems: 'center', justifyContent: 'center' },
   thumb: { width: 52, height: 52, borderRadius: 10, marginRight: 12, overflow: 'hidden' },
   words: { flex: 1 },
   meta: { marginTop: 2 },

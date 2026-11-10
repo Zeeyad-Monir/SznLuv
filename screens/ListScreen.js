@@ -1,7 +1,7 @@
 // A list's own page, in its cover colour: title, who made it, and its spots as cards.
 // The owner edits in place (add, note, reorder, remove), so the page always looks the way a visitor sees it.
 // Anyone else sees the public copy, with Follow, share and report. Opened with { listId }.
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Animated, LayoutAnimation, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -11,92 +11,85 @@ import { selectionAsync } from 'expo-haptics';
 import AddSpotSheet from '../components/AddSpotSheet';
 import useMySpots from '../hooks/useMySpots';
 import EmptyCard from '../components/EmptyCard';
-import ListMap, { mappable } from '../components/ListMap';
-import SegmentPill from '../components/SegmentPill';
+import ListBody from '../components/ListBody';
 import { spotCount } from '../components/ListTile';
 import { useSnackbar } from '../components/Snackbar';
-import SpotCard from '../components/SpotCard';
 import { colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import usePublishedList, { rememberPublished } from '../hooks/usePublishedList';
+import usePublicDocuments from '../hooks/usePublicDocuments';
+import useSpotEntries from '../hooks/useSpotEntries';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
-import { cityName, isOwnSpot, resolveSpot, spotKey } from '../services/catalogue';
+import { cityName, spotKey } from '../services/catalogue';
 import { followList, isFollowingList, markListOpened, unfollowList } from '../services/follows';
-import { deleteList, getPublicList, mutateList, publishList, subscribeList } from '../services/lists';
+import { deleteList, mutateList, publishList, subscribeList } from '../services/lists';
 import {
   LIMITS, addSpot, coverBackground, hasUnpublishedChanges, insertSpot, moveSpot, needsReview, removeSpot,
 } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
 import { blockUser } from '../services/moderation';
 import { shareList } from '../services/shareList';
-import { canNavigate, openVenue } from '../services/venueNavigation';
+import { canNavigate, openSpot } from '../services/venueNavigation';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 const haptic = () => { if (Platform.OS === 'ios') selectionAsync().catch(() => {}); };
-const VIEWS = [{ value: 'spots', label: 'Spots' }, { value: 'map', label: 'Map' }];
-
-// The switch appears only when a map would say something: two or more spots with a known location.
-function useListView(spots) {
-  const [view, setView] = useState('spots');
-  const canMap = mappable(spots).length >= 2;
-  return { view: canMap ? view : 'spots', setView, canMap };
-}
-
 export default function ListScreen({ navigation, route }) {
   const { listId, from } = route.params;
   const { user } = useContext(AuthContext);
+  return <ListPage key={JSON.stringify([user?.uid, listId])} listId={listId} from={from}
+    navigation={navigation} uid={user?.uid} />;
+}
 
-  // The user's own working copy, live. `null` means it isn't theirs (or doesn't exist).
+function ListPage({ listId, from, navigation, uid }) {
   const [draft, setDraft] = useState(undefined);
-  // The public copy, fetched only when there is no working copy to show.
-  const [shared, setShared] = useState(undefined);
-  const [failed, setFailed] = useState(false);
+  const [draftError, setDraftError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [view, setView] = useState('spots');
   const deleting = useRef(false);
+  const { read, retry } = usePublicDocuments('publicLists', draft === null ? [listId] : []);
+  const shared = read(listId);
 
   useEffect(() => subscribeList(listId, next => {
-    if (deleting.current) return; // Keep the page as it was while it slides away
-    setDraft(next?.ownerUid === user?.uid ? next : null);
+    if (!deleting.current) setDraft(next?.ownerUid === uid ? next : null);
   }, error => {
-    // Being refused is the normal answer for someone else's list.
-    if (error?.code !== 'permission-denied') console.error('List unavailable:', { code: error?.code });
-    setDraft(null);
-  }), [listId, user?.uid]);
+    if (error?.code === 'permission-denied') setDraft(null);
+    else setDraftError(true);
+  }), [listId, uid, attempt]);
 
-  useEffect(() => {
-    if (draft !== null) return undefined;
-    let active = true;
-    getPublicList(listId)
-      .then(list => { if (active) { setFailed(false); setShared(list); } })
-      .catch(error => {
-        console.error('Public list unavailable:', { code: error?.code });
-        if (active) { setFailed(true); setShared(null); }
-      });
-    return () => { active = false; };
-  }, [draft, listId]);
-
-  if (draft) {
-    return <OwnerList navigation={navigation} list={draft} setList={setDraft} deleting={deleting} />;
+  if (draft && !draftError) {
+    return <OwnerList navigation={navigation} list={draft} setList={setDraft} deleting={deleting}
+      view={view} setView={setView} />;
   }
-  if (draft === undefined || shared === undefined) {
+  const failed = draftError || shared.status === 'error';
+  if (!failed && (draft === undefined || shared.status === 'loading')) {
     return (
       <SignedInScreen style={[styles.container, styles.centred]}>
-        <ActivityIndicator size="large" color={colors.ink} />
+        <ActivityIndicator size="large" color={colors.ink} accessibilityLabel="Loading list" />
       </SignedInScreen>
     );
   }
-  if (shared) return <VisitorList navigation={navigation} list={shared} from={from} />;
+  if (!failed && shared.value) {
+    return <VisitorList navigation={navigation} list={shared.value} from={from} view={view} setView={setView} />;
+  }
+  const retryList = () => {
+    if (!draftError) return retry();
+    setDraft(undefined);
+    setDraftError(false);
+    setAttempt(value => value + 1);
+  };
   // One neutral page whether the list was made private, deleted, or never existed. Nothing of it is shown.
   return (
     <SignedInScreen style={[styles.container, styles.unavailable]}>
       <EmptyCard icon={failed ? 'cloud-off' : 'lock-outline'}
         title={failed ? 'Couldn’t open this list' : 'This list isn’t available'}
         text={failed ? 'Check your connection and try again.' : 'It may have been made private or removed.'}
-        actionLabel="Back to Explore" onAction={() => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
+        actionLabel={failed ? 'Try again' : 'Back to Explore'}
+        onAction={failed ? retryList : () => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
     </SignedInScreen>
   );
 }
@@ -105,7 +98,7 @@ function ListHeader({ list, style, byline }) {
   const count = list.spotCount ?? list.items.length;
   return (
     <Animated.View style={style}>
-      <Text style={text.worldTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} accessibilityRole="header">
+      <Text style={text.worldTitle} accessibilityRole="header">
         {list.title}
       </Text>
       {byline}
@@ -117,12 +110,12 @@ function ListHeader({ list, style, byline }) {
 
 // ---------------------------------------------------------------- The owner's view
 
-function OwnerList({ navigation, list, setList, deleting }) {
+function OwnerList({ navigation, list, setList, deleting, view, setView }) {
   const listId = list.id;
   const { user, username } = useContext(AuthContext);
   const snackbar = useSnackbar();
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
-  const { spots: mySpots } = useMySpots();
+  const mySpots = useMySpots();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -136,9 +129,8 @@ function OwnerList({ navigation, list, setList, deleting }) {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const entrance = useEntrance(3);
-  const spots = useMemo(() => list.items.map(item => ({ item, spot: resolveSpot(item.spot) })), [list]);
+  const { entries, retry } = useListEntries(list, { privateSpots: mySpots, ownedDraft: true });
   const full = list.items.length >= LIMITS.spots;
-  const { view, setView, canMap } = useListView(spots);
   const pending = list.public && hasUnpublishedChanges(list, published);
 
   // Shows the change at once, saves it, and puts the list back if the save fails.
@@ -172,12 +164,6 @@ function OwnerList({ navigation, list, setList, deleting }) {
       actionLabel: 'Undo',
       onAction: () => apply(current => insertSpot(current, item, index), { animate: true }),
     });
-  };
-
-  const openSpot = ({ item }) => {
-    if (!canNavigate(navigation)) return;
-    if (isOwnSpot(item.spot)) navigation.navigate('CustomSpotScreen', { spot: item.spot, addedBy: null });
-    else openVenue(navigation, Alert.alert, item.spot.name);
   };
 
   const openSharing = () => navigation.navigate('Sharing', { listId });
@@ -248,13 +234,13 @@ function OwnerList({ navigation, list, setList, deleting }) {
             ) : (
               <TouchableOpacity style={[controls.primary, styles.grow, styles.withIcon]} accessibilityRole="button" onPress={() => setAdding(true)}>
                 <Ionicons name="add" size={20} color={colors.white} />
-                <Text style={controls.primaryText}>Add a spot</Text>
+                <Text style={[controls.primaryText, styles.actionLabel]}>Add a spot</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[controls.secondary, styles.withIcon]} accessibilityRole="button"
               accessibilityLabel={list.public ? 'Public list, change sharing' : 'Private list, change sharing'} onPress={openSharing}>
               <Ionicons name={list.public ? 'globe-outline' : 'lock-closed'} size={16} color={colors.ink} />
-              <Text style={controls.secondaryText}>{list.public ? 'Public' : 'Private'}</Text>
+              <Text style={[controls.secondaryText, styles.actionLabel]}>{list.public ? 'Public' : 'Private'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[controls.secondary, styles.square]} accessibilityRole="button"
               accessibilityLabel="More options" onPress={openMenu}>
@@ -273,34 +259,29 @@ function OwnerList({ navigation, list, setList, deleting }) {
         </Animated.View>
 
         <Animated.View style={entrance[2]}>
-          {canMap && !editing && <SegmentPill options={VIEWS} value={view} onChange={setView} style={styles.views} />}
-          {view === 'map' && !editing && <ListMap spots={spots} onOpen={openSpot} />}
-          {spots.length === 0 && (
-            <EmptyCard icon="add-location-alt" title="Add your first spot"
+          <ListBody sections={[{ entries }]} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
+            onOpen={ref => openSpot(navigation, ref)} editing={editing} retry={retry}
+            empty={<EmptyCard icon="add-location-alt" title="Add your first spot"
               text="Search the spots in SznLuv, or add a place of your own."
-              actionLabel="Add a spot" onAction={() => setAdding(true)} />
-          )}
-          {(view === 'spots' || editing) && spots.map((entry, index) => (
-            <SpotCard
-              key={entry.spot.key} spot={entry.spot} note={entry.item.note}
-              saved={isSaved(entry.item.spot)} onToggleSave={() => saveRef(entry.item.spot)}
-              onPress={() => openSpot(entry)} onLongPress={() => setEditing(true)}
-              editing={editing} canMoveUp={index > 0} canMoveDown={index < spots.length - 1}
-              onMoveUp={() => apply(current => moveSpot(current, entry.spot.key, -1), { animate: true })}
-              onMoveDown={() => apply(current => moveSpot(current, entry.spot.key, 1), { animate: true })}
-              onRemove={() => remove(entry, index)}
-              onNotePress={() => navigation.navigate('Note', {
-                listId, spotKey: entry.spot.key, name: entry.spot.name, note: entry.item.note ?? '',
-              })}
-            />
-          ))}
+              actionLabel="Add a spot" onAction={() => setAdding(true)} />}
+            editProps={(entry, index) => ({
+              onLongPress: () => setEditing(true),
+              canMoveUp: index > 0,
+              canMoveDown: index < entries.length - 1,
+              onMoveUp: () => apply(current => moveSpot(current, entry.spot.key, -1), { animate: true }),
+              onMoveDown: () => apply(current => moveSpot(current, entry.spot.key, 1), { animate: true }),
+              onRemove: () => remove(entry, index),
+              onNotePress: () => navigation.navigate('Note', {
+                listId, spotKey: entry.spot.key, name: entry.spot.name, note: entry.note ?? '',
+              }),
+            })} />
         </Animated.View>
       </ScrollView>
 
       {adding && (
         <AddSpotSheet
           addedKeys={new Set(list.items.map(item => spotKey(item.spot)))}
-          mySpots={mySpots}
+          mySpots={mySpots.spots}
           full={full} fullHint={`This list is full. A list can hold up to ${LIMITS.spots} spots.`}
           onAdd={addToThisList}
           onAddOwn={name => navigation.navigate('OwnSpotScreen', { listId, name })}
@@ -313,7 +294,7 @@ function OwnerList({ navigation, list, setList, deleting }) {
 
 // ---------------------------------------------------------------- Everyone else's view
 
-function VisitorList({ navigation, list, from }) {
+function VisitorList({ navigation, list, from, view, setView }) {
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
   const snackbar = useSnackbar();
@@ -326,8 +307,7 @@ function VisitorList({ navigation, list, from }) {
   const { saveRef, isSaved } = useSaveSpot(favourites, setFavourites, { sourceListId: list.id });
   const working = useRef(false);
   const entrance = useEntrance(3);
-  const spots = useMemo(() => list.items.map(item => ({ item, spot: resolveSpot(item.spot) })), [list]);
-  const { view, setView, canMap } = useListView(spots);
+  const { entries, retry } = useListEntries(list);
 
   // Opening a followed list clears its "Updated" mark.
   useEffect(() => {
@@ -365,12 +345,6 @@ function VisitorList({ navigation, list, from }) {
     } finally {
       working.current = false;
     }
-  };
-
-  const openSpot = ({ item }) => {
-    if (!canNavigate(navigation)) return;
-    if (isOwnSpot(item.spot)) navigation.navigate('CustomSpotScreen', { spot: item.spot, addedBy: list.ownerUsername });
-    else openVenue(navigation, Alert.alert, item.spot.name);
   };
 
   const confirmBlock = () => Alert.alert(
@@ -424,7 +398,7 @@ function VisitorList({ navigation, list, from }) {
             accessibilityRole="button" accessibilityState={{ selected: following }}
             accessibilityLabel={following ? 'Following list. Unfollow' : 'Follow list'} onPress={toggleFollow}>
             <Ionicons name={following ? 'checkmark' : 'add'} size={20} color={following ? colors.ink : colors.white} />
-            <Text style={following ? controls.secondaryText : controls.primaryText}>{following ? 'Following' : 'Follow list'}</Text>
+            <Text style={[following ? controls.secondaryText : controls.primaryText, styles.actionLabel]}>{following ? 'Following' : 'Follow list'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[controls.secondary, styles.square]} accessibilityRole="button"
             accessibilityLabel="Share link" onPress={() => shareList(list).catch(() => {})}>
@@ -437,17 +411,21 @@ function VisitorList({ navigation, list, from }) {
         </Animated.View>
 
         <Animated.View style={entrance[2]}>
-          {canMap && <SegmentPill options={VIEWS} value={view} onChange={setView} style={styles.views} />}
-          {view === 'map' && <ListMap spots={spots} onOpen={openSpot} />}
-          {view === 'spots' && spots.map(entry => (
-            <SpotCard key={entry.spot.key} spot={entry.spot} note={entry.item.note}
-              saved={isSaved(entry.item.spot)} onToggleSave={() => saveRef(entry.item.spot)}
-              onPress={() => openSpot(entry)} />
-          ))}
+          <ListBody sections={[{ entries }]} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
+            onOpen={ref => openSpot(navigation, ref, list.id)} retry={retry}
+            empty={<EmptyCard icon="place" title="No spots yet" text="Spots appear here when the creator adds them." />} />
         </Animated.View>
       </ScrollView>
     </SignedInScreen>
   );
+}
+
+function useListEntries(list, options) {
+  const { entries, retry } = useSpotEntries(list.items.map(item => item.spot), options);
+  return {
+    entries: entries.map((entry, index) => ({ ...entry, item: list.items[index], note: list.items[index].note })),
+    retry,
+  };
 }
 
 const styles = StyleSheet.create({
@@ -462,9 +440,9 @@ const styles = StyleSheet.create({
   place: { marginTop: 8, textAlign: 'center' },
   description: { marginTop: 8, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 20, marginBottom: 20 },
-  views: { marginBottom: 16, backgroundColor: 'rgba(255, 255, 255, 0.45)' },
   grow: { flex: 1 },
-  withIcon: { flexDirection: 'row', gap: 6 },
+  withIcon: { flexDirection: 'row', flexShrink: 1, gap: 6 },
+  actionLabel: { flexShrink: 1 },
   square: { width: 48, paddingHorizontal: 0 },
   pending: {
     marginTop: -8, marginBottom: 20, minHeight: 48, paddingLeft: 14, paddingRight: 4, borderRadius: 12,

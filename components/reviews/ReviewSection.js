@@ -1,11 +1,10 @@
 // The review section of a spot page: average, a form to add one, sort and star filter, and the reviews.
-// Shared by SznLuv's spot pages (screens/SpotDetailScreen.js, in their original look) and pages for spots
-// people make and share (screens/CustomSpotScreen.js, tone="theme"). Data comes from hooks/useSpotReviews.js.
+// Data comes from hooks/useSpotReviews.js.
 import React, { useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FILTER_OPTIONS, SORT_OPTIONS } from '../../services/reviews';
-import { colors as theme } from '../theme';
+import { colors as theme, spot } from '../theme';
 
 const PROFILE_COLOURS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
 
@@ -60,7 +59,7 @@ export default function ReviewSection({
       </View>
 
       <View>
-        <Text style={styles.reviewHeader} accessibilityRole="header">{title}</Text>
+        <Text style={[styles.reviewHeader, themed && themedStyles.heading]} accessibilityRole="header">{title}</Text>
         {!canReview ? (
           <Text style={styles.loginPrompt}>{cannotReviewText}</Text>
         ) : reviews.signedIn ? (
@@ -74,7 +73,7 @@ export default function ReviewSection({
                 </TouchableOpacity>
               ))}
             </View>
-            <TextInput style={styles.reviewInput} placeholder="Write your review here..." value={comment}
+            <TextInput style={[styles.reviewInput, themed && themedStyles.inset]} placeholder="Write your review here..." value={comment}
               onChangeText={setComment} multiline maxLength={2000} accessibilityLabel="Your review" />
             <View style={styles.colorPickerContainer}>
               <FlatList data={PROFILE_COLOURS} horizontal keyExtractor={item => item}
@@ -94,21 +93,21 @@ export default function ReviewSection({
         )}
       </View>
 
-      <Text style={styles.filterTitle}>Filter Reviews</Text>
+      <Text style={[styles.filterTitle, themed && themedStyles.heading]}>Filter Reviews</Text>
       <View style={styles.filterRow}>
-        <Dropdown label={SORT_OPTIONS.find(option => option.value === reviews.sort)?.label || 'Sort By'}
+        <Dropdown themed={themed} label={SORT_OPTIONS.find(option => option.value === reviews.sort)?.label || 'Sort By'}
           open={isSortOpen} onToggle={() => setIsSortOpen(open => !open)} options={SORT_OPTIONS}
           onChoose={value => { reviews.setSort(value); setIsSortOpen(false); }} />
-        <Dropdown label={FILTER_OPTIONS.find(option => parseInt(option.value, 10) === reviews.minStars)?.label || 'Filter'}
+        <Dropdown themed={themed} label={FILTER_OPTIONS.find(option => parseInt(option.value, 10) === reviews.minStars)?.label || 'Filter'}
           open={isFilterOpen} onToggle={() => setIsFilterOpen(open => !open)} options={FILTER_OPTIONS}
           onChoose={value => { reviews.setMinStars(parseInt(value, 10)); setIsFilterOpen(false); }} />
       </View>
 
-      <View style={styles.separator} />
+      <View style={[styles.separator, themed && themedStyles.separator]} />
 
       {!!reviews.error && <Text accessibilityRole="alert">{reviews.error}</Text>}
       {reviews.reviews.length > 0 ? reviews.reviews.map(item => (
-        <View key={item.id} style={styles.reviewItem}>
+        <View key={item.id} style={[styles.reviewItem, themed && themedStyles.reviewItem]}>
           <View style={[styles.profilePic, { backgroundColor: item.profileColor || '#ccc' }]}>
             <Text style={styles.profilePicText}>{(item.username || 'User').charAt(0).toUpperCase()}</Text>
           </View>
@@ -144,15 +143,15 @@ export default function ReviewSection({
   );
 }
 
-function Dropdown({ label, open, onToggle, options, onChoose }) {
+function Dropdown({ label, open, onToggle, options, onChoose, themed }) {
   return (
-    <View style={styles.dropdownContainer}>
+    <View style={[styles.dropdownContainer, themed && themedStyles.inset]}>
       <TouchableOpacity style={styles.dropdownHeader} onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }}>
         <Text style={styles.dropdownHeaderText}>{label}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color="#555" />
       </TouchableOpacity>
       {open && (
-        <View style={styles.dropdownOptions}>
+        <View style={[styles.dropdownOptions, themed && themedStyles.options]}>
           {options.map(option => (
             <TouchableOpacity key={option.value} style={styles.dropdownOption} onPress={() => onChoose(option.value)}>
               <Text style={styles.dropdownOptionText}>{option.label}</Text>
@@ -220,8 +219,16 @@ const styles = StyleSheet.create({
 
 // The newer pages' cream and ink.
 const themedStyles = StyleSheet.create({
-  section: { backgroundColor: theme.card, marginHorizontal: 0, borderRadius: 14 },
-  average: { color: theme.ink },
-  submit: { backgroundColor: theme.ink, borderRadius: 12, minHeight: 48, justifyContent: 'center' },
+  section: { ...StyleSheet.flatten(spot.section), marginHorizontal: 0, marginTop: 0, marginBottom: 0, padding: 16, gap: 0 },
+  average: { color: theme.spotInk },
+  heading: { color: theme.spotInk },
+  inset: { backgroundColor: theme.surfaceInset, borderColor: theme.surfaceBorder, borderRadius: 12 },
+  options: { backgroundColor: theme.surfaceInset },
+  separator: { backgroundColor: theme.surfaceBorder },
+  reviewItem: {
+    backgroundColor: theme.surfaceInset, borderWidth: 1, borderColor: theme.surfaceBorder, borderRadius: 12, padding: 10,
+    shadowOpacity: 0, elevation: 0,
+  },
+  submit: { backgroundColor: theme.spotInk, borderRadius: 12, minHeight: 48, justifyContent: 'center' },
   submitText: { color: theme.white },
 });

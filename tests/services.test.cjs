@@ -4,7 +4,7 @@ const { registerWithProfile } = require('../services/registrationFlow');
 const { firebaseErrorMessage } = require('../services/firebaseErrors');
 const { toggleFavourite, removeFavourite } = require('../services/favouritesState');
 const { sessionAccess } = require('../services/sessionAccess');
-const { openVenue, venueRoutes, SPOT_DETAIL_ROUTE } = require('../services/venueNavigation');
+const { openSpot, SPOT_DETAIL_ROUTE } = require('../services/venueNavigation');
 const { buildForecastUrl, processDailyData, fetchForecast, WEATHER_UNAVAILABLE } = require('../services/weather');
 const { fallCategoryTitles, legacyFallSpots, detailedFallSpots, fallCategories, fallSpotNames, getSpotByPlaceID } = require('../services/spots');
 
@@ -88,15 +88,16 @@ test('provisioning and incomplete profiles never grant Home access', () => {
   assert.equal(sessionAccess({ ...state, registrationError: 'Logout failed' }), 'blocked');
   assert.equal(sessionAccess({ ...state, user: null }), 'auth');
 });
-test('venue links navigate only to registered screens and explain unavailable destinations', () => {
-  const navigated = [], alerts = [];
-  const nav = { navigate: route => navigated.push(route) };
-  const alert = (...args) => alerts.push(args);
-  for (const name of Object.keys(venueRoutes)) openVenue(nav, alert, name);
-  for (const name of ['Glacier Rink', 'Blossom Garden', 'Sunset Beach']) openVenue(nav, alert, name);
-  assert.equal(navigated.length, 3);
-  assert.equal(alerts.length, 3);
-  assert.ok(alerts.every(([title]) => title === 'Details unavailable'));
+test('spot navigation uses one route and passes identity and optional list attribution', () => {
+  const navigated = [];
+  const navigation = { navigate: (...args) => navigated.push(args) };
+  const spot = { k: 'x', id: 'maya_cafe', owner: 'maya', name: 'Café', lat: 49, lng: -123 };
+  openSpot(navigation, spot, 'public-list');
+  assert.deepEqual(navigated, [[SPOT_DETAIL_ROUTE, {
+    spot: { k: 'x', id: spot.id, owner: spot.owner, name: spot.name }, sourceListId: 'public-list',
+  }]]);
+  openSpot({ ...navigation, isFocused: () => false }, spot);
+  assert.equal(navigated.length, 1, 'a second tap after navigation starts is ignored');
 });
 
 const otherSeasonSpotNames = ['Glacier Rink', 'Frosty Pond', 'Evergreen Acres', 'Snowy Pines', 'Science World', 'Blossom Garden', 'VanDusen Botanical Garden', 'Spring Haven', 'River Trail', 'Meadow Path', 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
@@ -127,21 +128,17 @@ test('fall spots: names are unique across seasons and the list matches the origi
   assert.equal(new Set(fallSpotNames).size, fallSpotNames.length);
   assert.equal(fallSpotNames.length, 43);
   assert.ok(fallSpotNames.every(name => !otherSeasonSpotNames.includes(name)));
-  assert.deepEqual(legacyFallSpots.map(spot => spot.name).sort(), Object.keys(venueRoutes).sort());
+  assert.deepEqual(legacyFallSpots.map(spot => spot.name).sort(), ['Aldor Family Farm', 'Eagle Acres Dairy', 'Laity Pumpkin Patch']);
+  assert.equal(getSpotByPlaceID('aldor_farm').name, 'Aldor Family Farm');
   assert.deepEqual(fallCategories.map(category => category.spots.length), [12, 9, 8, 5, 9]);
   assert.ok(fallCategories.every(category => category.spots.every(spot => spot.name && spot.address)));
 });
-test('venue links open the shared detail page for every new fall spot', () => {
-  for (const spot of detailedFallSpots) {
-    const navigated = [], alerts = [];
-    openVenue({ navigate: (...args) => navigated.push(args) }, (...args) => alerts.push(args), spot.name);
-    assert.deepEqual(navigated, [[SPOT_DETAIL_ROUTE, { placeID: spot.placeID }]], spot.name);
-    assert.equal(alerts.length, 0);
-  }
-  for (const [name, route] of Object.entries(venueRoutes)) {
+test('all catalogue spots open the shared details route, including sparse entries', () => {
+  for (const name of [...fallSpotNames, 'Glacier Rink', 'Blossom Garden', 'Sunset Beach']) {
     const navigated = [];
-    openVenue({ navigate: (...args) => navigated.push(args) }, () => assert.fail('legacy spot should navigate'), name);
-    assert.deepEqual(navigated, [[route]]);
+    const spot = { k: 'c', name };
+    openSpot({ navigate: (...args) => navigated.push(args) }, spot);
+    assert.deepEqual(navigated, [[SPOT_DETAIL_ROUTE, { spot }]], name);
   }
 });
 

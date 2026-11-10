@@ -24,6 +24,13 @@ const colors = {
   segmentHighlight: 'rgba(255, 252, 247, 0.83)',
   segmentRim: 'rgba(157, 118, 77, 0.26)',
   white: '#FFFFFF',
+  // Spot pages: white cards on the cream page, so sections stand apart instead of blending in.
+  surface: '#FFFFFF',
+  surfaceBorder: '#EADCC8',
+  surfaceInset: '#FFF7EC',
+  spotInk: '#2B2420',
+  spotBody: '#3A3028',
+  spotMeta: '#6B5E52',
 };
 
 const GUTTER = 20;
@@ -69,4 +76,17 @@ const controls = StyleSheet.create({
   },
 });
 
-module.exports = { colors, GUTTER, GRID_GAP, tileWidth, cardShadow, text, controls };
+// One section card on a spot page (About, Location, Weather, Reviews), the same for every kind of spot.
+const spot = StyleSheet.create({
+  section: {
+    marginTop: 16, padding: 16, gap: 10, borderRadius: 16,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceBorder,
+    shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1,
+  },
+  heading: { fontSize: 18, fontWeight: '700', color: colors.spotInk },
+  body: { fontSize: 15, lineHeight: 22, color: colors.spotBody },
+  label: { fontSize: 14, fontWeight: '700', color: colors.spotInk },
+  meta: { fontSize: 14, fontWeight: '500', color: colors.spotMeta },
+});
+
+module.exports = { colors, GUTTER, GRID_GAP, tileWidth, cardShadow, text, controls, spot };

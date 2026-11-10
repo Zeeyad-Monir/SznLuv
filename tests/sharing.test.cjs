@@ -165,7 +165,7 @@ test('visitor page: shows who made it and its spots, with no way to edit', async
   assert.equal(screen.button('Done'), undefined, 'a long press does not start editing someone else\'s list');
 
   await screen.press('View details for Waterfront steps');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: mayaSteps, addedBy: 'maya' }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'x', id: mayaSteps.id, owner: mayaSteps.owner, name: mayaSteps.name }, sourceListId: 'm' }]);
   await screen.press('Share link');
   assert.deepEqual(h.calls.at(-1), ['share', { message: '“Golden Hour”, a SznLuv list by maya\nsznluv://list/m' }]);
 });
@@ -208,7 +208,7 @@ test('visitor page: the heart saves to the visitor\'s own Saved, linking someone
   assert.deepEqual([saved.isFavourite, saved.owner, saved.name, 'lat' in saved], [true, 'maya-uid', 'Waterfront steps', false],
     'only the name and owner are kept: where it is stays Maya\'s to share');
   await screen.press('Add to list');
-  assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: mayaSteps, sourceListId: 'm' }]);
+  assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: { k: 'x', id: mayaSteps.id, owner: mayaSteps.owner, name: mayaSteps.name }, sourceListId: 'm' }]);
 
   await screen.press('More options');
   assert.deepEqual(h.menus.at(-1).options, ['Report list', 'Block maya', 'Cancel']);
@@ -259,8 +259,8 @@ test('explore: shows the newest lists from other people, never your own or a blo
   const h = createHarness({ documents: exploreDocuments() });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'Lists and people', 'New in Vancouver']);
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex']);
-  await screen.press('Golden Hour, by maya');
+  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
+  await screen.press('Golden Hour, 1 spot, by maya');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'new' }]);
 });
 
@@ -275,16 +275,16 @@ test('explore: search waits for a pause, matches title, creator, spot and town, 
   };
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('gold'));
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex'], 'nothing changes mid-typing');
+  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'], 'nothing changes mid-typing');
   await act(async () => { t.mock.timers.tick(300); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya']);
+  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya']);
   assert.ok(screen.texts().includes('1 list'));
 
   await type('alex');
-  assert.deepEqual(cards(screen), ['Farm days, by alex']);
+  assert.deepEqual(cards(screen), ['Farm days, 1 spot, by alex']);
   await type('langley');
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex'].filter(label => label.startsWith('Golden')));
+  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'].filter(label => label.startsWith('Golden')));
   await type('zebra');
   assert.ok(screen.texts().includes('Nothing for “zebra”'));
   await act(async () => screen.button('Clear search').props.onPress());
@@ -314,7 +314,7 @@ test('explore: loads twenty at a time', async () => {
   const h = createHarness({ documents: { ...base, ...many } });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.equal(cards(screen).length, 20);
-  assert.equal(cards(screen)[0], 'List 24, by maya');
+  assert.equal(cards(screen)[0], 'List 24, 1 spot, by maya');
   await screen.press('Load more');
   assert.equal(cards(screen).length, 25);
   assert.equal(screen.button('Load more'), undefined);
@@ -338,14 +338,14 @@ test('following: shows followed lists, marks updated ones, and drops ones no lon
   });
   const screen = await mount(h, 'screens/Favourites.js', { params: { segment: 'following' } });
   const tiles = screen.all('TouchableOpacity').map(node => node.props.accessibilityLabel).filter(label => /by maya/.test(label ?? ''));
-  assert.deepEqual(tiles, ['Golden Hour, by maya', 'Slow Sundays, Updated · by maya']);
+  assert.deepEqual(tiles, ['Golden Hour, 1 spot, by maya', 'Slow Sundays, 2 spots, by maya, Updated']);
   const notices = screen.texts().filter(line => line.includes('no longer shared'));
   assert.deepEqual(notices.sort(), ['“Came back” is no longer shared.', '“Withdrawn list” is no longer shared.']);
   assert.equal(h.documents.has('users/audit/followedLists/gone'), false);
   assert.equal(h.documents.has('users/audit/followedLists/republished'), false, 'a list made private and public again has to be followed again');
   assert.ok(h.documents.has('users/audit/followedLists/seen'));
 
-  await screen.press('Slow Sundays, Updated · by maya');
+  await screen.press('Slow Sundays, 2 spots, by maya, Updated');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'changed' }]);
 });
 

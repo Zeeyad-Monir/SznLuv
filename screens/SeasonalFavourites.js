@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { removeSavedSpot, restoreSavedSpot } from '../services/favourites';
 import { useSnackbar } from '../components/Snackbar';
-import { openVenue } from '../services/venueNavigation';
+import { catalogueRef } from '../services/catalogue';
+import { openSpot } from '../services/venueNavigation';
 // SeasonalFavourites.js
 // This screen displays only the favourites for a specific season.
 // It allows removal of favourites just like the old favourites screen did, but filtered by season.
@@ -115,7 +116,7 @@ const SeasonalFavourites = () => {
     }
   };
 
-  const handleFavouritePress = (name) => openVenue(navigation, Alert.alert, name);
+  const handleFavouritePress = name => openSpot(navigation, catalogueRef(name));
 
   if (loading) {
     return (

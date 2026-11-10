@@ -225,16 +225,10 @@ export async function migrateLegacySpots(uid, lists) {
 // ---------------------------------------------------------------- Someone else's spot
 
 // What a visitor can read of a spot: its public copy, or null when it isn't shared (or is gone).
-// Kept for the session so lists and Saved don't read the same spot twice; a spot page asks afresh.
-const publicCopies = new Map();
-export async function getPublicSpot(id, { fresh = false } = {}) {
-  if (!fresh && publicCopies.has(id)) return publicCopies.get(id);
+export async function getPublicSpot(id) {
   const snapshot = await getDoc(doc(db, 'publicSpots', id));
-  const value = snapshot.exists() ? { id, ...snapshot.data() } : null;
-  publicCopies.set(id, value);
-  return value;
+  return snapshot.exists() ? { id, ...snapshot.data() } : null;
 }
-export const cachedPublicSpot = id => publicCopies.get(id);
 
 // ---------------------------------------------------------------- Keeping shared copies right
 
@@ -372,6 +366,5 @@ export async function deleteSpot(uid, id) {
     console.error('Public Top 4 not updated:', { code: error?.code });
   }
   await deleteDoc(doc(db, 'publicSpots', id)).catch(error => console.error('Public copy not removed:', { code: error?.code }));
-  publicCopies.delete(id);
   await cleanOrphans(uid, id, []);
 }

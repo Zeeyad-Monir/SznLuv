@@ -39,7 +39,10 @@ function createHarness(options = {}) {
     const refPath = parts.join('/');
     return { path: refPath, id: parts.at(-1), type };
   };
-  const docSnapshot = ref => ({ id: ref.id, ref, exists: () => documents.has(ref.path), data: () => documents.get(ref.path) });
+  const docSnapshot = ref => ({
+    id: ref.id, ref, exists: () => documents.has(ref.path), data: () => documents.get(ref.path),
+    metadata: { fromCache: false, hasPendingWrites: false },
+  });
   const satisfies = (data, { field, op, value }) => {
     const actual = data?.[field];
     if (op === '==') return actual === value;
@@ -88,10 +91,12 @@ function createHarness(options = {}) {
     collection: (parent, ...segments) => makeRef(parent, segments, 'collection'),
     getDoc: async ref => { if (options.beforeRead) await options.beforeRead(ref); if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return snapshot(ref); },
     getDocs: async ref => { if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return querySnapshot(ref); },
-    onSnapshot: (ref, next) => {
-      const listener = { ref, next };
+    onSnapshot: (ref, settingsOrNext, nextOrError, onError) => {
+      const next = typeof settingsOrNext === 'function' ? settingsOrNext : nextOrError;
+      const error = typeof settingsOrNext === 'function' ? nextOrError : onError;
+      const listener = { ref, next, error };
       liveListeners.add(listener);
-      next(snapshot(ref));
+      if (!options.onListen?.(listener, snapshot(ref))) next(snapshot(ref));
       return () => liveListeners.delete(listener);
     },
     query: (ref, ...constraints) => ({ ...ref, constraints: [...(ref.constraints || []), ...constraints] }),
@@ -260,6 +265,7 @@ function createHarness(options = {}) {
       getInitialURL: async () => options.initialUrl ?? null,
       addEventListener: (_, listener) => { urlListeners.add(listener); return { remove: () => urlListeners.delete(listener) }; },
     },
+    'expo-clipboard': { setStringAsync: async value => { calls.push(['setClipboard', value]); return true; } },
     'expo-haptics': { selectionAsync: async () => { calls.push(['selectionHaptic']); } },
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
@@ -315,6 +321,10 @@ function createHarness(options = {}) {
       }, React.createElement(LocationSettings, null, element)), {
         createNodeMock: node => {
           if (node.type === 'ScrollView') return { scrollTo() {} };
+          if (node.type === 'MapView') return {
+            fitToCoordinates: (...args) => calls.push(['fitToCoordinates', ...args]),
+            animateToRegion: (...args) => calls.push(['animateToRegion', ...args]),
+          };
           if (node.type === 'Text' || node.type === 'TouchableOpacity') {
             return { tag: node.props.accessibilityLabel ?? node.props.children };
           }
