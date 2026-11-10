@@ -64,6 +64,11 @@ export async function markListOpened(uid, listId) {
 export const isStalePointer = (pointer, list) => !list || list.publishedAt !== pointer.publishedAt;
 export const hasUpdate = (pointer, list) => (list.updatedAt ?? 0) > (pointer.lastOpenedAt ?? 0);
 
+// Just the ids, for hiding lists you already follow.
+export async function loadFollowedListIds(uid) {
+  return (await getDocs(followedLists(uid))).docs.map(snapshot => snapshot.id);
+}
+
 // Followed lists that are still shared, newest follow first, plus the titles that were just dropped
 // because their list was made private or deleted. A read that fails keeps the pointer: only a
 // definite "not there" removes a follow.

@@ -22,7 +22,7 @@ export default function ListTile({ list, size, onPress, caption, badge }) {
           <Ionicons name={list.public ? 'globe-outline' : 'lock-closed'} size={13} color={colors.ink} />
         </View>
       )}
-      <Text style={[styles.title, art && styles.onArt]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.75}>
+      <Text style={[styles.title, art && styles.onArt]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
         {list.title}
       </Text>
       <Text style={[styles.caption, art && styles.onArt]} numberOfLines={1}>{footer}</Text>

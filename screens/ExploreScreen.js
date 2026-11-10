@@ -2,14 +2,14 @@
 // (by title, creator, spot or town) and people (by username).
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Animated, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import EmptyCard from '../components/EmptyCard';
-import ListCard from '../components/ListCard';
+import ListTile from '../components/ListTile';
 import PersonRow from '../components/PersonRow';
-import { colors } from '../components/theme';
+import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
@@ -17,7 +17,7 @@ import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { cityName, DEFAULT_CITY } from '../services/catalogue';
 import { getNewestPublicLists, getPublicListsBy, searchPublicLists } from '../services/lists';
 import { parseQuery, rankLists, visibleLists } from '../services/listSearch';
-import { loadFollowedPeople } from '../services/follows';
+import { loadFollowedListIds, loadFollowedPeople } from '../services/follows';
 import { getBlocked } from '../services/moderation';
 import { searchProfiles } from '../services/profiles';
 import { canNavigate } from '../services/venueNavigation';
@@ -27,10 +27,23 @@ const DEBOUNCE_MS = 300;
 const PEOPLE_SHOWN = 3;
 const FOLLOWED_SHOWN = 6;
 
+// The same square tiles as the Favourites grid, two to a row, with who made the list underneath.
+function ListGrid({ lists, size, onOpen, keyPrefix = '' }) {
+  return (
+    <View style={styles.grid}>
+      {lists.map(list => (
+        <ListTile key={keyPrefix + list.id} list={list} size={size} caption={`by ${list.ownerUsername ?? 'someone'}`}
+          onPress={() => onOpen(list)} />
+      ))}
+    </View>
+  );
+}
+
 export default function ExploreScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
+  const size = tileWidth(useWindowDimensions().width);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -66,11 +79,15 @@ export default function ExploreScreen({ navigation }) {
     let active = true;
     loadFeed();
     getBlocked(uid).then(setBlocked).catch(() => {});
-    // The latest lists from up to five people you follow.
-    loadFollowedPeople(uid)
-      .then(people => Promise.all(people.slice(0, 5).map(person => getPublicListsBy(person.uid))))
-      .then(theirLists => {
-        if (active) setFromFollowed(theirLists.flat().sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0)).slice(0, FOLLOWED_SHOWN));
+    // The latest lists from up to five people you follow, leaving out lists you already follow.
+    Promise.all([
+      loadFollowedPeople(uid).then(people => Promise.all(people.slice(0, 5).map(person => getPublicListsBy(person.uid)))),
+      loadFollowedListIds(uid),
+    ])
+      .then(([theirLists, followedIds]) => {
+        if (!active) return;
+        const notFollowed = theirLists.flat().filter(list => !followedIds.includes(list.id));
+        setFromFollowed(notFollowed.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0)).slice(0, FOLLOWED_SHOWN));
       })
       .catch(() => {});
     return () => { active = false; };
@@ -175,7 +192,7 @@ export default function ExploreScreen({ navigation }) {
                   {found.length > 0 && (
                     <Text style={styles.count} accessibilityLiveRegion="polite">{found.length} {found.length === 1 ? 'list' : 'lists'}</Text>
                   )}
-                  {found.map(list => <ListCard key={list.id} list={list} onPress={() => open(list)} />)}
+                  <ListGrid lists={found} size={size} onOpen={open} />
                 </View>
               )}
             </>
@@ -184,7 +201,7 @@ export default function ExploreScreen({ navigation }) {
               {hide(fromFollowed).length > 0 && (
                 <>
                   <Text style={[styles.label, styles.section]} accessibilityRole="header">From people you follow</Text>
-                  {hide(fromFollowed).map(list => <ListCard key={`followed-${list.id}`} list={list} onPress={() => open(list)} />)}
+                  <ListGrid lists={hide(fromFollowed)} size={size} onOpen={open} keyPrefix="followed-" />
                 </>
               )}
               <Text style={[styles.label, styles.section]} accessibilityRole="header">New in {cityName(DEFAULT_CITY.id)}</Text>
@@ -198,7 +215,7 @@ export default function ExploreScreen({ navigation }) {
                   actionLabel="Make a list" onAction={() => navigation.navigate('FavouritesTab', { screen: 'Favourites', params: { segment: 'lists' } })} />
               ) : (
                 <>
-                  {feedLists.map(list => <ListCard key={list.id} list={list} onPress={() => open(list)} />)}
+                  <ListGrid lists={feedLists} size={size} onOpen={open} />
                   {feed.more && (
                     <TouchableOpacity style={styles.more} accessibilityRole="button" onPress={() => loadFeed(feed.lists.at(-1))}>
                       <Text style={styles.moreText}>Load more</Text>
@@ -216,7 +233,8 @@ export default function ExploreScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
-  content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 },
+  content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
   title: { fontSize: 48, fontWeight: '700', color: colors.ink },
   label: { marginTop: 4, fontSize: 18, fontWeight: '700', color: colors.label },
   section: { marginTop: 24, marginBottom: 12 },

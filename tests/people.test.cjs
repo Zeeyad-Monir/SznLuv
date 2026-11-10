@@ -43,10 +43,10 @@ test('a list made public by one person is found by another in Explore search, an
   await sheet.press('Make public');
   assert.ok(h.documents.get('publicLists/a').searchTerms.includes('rainy'));
 
-  assert.deepEqual(await find('rainy'), ['Rainy day plans, by audit · 2 spots'], 'by a word in the title');
-  assert.deepEqual(await find('rai'), ['Rainy day plans, by audit · 2 spots'], 'by the start of a word');
-  assert.deepEqual(await find('langley'), ['Rainy day plans, by audit · 2 spots'], 'by a spot\'s town');
-  assert.deepEqual(await find('audit'), ['audit, profile', 'Rainy day plans, by audit · 2 spots'], 'by creator: the person and their list');
+  assert.deepEqual(await find('rainy'), ['Rainy day plans, by audit'], 'by a word in the title');
+  assert.deepEqual(await find('rai'), ['Rainy day plans, by audit'], 'by the start of a word');
+  assert.deepEqual(await find('langley'), ['Rainy day plans, by audit'], 'by a spot\'s town');
+  assert.deepEqual(await find('audit'), ['audit, profile', 'Rainy day plans, by audit'], 'by creator: the person and their list');
 
   const confirm = await mount(h, 'screens/SharingSheet.js', { params: { listId: 'a', confirmPrivate: true } });
   await confirm.press('Make private');
@@ -218,7 +218,10 @@ test('explore: search finds people by the start of their username; followed peop
   const screen = await mount(h, 'screens/ExploreScreen.js');
   const headings = () => screen.texts().filter(line => ['From people you follow', 'New in Vancouver', 'People'].includes(line));
   assert.deepEqual(headings(), ['From people you follow', 'New in Vancouver']);
-  assert.deepEqual(labels(screen).filter(label => / by /.test(label)).slice(0, 2), ['Slow Sundays, by maya · 1 spot', 'Golden Hour, by maya · 2 spots']);
+  assert.deepEqual(labels(screen).filter(label => / by /.test(label)).slice(0, 2), ['Slow Sundays, by maya', 'Golden Hour, by maya']);
+  // Lists are square tiles, two to a row, the same size as the Favourites grid.
+  const tile = screen.all('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Golden Hour, by maya');
+  assert.deepEqual([tile.props.style[1].width, tile.props.style[1].height], [167, 167]);
 
   t.mock.timers.enable({ apis: ['setTimeout'] });
   await act(async () => screen.all('TextInput')[0].props.onChangeText('ma'));
@@ -281,6 +284,32 @@ test('Vancouver page: community lists are the three most followed, and a list th
   await act(async () => { await follows.unfollowList('sam-uid', 'l2'); });
   assert.equal(h.documents.get('publicLists/l2').followerCount, 1);
   assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
+});
+
+test('explore: lists you already follow are left out of "From people you follow"', async () => {
+  const h = createHarness({
+    documents: {
+      ...base, ...maya,
+      'users/audit/followedPeople/maya-uid': { username: 'maya', followedAt: 1 },
+      'users/audit/followedLists/m2': { ownerUid: 'maya-uid', title: 'Slow Sundays', publishedAt: 200, followedAt: 1 },
+    },
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  const texts = screen.texts();
+  const section = texts.slice(texts.indexOf('From people you follow'), texts.indexOf('New in Vancouver'));
+  assert.ok(section.includes('Golden Hour'));
+  assert.equal(section.includes('Slow Sundays'), false);
+
+  // Following everything they've made hides the section altogether.
+  const all = createHarness({
+    documents: {
+      ...base, ...maya,
+      'users/audit/followedPeople/maya-uid': { username: 'maya', followedAt: 1 },
+      'users/audit/followedLists/m1': { ownerUid: 'maya-uid', title: 'Golden Hour', publishedAt: 100, followedAt: 1 },
+      'users/audit/followedLists/m2': { ownerUid: 'maya-uid', title: 'Slow Sundays', publishedAt: 200, followedAt: 1 },
+    },
+  });
+  assert.equal((await mount(all, 'screens/ExploreScreen.js')).texts().includes('From people you follow'), false);
 });
 
 // ---------------------------------------------------------------- Map

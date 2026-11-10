@@ -253,8 +253,8 @@ test('explore: shows the newest lists from other people, never your own or a blo
   const h = createHarness({ documents: exploreDocuments() });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'Lists and people', 'New in Vancouver']);
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya · 1 spot', 'Farm days, by alex · 1 spot']);
-  await screen.press('Golden Hour, by maya · 1 spot');
+  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex']);
+  await screen.press('Golden Hour, by maya');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'new' }]);
 });
 
@@ -269,16 +269,16 @@ test('explore: search waits for a pause, matches title, creator, spot and town, 
   };
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('gold'));
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya · 1 spot', 'Farm days, by alex · 1 spot'], 'nothing changes mid-typing');
+  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex'], 'nothing changes mid-typing');
   await act(async () => { t.mock.timers.tick(300); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya · 1 spot']);
+  assert.deepEqual(cards(screen), ['Golden Hour, by maya']);
   assert.ok(screen.texts().includes('1 list'));
 
   await type('alex');
-  assert.deepEqual(cards(screen), ['Farm days, by alex · 1 spot']);
+  assert.deepEqual(cards(screen), ['Farm days, by alex']);
   await type('langley');
-  assert.deepEqual(cards(screen), ['Golden Hour, by maya · 1 spot', 'Farm days, by alex · 1 spot'].filter(label => label.startsWith('Golden')));
+  assert.deepEqual(cards(screen), ['Golden Hour, by maya', 'Farm days, by alex'].filter(label => label.startsWith('Golden')));
   await type('zebra');
   assert.ok(screen.texts().includes('Nothing for “zebra”'));
   await act(async () => screen.button('Clear search').props.onPress());
@@ -308,7 +308,7 @@ test('explore: loads twenty at a time', async () => {
   const h = createHarness({ documents: { ...base, ...many } });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.equal(cards(screen).length, 20);
-  assert.equal(cards(screen)[0], 'List 24, by maya · 1 spot');
+  assert.equal(cards(screen)[0], 'List 24, by maya');
   await screen.press('Load more');
   assert.equal(cards(screen).length, 25);
   assert.equal(screen.button('Load more'), undefined);

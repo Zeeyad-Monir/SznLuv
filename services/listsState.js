@@ -3,7 +3,7 @@
 const { DEFAULT_CITY, spotKey, isOwnSpot, describeWhere, catalogueRef } = require('./catalogue');
 const { buildSearchTerms } = require('./listSearch');
 
-const LIMITS = { title: 40, description: 120, note: 140, spots: 50, spotName: 60 };
+const LIMITS = { title: 25, description: 120, note: 140, spots: 50, spotName: 60 };
 
 const COLOURS = [
   { value: '#FFC1E3', name: 'Pink' },
@@ -39,11 +39,12 @@ function listError(code, message) {
   return Object.assign(new Error(message), { code });
 }
 
-function cleanDetails({ title, description = '', cover = DEFAULT_COVER }) {
+// `keepTitle` is the list's current title: one saved before titles were capped at 25 can stay as it is.
+function cleanDetails({ title, description = '', cover = DEFAULT_COVER }, keepTitle) {
   const cleanTitle = String(title ?? '').trim();
   const cleanDescription = String(description ?? '').trim();
   if (!cleanTitle) throw listError('list/no-title', 'Give your list a title.');
-  if (cleanTitle.length > LIMITS.title) throw listError('list/title-too-long', `Titles can be up to ${LIMITS.title} characters.`);
+  if (cleanTitle.length > LIMITS.title && cleanTitle !== keepTitle) throw listError('list/title-too-long', `Titles can be up to ${LIMITS.title} characters.`);
   if (cleanDescription.length > LIMITS.description) {
     throw listError('list/description-too-long', `Descriptions can be up to ${LIMITS.description} characters.`);
   }
@@ -58,7 +59,7 @@ function createList({ ownerUid, title, description, cover, cityId = DEFAULT_CITY
   };
 }
 
-const editDetails = (list, details) => ({ ...list, ...cleanDetails({ ...list, ...details }) });
+const editDetails = (list, details) => ({ ...list, ...cleanDetails({ ...list, ...details }, list.title) });
 
 const indexOfSpot = (list, key) => list.items.findIndex(item => spotKey(item.spot) === key);
 const hasSpot = (list, ref) => indexOfSpot(list, spotKey(ref)) !== -1;

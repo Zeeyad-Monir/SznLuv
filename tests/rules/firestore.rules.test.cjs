@@ -99,7 +99,15 @@ test('a list draft is readable and writable by its owner alone', async () => {
 
 test('list drafts enforce the title, description and 50-spot limits', async () => {
   await assertFails(setDoc(doc(maya, 'lists/a'), draft('maya', { title: '' })));
-  await assertFails(setDoc(doc(maya, 'lists/a'), draft('maya', { title: 'x'.repeat(41) })));
+  await assertFails(setDoc(doc(maya, 'lists/a'), draft('maya', { title: 'x'.repeat(26) })));
+  await assertSucceeds(setDoc(doc(maya, 'lists/a'), draft('maya', { title: 'x'.repeat(25) })));
+  // Titles saved before the cap stay as they are; they can't be renamed to another long one.
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'lists/old'), draft('maya', { title: 'x'.repeat(40) }));
+  });
+  await assertSucceeds(updateDoc(doc(maya, 'lists/old'), { description: 'Still fine.' }));
+  await assertFails(updateDoc(doc(maya, 'lists/old'), { title: 'y'.repeat(40) }));
+  await assertSucceeds(updateDoc(doc(maya, 'lists/old'), { title: 'Short now' }));
   await assertFails(setDoc(doc(maya, 'lists/a'), draft('maya', { description: 'x'.repeat(121) })));
   await assertFails(setDoc(doc(maya, 'lists/a'), draft('maya', { items: Array.from({ length: 51 }, (_, i) => spot('s' + i)) })));
   await assertSucceeds(setDoc(doc(maya, 'lists/a'), draft('maya', { items: Array.from({ length: 50 }, (_, i) => spot('s' + i)) })));
@@ -136,7 +144,7 @@ test('a public list needs an owned draft, the real username, a spot and bounded 
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('alex', 'maya')));
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'alex')));
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { items: [] })));
-  await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { title: 'x'.repeat(41) })));
+  await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { title: 'x'.repeat(26) })));
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { searchTerms: Array.from({ length: 121 }, (_, i) => 't' + i) })));
   await assertSucceeds(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya')));
 });

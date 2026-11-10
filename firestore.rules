@@ -94,8 +94,15 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------- Lists
 
+    // Titles are capped at 25. Lists named before that (up to 40) keep their title until it is changed:
+    // `oldTitle` is the title already saved there (or on the owner's draft, for the public copy).
+    function validTitle(data, oldTitle) {
+      return data.title is string && data.title.size() > 0
+        && (data.title.size() <= 25 || (data.title.size() <= 40 && data.title == oldTitle));
+    }
+
     function validListFields(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 40
+      return data.title is string
         && shortText(data.description, 120)
         && data.cityId is string
         && data.cover is map
@@ -108,11 +115,13 @@ service cloud.firestore {
       allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
-        && validListFields(request.resource.data);
+        && validListFields(request.resource.data)
+        && validTitle(request.resource.data, null);
       allow update: if signedIn()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == request.auth.uid
-        && validListFields(request.resource.data);
+        && validListFields(request.resource.data)
+        && validTitle(request.resource.data, resource.data.title);
       allow delete: if signedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
     }
 
@@ -135,6 +144,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/lists/$(listId)).data.ownerUid == request.auth.uid
         && request.resource.data.ownerUsername == myUsername()
         && validListFields(request.resource.data)
+        && validTitle(request.resource.data, get(/databases/$(database)/documents/lists/$(listId)).data.title)
         && request.resource.data.items.size() >= 1
         && request.resource.data.searchTerms is list
         && request.resource.data.searchTerms.size() <= 120;

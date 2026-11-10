@@ -71,7 +71,12 @@ test('a new list is private, trimmed, and rejects a missing or oversized title',
   );
   assert.deepEqual(list.cover, lists.DEFAULT_COVER);
   assert.throws(() => base({ title: '   ' }), { code: 'list/no-title' });
-  assert.throws(() => base({ title: 'x'.repeat(41) }), { code: 'list/title-too-long' });
+  assert.throws(() => base({ title: 'x'.repeat(26) }), { code: 'list/title-too-long' });
+  assert.equal(base({ title: 'x'.repeat(25) }).title.length, 25);
+  // A list named before the 25-character cap keeps its title through other edits, but a new long one is refused.
+  const legacy = { ...base({}), title: 'x'.repeat(40) };
+  assert.equal(lists.editDetails(legacy, { description: 'Still here.' }).title.length, 40);
+  assert.throws(() => lists.editDetails(legacy, { title: 'y'.repeat(40) }), { code: 'list/title-too-long' });
   assert.throws(() => base({ description: 'x'.repeat(121) }), { code: 'list/description-too-long' });
   assert.throws(() => lists.createList({ title: 'A', now: 1 }), { code: 'list/signed-out' });
   assert.deepEqual(base({ cover: { type: 'colour', value: 'red' } }).cover, lists.DEFAULT_COVER);
@@ -206,7 +211,7 @@ test('migration turns each collection into a private list and removes the old fi
   const [weekend, long] = result.lists.map(list => list.data);
   assert.deepEqual([weekend.title, weekend.cover, weekend.public, weekend.ownerUid], ['Weekend', { type: 'colour', value: '#A7C8FF' }, false, 'maya']);
   assert.deepEqual(weekend.items, [{ spot: farm, note: '' }, { spot: maan, note: '' }]);
-  assert.equal(long.title.length, 40);
+  assert.equal(long.title, 'A title that was allowed'); // Cut to 25, then trimmed
   assert.deepEqual(long.cover, lists.DEFAULT_COVER);
   assert.ok(weekend.createdAt < long.createdAt);
   assert.deepEqual(result.favourites, { 'Aldor Family Farm': { isFavourite: true, season: 'Fall' }, listsMigratedAt: 1000 });
