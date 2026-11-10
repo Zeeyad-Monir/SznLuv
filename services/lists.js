@@ -72,11 +72,13 @@ export async function publishList(uid, username, listId) {
     const snapshot = toPublicSnapshot(draft.data(), {
       ownerUsername: username, now, publishedAt: current.exists() ? current.data().publishedAt : now,
     });
-    transaction.set(publicRef, snapshot);
+    // Republishing keeps the follower count; a list published fresh starts at 0.
+    const followerCount = current.exists() ? current.data().followerCount ?? 0 : 0;
+    transaction.set(publicRef, { ...snapshot, followerCount });
     transaction.set(draftRef, { ...draft.data(), public: true, publishedAt: snapshot.publishedAt, updatedAt: now });
     // The first thing a user makes public is also what makes them findable.
     transaction.set(profileRef, { username }, { merge: true });
-    return { id: listId, ...snapshot };
+    return { id: listId, ...snapshot, followerCount };
   });
 }
 
@@ -119,6 +121,24 @@ export async function getNewestPublicLists({ count = 20, after } = {}) {
   if (after) constraints.push(startAfter(after.publishedAt));
   const snapshot = await getDocs(query(published(), ...constraints, limit(count)));
   return snapshot.docs.map(withId);
+}
+
+// Live candidates for "From the community": the most followed lists plus the newest ones, so lists
+// published before counts existed (no followerCount field, which orderBy skips) still have a chance.
+// services/listSearch.js mostFollowed picks and orders the final few.
+export function subscribeCommunityCandidates(count, onLists, onError) {
+  const results = { followed: [], newest: [] };
+  const emit = () => {
+    const byId = new Map();
+    [...results.followed, ...results.newest].forEach(list => byId.set(list.id, list));
+    onLists([...byId.values()]);
+  };
+  const listen = (key, ordering) => onSnapshot(query(published(), orderBy(ordering, 'desc'), limit(count)), snapshot => {
+    results[key] = snapshot.docs.map(withId);
+    emit();
+  }, onError);
+  const stops = [listen('followed', 'followerCount'), listen('newest', 'publishedAt')];
+  return () => stops.forEach(stop => stop());
 }
 
 // Candidates for a search; services/listSearch.js rankLists does the real matching.

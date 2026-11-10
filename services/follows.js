@@ -1,6 +1,6 @@
 // Following a list or a person. Each follow is a private pointer under the follower's own user document,
 // so nobody can see who follows what, and the owner of a list never writes to a follower's data.
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 const followedLists = uid => collection(db, 'users', uid, 'followedLists');
@@ -9,17 +9,46 @@ const byNewest = (a, b) => (b.followedAt ?? 0) - (a.followedAt ?? 0);
 
 // ---------------------------------------------------------------- Lists
 
+// Each follow moves the list's public followerCount by one in the same transaction, which is what
+// ranks "From the community". firestore.rules only accepts the pointer and the count together.
+const publicListRef = listId => doc(db, 'publicLists', listId);
+const followerCount = list => Math.max(0, Number(list?.followerCount) || 0);
+
 export async function followList(uid, list) {
-  const now = Date.now();
-  const pointer = {
-    ownerUid: list.ownerUid, ownerUsername: list.ownerUsername, title: list.title, cover: list.cover,
-    publishedAt: list.publishedAt, followedAt: now, lastOpenedAt: now,
-  };
-  await setDoc(doc(followedLists(uid), list.id), pointer);
-  return { id: list.id, ...pointer };
+  const pointerRef = doc(followedLists(uid), list.id), listRef = publicListRef(list.id);
+  // A pointer left from before the list was withdrawn and published again can't be counted; clear it first.
+  const old = await getDoc(pointerRef);
+  if (old.exists() && old.data().publishedAt !== list.publishedAt) await deleteDoc(pointerRef);
+  return runTransaction(db, async transaction => {
+    const pointerSnapshot = await transaction.get(pointerRef);
+    const listSnapshot = await transaction.get(listRef);
+    if (!listSnapshot.exists()) throw Object.assign(new Error('This list is no longer shared.'), { code: 'list/missing' });
+    if (pointerSnapshot.exists()) return { id: list.id, ...pointerSnapshot.data() }; // Already following
+    const current = listSnapshot.data(), now = Date.now();
+    const pointer = {
+      ownerUid: current.ownerUid, ownerUsername: current.ownerUsername, title: current.title, cover: current.cover,
+      publishedAt: current.publishedAt, followedAt: now, lastOpenedAt: now,
+    };
+    transaction.set(pointerRef, pointer);
+    transaction.update(listRef, { followerCount: followerCount(current) + 1 });
+    return { id: list.id, ...pointer };
+  });
 }
 
-export const unfollowList = (uid, listId) => deleteDoc(doc(followedLists(uid), listId));
+export async function unfollowList(uid, listId) {
+  const pointerRef = doc(followedLists(uid), listId), listRef = publicListRef(listId);
+  await runTransaction(db, async transaction => {
+    const pointerSnapshot = await transaction.get(pointerRef);
+    const listSnapshot = await transaction.get(listRef);
+    if (!pointerSnapshot.exists()) return;
+    const current = listSnapshot.exists() ? listSnapshot.data() : null;
+    // Only a follow of the list as it is now was counted. Follows from before counts existed may find it at 0.
+    if (current && current.publishedAt === pointerSnapshot.data().publishedAt && followerCount(current) > 0) {
+      transaction.update(listRef, { followerCount: followerCount(current) - 1 });
+    }
+    transaction.delete(pointerRef);
+  });
+}
 
 export async function isFollowingList(uid, listId) {
   return (await getDoc(doc(followedLists(uid), listId))).exists();

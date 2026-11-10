@@ -259,6 +259,30 @@ test('Vancouver page: shows up to three community lists and a way into Explore, 
   assert.equal(none.texts().includes('From the community'), false);
 });
 
+test('Vancouver page: community lists are the three most followed, and a list that gains followers moves in', async () => {
+  const counts = { l1: 5, l2: 0, l3: 2, l4: 1 };
+  const lists = Object.fromEntries(Object.entries(counts).map(([id, followerCount], n) =>
+    [`publicLists/${id}`, { ...publicCopy(`List ${id.slice(1)}`, [farm], 'maya-uid', 'maya', 100 + n), followerCount }]));
+  const legacy = publicCopy('No count yet', [farm], 'maya-uid', 'maya', 50); // Published before counts existed
+  const elsewhere = { ...publicCopy('Somewhere else', [farm], 'maya-uid', 'maya', 60), cityId: 'toronto', followerCount: 99 };
+  const h = createHarness({ documents: { ...base, ...lists, 'publicLists/legacy': legacy, 'publicLists/far': elsewhere } });
+  const screen = await mount(h, 'screens/VancouverScreen.js');
+  const shown = () => labels(screen).filter(label => / by /.test(label)).map(label => label.split(',')[0]);
+  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
+
+  // Two people follow List 2: it overtakes List 3 and List 4 without leaving the page.
+  const follows = h.load('services/follows.js');
+  await act(async () => { await follows.followList('sam-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); });
+  await act(async () => { await follows.followList('alex-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); });
+  await act(async () => { await follows.followList('alex-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); }); // Already following: no change
+  assert.equal(h.documents.get('publicLists/l2').followerCount, 2);
+  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 2']); // Ties go to the newest
+
+  await act(async () => { await follows.unfollowList('sam-uid', 'l2'); });
+  assert.equal(h.documents.get('publicLists/l2').followerCount, 1);
+  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
+});
+
 // ---------------------------------------------------------------- Map
 
 test('list page: Spots and Map switch appears only when two or more spots can be mapped', async () => {

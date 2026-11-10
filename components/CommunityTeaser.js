@@ -1,32 +1,36 @@
-// "From the community": the three newest public lists, with a way into Explore for the rest.
+// "From the community": the three most followed public lists for this city, with a way into Explore
+// for the rest. Live while the screen is focused, so a list that overtakes another moves into the top three.
 // Renders nothing until there is something to show, so the page never carries an empty promise.
 import React, { useCallback, useContext, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
-import { getNewestPublicLists } from '../services/lists';
-import { visibleLists } from '../services/listSearch';
+import { subscribeCommunityCandidates } from '../services/lists';
+import { mostFollowed } from '../services/listSearch';
 import { getBlocked } from '../services/moderation';
+import { DEFAULT_CITY } from '../services/catalogue';
 import { canNavigate } from '../services/venueNavigation';
 import ListCard from './ListCard';
 import { colors } from './theme';
 
 const SHOWN = 3;
+// Extra candidates so that hiding your own, blocked people's and other cities' lists still leaves three.
+const CANDIDATES = 20;
 
-export default function CommunityTeaser() {
+export default function CommunityTeaser({ cityId = DEFAULT_CITY.id }) {
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
   const [lists, setLists] = useState([]);
 
   useFocusEffect(useCallback(() => {
-    let active = true;
-    // A few extra are fetched so that hiding your own and blocked people's lists still leaves three.
-    Promise.all([getNewestPublicLists({ count: SHOWN * 3 }), getBlocked(uid)])
-      .then(([newest, blocked]) => { if (active) setLists(visibleLists(newest, { viewerUid: uid, blocked }).slice(0, SHOWN)); })
-      .catch(() => {}); // The page works without it
-    return () => { active = false; };
-  }, [uid]));
+    let active = true, blocked = [], candidates = [];
+    const show = () => { if (active) setLists(mostFollowed(candidates, { cityId, viewerUid: uid, blocked, count: SHOWN })); };
+    getBlocked(uid).then(next => { blocked = next; show(); }).catch(() => {});
+    const stop = subscribeCommunityCandidates(CANDIDATES, next => { candidates = next; show(); },
+      () => {}); // The page works without it
+    return () => { active = false; stop(); };
+  }, [uid, cityId]));
 
   if (!lists.length) return null;
   return (

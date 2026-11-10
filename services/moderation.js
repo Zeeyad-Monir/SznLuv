@@ -2,6 +2,7 @@
 // Blocking is private to the blocker: their client hides the other person's lists and profile.
 import { addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { unfollowList } from './follows';
 
 export const REPORT_REASONS = ['Spam', 'Inappropriate', 'Private information', 'Other'];
 
@@ -22,7 +23,7 @@ export async function blockUser(uid, otherUid) {
   const theirLists = await getDocs(query(collection(db, 'users', uid, 'followedLists'), where('ownerUid', '==', otherUid)));
   await Promise.all([
     deleteDoc(doc(db, 'users', uid, 'followedPeople', otherUid)),
-    ...theirLists.docs.map(pointer => deleteDoc(pointer.ref)),
+    ...theirLists.docs.map(pointer => unfollowList(uid, pointer.id)),
   ]);
 }
 

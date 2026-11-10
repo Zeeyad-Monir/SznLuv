@@ -123,7 +123,7 @@ Top 4 tile: square, coloured by the spot's season (own spots cream with a pin gl
 Same layout, read-only: identity row + **Follow username** / **Following ✓** button; Top 4 only if public and non-empty (visitors never see empty slots); **Lists** grid; `…` Report / Block. Blocked or missing → "This profile isn't available."
 
 ### 6.7 Vancouver page — `screens/VancouverScreen.js`
-Under the Seasons card: tan label **From the community** + the 3 newest public lists (same 88pt cards as Explore) + "See all in Explore" (switches to the Explore slot). The section is hidden when there are no public lists, so the page never shows an empty promise. Blocked users are filtered out.
+Under the Seasons card: tan label **From the community** + the 3 most followed public lists for the city, newest first among ties, live while the page is open (same 88pt cards as Explore; ranked by `publicLists.followerCount`, which each follow and unfollow moves by one in the same transaction as the follower's pointer) + "See all in Explore" (switches to the Explore slot). The section is hidden when there are no public lists, so the page never shows an empty promise. Blocked users are filtered out.
 
 ## 7. Behaviour
 

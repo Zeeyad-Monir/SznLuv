@@ -83,10 +83,19 @@ function visibleLists(lists, { viewerUid, blocked = [] } = {}) {
   return lists.filter(list => list.ownerUid !== viewerUid && !blocked.includes(list.ownerUid));
 }
 
+// "From the community" for one city: most followed first, newest first among equals.
+function mostFollowed(lists, { cityId, viewerUid, blocked = [], count = 3 } = {}) {
+  const followers = list => Math.max(0, Number(list.followerCount) || 0);
+  return visibleLists(lists, { viewerUid, blocked })
+    .filter(list => !cityId || list.cityId === cityId)
+    .sort((a, b) => followers(b) - followers(a) || (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
+    .slice(0, count);
+}
+
 // Usernames are lowercase letters, digits, dot, dash and underscore. Returns null if the text can't be one.
 function usernamePrefix(text) {
   const prefix = String(text ?? '').trim().toLowerCase().replace(/^@/, '');
   return prefix.length >= MIN_QUERY && /^[a-z0-9_.-]+$/.test(prefix) ? prefix : null;
 }
 
-module.exports = { MAX_TERMS, buildSearchTerms, parseQuery, rankLists, visibleLists, usernamePrefix };
+module.exports = { MAX_TERMS, buildSearchTerms, parseQuery, rankLists, visibleLists, mostFollowed, usernamePrefix };

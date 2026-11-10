@@ -61,7 +61,7 @@ test('favourites and private user data belong to their owner only', async () => 
   await assertFails(getDoc(doc(alex, 'users/maya')));
   await assertFails(updateDoc(doc(alex, 'users/maya'), { username: 'alex' }));
 
-  for (const sub of ['votes/r1', 'followedLists/mayaList', 'followedPeople/alex']) {
+  for (const sub of ['votes/r1', 'followedPeople/alex']) {
     await assertSucceeds(setDoc(doc(maya, `users/maya/${sub}`), { followedAt: 1 }));
     await assertFails(getDoc(doc(alex, `users/maya/${sub}`)));
     await assertFails(setDoc(doc(alex, `users/maya/${sub}`), { followedAt: 1 }));
@@ -139,6 +139,53 @@ test('a public list needs an owned draft, the real username, a spot and bounded 
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { title: 'x'.repeat(41) })));
   await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { searchTerms: Array.from({ length: 121 }, (_, i) => 't' + i) })));
   await assertSucceeds(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya')));
+});
+
+test('a list’s followerCount moves by one, only together with the follower’s own pointer', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'publicLists/mayaList'), snapshot('maya', 'maya', { followerCount: 3 }));
+  });
+  const list = doc(alex, 'publicLists/mayaList'), pointer = doc(alex, 'users/alex/followedLists/mayaList');
+  const follow = (count, data = { publishedAt: 1, followedAt: 1 }) => {
+    const batch = writeBatch(alex);
+    batch.set(pointer, data);
+    batch.update(list, { followerCount: count });
+    return batch.commit();
+  };
+
+  // Neither half alone, no jumps, no forged pointer.
+  await assertFails(setDoc(pointer, { publishedAt: 1, followedAt: 1 }));
+  await assertFails(updateDoc(list, { followerCount: 4 }));
+  await assertFails(follow(10));
+  await assertFails(follow(4, { publishedAt: 0, followedAt: 1 }));
+  await assertFails(setDoc(doc(alex, 'users/alex/followedLists/nothing'), { publishedAt: 1 }));
+  await assertSucceeds(follow(4));
+  await assertSucceeds(updateDoc(pointer, { lastOpenedAt: 2 }));
+  await assertFails(updateDoc(pointer, { publishedAt: 0 }));
+  await assertFails(follow(5)); // Already following: the pointer exists
+  await assertFails(deleteDoc(pointer)); // Unfollowing has to give the follow back
+
+  const unfollow = count => {
+    const batch = writeBatch(alex);
+    batch.delete(pointer);
+    batch.update(list, { followerCount: count });
+    return batch.commit();
+  };
+  await assertFails(unfollow(2));
+  await assertSucceeds(unfollow(3));
+  assert.equal((await getDoc(list)).data().followerCount, 3);
+
+  // The owner republishing can't touch the count.
+  await assertFails(updateDoc(doc(maya, 'publicLists/mayaList'), { followerCount: 50 }));
+  await assertFails(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { followerCount: 50 })));
+  await assertSucceeds(setDoc(doc(maya, 'publicLists/mayaList'), snapshot('maya', 'maya', { followerCount: 3 })));
+
+  // A stale pointer (list republished since) can be dropped without touching the count.
+  await assertSucceeds(follow(4));
+  await env.withSecurityRulesDisabled(async context => {
+    await updateDoc(doc(context.firestore(), 'publicLists/mayaList'), { publishedAt: 9 });
+  });
+  await assertSucceeds(deleteDoc(pointer));
 });
 
 test('public profiles are readable when signed in and writable only by their owner', async () => {
