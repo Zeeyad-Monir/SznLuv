@@ -14,7 +14,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage'; // Import Firebase Storage
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Your Firebase configuration object
 const firebaseConfig = {
@@ -51,13 +51,20 @@ function initializeAuthentication() {
 }
 export const auth = initializeAuthentication();
 export const db = getFirestore(app);
+export const storage = getStorage(app); // Photos of spots people make (storage.rules)
 
 if (useEmulator && !globalThis.__sznluvEmulatorConnected) {
   globalThis.__sznluvEmulatorConnected = true; // Fast Refresh re-runs this file; connecting twice throws
   connectAuthEmulator(auth, `http://${emulatorHost}:9099`, { disableWarnings: true });
   connectFirestoreEmulator(db, emulatorHost, 8080);
+  connectStorageEmulator(storage, emulatorHost, 9199);
 }
-export const storage = getStorage(app); // Initialize and export Firebase Storage
+
+// Where a stored photo is downloaded from. Loading it this way, with the viewer's sign-in token, means
+// Storage checks storage.rules on every load: a photo stops loading for others once its spot is private.
+// (A download URL from getDownloadURL would keep working for anyone who ever had it.)
+const storageOrigin = useEmulator ? `http://${emulatorHost}:9199` : 'https://firebasestorage.googleapis.com';
+export const photoUrl = path => `${storageOrigin}/v0/b/${appConfig.storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 
 // Authentication functions
 export const login = (email, password) => {

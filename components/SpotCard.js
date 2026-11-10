@@ -4,10 +4,12 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HeartButton from './HeartButton';
+import StoragePhoto from './StoragePhoto';
 import { cardShadow, colors, text } from './theme';
 
+// `thumbnail`: a spot someone made shows its cover photo ({ path }), or a placeholder (null). Left out, none.
 export default function SpotCard({
-  spot, note, saved = false, onPress, onToggleSave, onLongPress,
+  spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
   const disabled = spot.missing;
@@ -41,6 +43,7 @@ export default function SpotCard({
             label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />
         )}
 
+        {thumbnail !== undefined && <StoragePhoto path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
         <View style={styles.words}>
           <Text style={text.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} maxFontSizeMultiplier={1.2}>
             {spot.name}
@@ -84,6 +87,7 @@ const styles = StyleSheet.create({
   // Padding is on the touchable, so the whole card responds and not just its middle.
   content: { minHeight: 74, padding: 14, flexDirection: 'row', alignItems: 'center' },
   heart: { marginRight: 16 },
+  thumb: { width: 52, height: 52, borderRadius: 10, marginRight: 12, overflow: 'hidden' },
   words: { flex: 1 },
   meta: { marginTop: 2 },
   note: { marginTop: 6 },

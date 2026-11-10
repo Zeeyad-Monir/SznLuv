@@ -111,7 +111,7 @@ function Saved({ onExplore }) {
       const ref = record ? toRef(entry.id, record) : { k: 'x', id: entry.id, ...(entry.owner ? { owner: entry.owner } : {}), name: entry.name };
       const mine = isMine(ref, user?.uid);
       const resolved = resolveSpot(ref);
-      return { ref, spot: { ...resolved, meta: mine ? (record?.category || resolved.meta) : 'Shared spot' } };
+      return { ref, cover: record?.photos?.[0] ?? null, spot: { ...resolved, meta: mine ? (record?.category || resolved.meta) : 'Shared spot' } };
     });
   const groups = SEASON_ORDER.map(season => ({
     season,
@@ -146,9 +146,9 @@ function Saved({ onExplore }) {
       {custom.length > 0 && (
         <View>
           <Text style={styles.sectionLabel} accessibilityRole="header">Your spots</Text>
-          {custom.map(({ ref, spot }) => (
+          {custom.map(({ ref, spot, cover }) => (
             <Animated.View key={ref.id} style={entrance.styleFor(ref.id)}>
-              <SpotCard spot={spot} saved
+              <SpotCard spot={spot} saved thumbnail={cover}
                 onPress={() => { if (canNavigate(navigation)) navigation.navigate('CustomSpotScreen', { spot: ref }); }}
                 onToggleSave={() => toggleCustomSpot(ref)} />
             </Animated.View>

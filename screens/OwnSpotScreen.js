@@ -9,6 +9,7 @@ import {
 import MapView from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { usePreventRemove } from '@react-navigation/native';
+import PhotoSlots, { usePhotoSlots } from '../components/PhotoSlots';
 import { useSnackbar } from '../components/Snackbar';
 import { colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
@@ -17,11 +18,12 @@ import useMySpots from '../hooks/useMySpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { DEFAULT_CITY, catalogueRef } from '../services/catalogue';
-import { addExistingSpot, createSpot, updateSpot } from '../services/customSpots';
+import { addExistingSpot, createSpot, newSpotId, updateSpot } from '../services/customSpots';
 import {
   SPOT_CATEGORIES, SPOT_LIMITS, SPOT_SEASONS, findListedSpot, findSameSpot, spotFields, spotProblem, toRef,
 } from '../services/customSpotsState';
 import { restoreSavedSpot } from '../services/favourites';
+import { cleanOrphans } from '../services/spotPhotos';
 import { mutateList } from '../services/lists';
 import { addSpot } from '../services/listsState';
 import { customLocationAvailable, findCustomOrigins } from '../services/spotLocation';
@@ -67,6 +69,12 @@ export default function OwnSpotScreen({ navigation, route }) {
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
   const mapReady = useAfterTransition(); // The map mounts after the slide, so it can't stutter the push
   const spot = editing ? byId[spotId] : null;
+  // A new spot's ID is chosen now, so its photos can upload while the rest is being filled in.
+  const [draftId] = useState(() => (editing ? null : newSpotId(uid)));
+  const photoSpotId = spotId ?? draftId;
+  const slots = usePhotoSlots(uid, photoSpotId, spot?.photos ?? []);
+  const savedPhotos = JSON.stringify(slots.saved);
+  const [initialPhotos, setInitialPhotos] = useState(savedPhotos);
 
   const [form, setForm] = useState(() => initialForm(spot, typedName));
   const [initial, setInitial] = useState(form);
@@ -87,19 +95,26 @@ export default function OwnSpotScreen({ navigation, route }) {
     setForm(start);
     setInitial(start);
     setMoreOpen(hasDetails(start));
+    slots.reset(spot.photos ?? []);
+    setInitialPhotos(JSON.stringify(spot.photos ?? []));
   }, [spot]);
 
   const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
   const input = { ...form, pin: form.mode === 'pin' ? form.pin : form.chosen, label: form.chosen?.label };
-  const problem = spotProblem(input);
-  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
+  const problem = spotProblem(input)
+    || (slots.failed ? 'A photo didn’t upload. Retry it, or remove it.' : null);
+  const formChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
+  const dirty = formChanged || savedPhotos !== initialPhotos || slots.uploading || slots.failed;
+
+  // Photos uploaded for an edit that won't be kept, or for a spot that won't be made.
+  const discardUploads = () => cleanOrphans(uid, photoSpotId, editing ? spot?.photos ?? [] : []);
 
   // Leaving with unsaved changes asks first, whether by the back button or a swipe.
   usePreventRemove(dirty && !saving, ({ data }) => {
     if (done.current) { navigation.dispatch(data.action); return; }
     Alert.alert('Discard changes?', editing ? 'Your changes to this spot won’t be saved.' : 'This spot won’t be saved.', [
       { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+      { text: 'Discard', style: 'destructive', onPress: () => { discardUploads(); navigation.dispatch(data.action); } },
     ]);
   });
 
@@ -144,6 +159,7 @@ export default function OwnSpotScreen({ navigation, route }) {
 
   // SznLuv's own page for a spot of the same name, instead of making a second one.
   const takeListed = listed => run(async () => {
+    discardUploads();
     if (listId) {
       await mutateList(listId, list => addSpot(list, catalogueRef(listed.name)));
       return `Added ${listed.name}`;
@@ -156,19 +172,22 @@ export default function OwnSpotScreen({ navigation, route }) {
     const same = findSameSpot(fields, mySpots);
     if (same) {
       await addExistingSpot(uid, toRef(same.id, same), { listId });
+      discardUploads();
       return `Matched an existing spot: ${same.name}`;
     }
-    await createSpot(uid, fields, { listId });
+    await createSpot(uid, fields, { id: draftId, listId, photos: slots.saved });
+    cleanOrphans(uid, draftId, slots.saved);
     return listId ? `Added ${fields.name}` : `Saved ${fields.name}`;
   });
 
   const save = () => {
-    if (submitting.current) return;
+    if (submitting.current || slots.uploading) return;
     if (problem) { setShowProblem(true); return; }
     const fields = spotFields(input);
     if (editing) {
       run(async () => {
-        await updateSpot(uid, spotId, fields);
+        await updateSpot(uid, spotId, fields, { photos: slots.saved });
+        cleanOrphans(uid, spotId, slots.saved);
         return 'Changes saved';
       });
       return;
@@ -193,7 +212,8 @@ export default function OwnSpotScreen({ navigation, route }) {
   }
 
   const publicNote = editing && (spot?.publicListIds?.length ?? 0) > 0;
-  const action = editing ? 'Save changes' : listId ? 'Add to list' : 'Save spot';
+  const action = slots.uploading ? 'Uploading photos…' : editing ? 'Save changes' : listId ? 'Add to list' : 'Save spot';
+  const blocked = saving || slots.uploading;
 
   return (
     <SignedInScreen style={styles.container}>
@@ -206,6 +226,9 @@ export default function OwnSpotScreen({ navigation, route }) {
           {publicNote && (
             <Text style={[text.body, styles.intro]} accessibilityRole="alert">This spot is in a public list, so changes show to everyone straight away.</Text>
           )}
+
+          <Text style={styles.label}>Photos <Text style={styles.optional}>(optional)</Text></Text>
+          <PhotoSlots slots={slots} />
 
           <Text style={styles.label}>Name</Text>
           <TextInput style={controls.field} value={form.name} onChangeText={value => set('name', value)} maxLength={SPOT_LIMITS.name}
@@ -299,8 +322,8 @@ export default function OwnSpotScreen({ navigation, route }) {
           )}
 
           {showProblem && !!problem && <Text style={styles.problem} accessibilityRole="alert">{problem}</Text>}
-          <TouchableOpacity style={[controls.primary, styles.save, saving && controls.primaryDisabled]} onPress={save}
-            disabled={saving} accessibilityRole="button" accessibilityState={{ disabled: saving }}>
+          <TouchableOpacity style={[controls.primary, styles.save, blocked && controls.primaryDisabled]} onPress={save}
+            disabled={blocked} accessibilityRole="button" accessibilityState={{ disabled: blocked }}>
             <Text style={controls.primaryText}>{action}</Text>
           </TouchableOpacity>
         </ScrollView>

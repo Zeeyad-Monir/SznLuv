@@ -34,6 +34,16 @@
     },
     "extra": {
       "WEATHER_API_KEY": "92be9d8cdbac2f4865e8666ae541f316"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SznLuv uses your photos so you can add pictures to spots you make.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }

@@ -125,8 +125,37 @@ function createHarness(options = {}) {
       return result;
     },
   };
+  // Storage: files by path. With `holdUploads`, uploads wait for finishUploads(), to see them in progress.
+  const files = new Map(Object.entries(options.files || {}));
+  const heldUploads = [];
+  const finishUploads = () => heldUploads.splice(0).forEach(run => run());
+  const storageStub = {
+    getStorage: () => ({}), connectStorageEmulator() {},
+    ref: (_, fullPath) => ({ fullPath }),
+    uploadBytesResumable: (ref, blob, metadata) => ({
+      cancel() {},
+      on: (_event, next, fail, complete) => {
+        const run = () => {
+          if (options.uploadError) { fail(Object.assign(new Error('Upload failed'), { code: options.uploadError })); return; }
+          next({ bytesTransferred: 1, totalBytes: 2 });
+          files.set(ref.fullPath, { size: blob.size, contentType: metadata?.contentType });
+          calls.push(['upload', ref.fullPath]);
+          complete();
+        };
+        if (options.holdUploads) heldUploads.push(run);
+        else setTimeout(run, 0);
+      },
+    }),
+    deleteObject: async ref => { files.delete(ref.fullPath); calls.push(['deletePhoto', ref.fullPath]); },
+    listAll: async ref => ({ items: [...files.keys()].filter(key => key.startsWith(ref.fullPath + '/')).map(fullPath => ({ fullPath })) }),
+  };
+  global.XMLHttpRequest = class {
+    open(method, url) { this.url = url; }
+    send() { setTimeout(() => { this.response = { size: options.photoBytes ?? 300000, close() {} }; this.onload(); }, 0); }
+  };
   const firebase = {
     auth, db: options.db || {}, storage: {},
+    photoUrl: path => 'https://storage.test/' + encodeURIComponent(path),
     login: async (email, password) => { calls.push(['login', email, password]); if (options.loginError) throw Object.assign(new Error('Login failed'), { code: options.loginError }); setUser({ uid: 'audit', email }); },
     register: async (email, password) => { calls.push(['register', email, password]); const user = { uid: 'new-audit', email }; setUser(user); return { user }; },
     logout: async () => { calls.push(['logout']); setUser(null); },
@@ -232,6 +261,14 @@ function createHarness(options = {}) {
     'expo-haptics': { selectionAsync: async () => { calls.push(['selectionHaptic']); } },
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
+    'firebase/storage': storageStub,
+    'expo-image-picker': {
+      launchImageLibraryAsync: async config => { calls.push(['pickPhotos', config]); return options.pickPhotos ? options.pickPhotos(config) : { canceled: true }; },
+    },
+    'expo-image-manipulator': {
+      SaveFormat: { JPEG: 'jpeg' },
+      manipulateAsync: async (uri, actions, saveOptions) => { calls.push(['shrink', uri, actions, saveOptions]); return { uri: `${uri}#small` }; },
+    },
   };
   // Lets a test swap a stub for the real module, e.g. real Firestore against the emulator.
   Object.assign(stubs, options.stubs);
@@ -297,6 +334,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, renderElement, load, menus, openUrl, alerts, leave, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
+  return { render, renderElement, load, menus, openUrl, alerts, leave, files, finishUploads, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
 }
 module.exports = { createHarness, act };

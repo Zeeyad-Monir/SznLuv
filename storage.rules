@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// SznLuv Storage rules: photos of spots people make.
+//
+// Not deployed automatically, like firestore.rules. Deploy both together: these rules ask Firestore
+// whether a spot is shared (the first deploy asks to let Storage read Firestore; allow it).
+//
+// Tested by tests/rules/storage.rules.test.cjs against the emulator (npm run test:rules).
+service firebase.storage {
+  match /b/{bucket}/o {
+    // spotPhotos/{ownerUid}/{spotId}/{photoId}. A spot's ID starts with its owner's uid.
+    match /spotPhotos/{uid}/{spotId}/{photoId} {
+      // The owner always. Anyone signed in only while the spot is in a public list, which is exactly
+      // while publicSpots/{spotId} exists: making the list private takes the photos with it.
+      allow read: if request.auth != null
+        && (request.auth.uid == uid
+          || firestore.exists(/databases/(default)/documents/publicSpots/$(spotId)));
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && spotId.matches(uid + '_.+')
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
