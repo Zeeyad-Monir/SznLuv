@@ -6,7 +6,7 @@
 // =========================
 
 // Importing necessary modules and hooks from React
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useRef } from 'react';
 
 // Importing React Native components and APIs
 import {
@@ -24,13 +24,6 @@ import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
-
-// Importing AuthContext to access authenticated user information
-import { AuthContext } from '../contexts/AuthContext';
-
-// Importing Firebase authentication and database functions
-import { auth, db } from '../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
 
 // =========================
 // HELPER FUNCTIONS SECTION
@@ -104,7 +97,7 @@ const COVER_IMAGE_OPACITY = 0.9;
  * HomeScreen Component
  *
  * This component serves as the main landing screen of the application.
- * It greets the user and displays the location categories (currently just Vancouver).
+ * It displays the location categories (currently just Vancouver).
  * Vancouver opens VancouverScreen, which leads to the seasons (Fall, Winter, Spring, Summer).
  * The component also includes animations for a dynamic and engaging user experience.
  */
@@ -115,51 +108,7 @@ export default function HomeScreen() {
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
 
-  // Accessing the authenticated user from AuthContext
-  const { user, username } = useContext(AuthContext);
-
-  // =========================
-  // STATE VARIABLES SECTION
-  // =========================
-
-  // Known from the sign-in profile check, so the greeting is complete on the first frame
-  const [userName, setUserName] = useState(username || '');
-
   const entrance = useEntrance(2);
-
-  // =========================
-  // DATA FETCHING FUNCTIONS
-  // =========================
-
-  /**
-   * fetchUserName Function
-   *
-   * Fetches the authenticated user's name from Firebase Firestore.
-   * If the user's document exists, it retrieves the username; otherwise, defaults to 'User'.
-   */
-  const fetchUserName = async () => {
-    try {
-      const userRef = doc(db, 'users', user.uid); // Reference to the user's document
-      const userSnap = await getDoc(userRef); // Fetching the document snapshot
-
-      if (userSnap.exists()) {
-        setUserName(userSnap.data().username); // Setting the username from Firestore
-      } else {
-        setUserName('User'); // Default username if document doesn't exist
-      }
-    } catch (error) {
-      console.error('Error fetching user name:', error); // Logging any errors
-      setUserName('User'); // Default username in case of error
-    }
-  };
-
-  // =========================
-  // USE EFFECTS SECTION
-  // =========================
-
-  useEffect(() => {
-    if (!username) fetchUserName(); // App normally already has the name from the sign-in profile check
-  }, []);
 
   // =========================
   // RENDERING SECTION
@@ -169,17 +118,12 @@ export default function HomeScreen() {
     <SignedInScreen style={styles.container}>
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
-        {/* Greeting Container with Animations */}
-        <Animated.View style={[styles.greetingContainer, entrance[0]]}>
-          {/* Greeting Text */}
-          <Text style={styles.greetingText}>Hello, {userName}!</Text>
-
-          {/* Subtext indicating the location categories */}
-          <Text style={styles.subtext}>Locations</Text>
+        <Animated.View style={entrance[0]}>
+          <Text accessibilityRole="header" style={styles.locationsHeading}>Locations</Text>
         </Animated.View>
 
         {/* Location Categories Container */}
-        <View style={styles.seasonContainer}>
+        <View>
           {/* =========================
               VANCOUVER CARD
               ========================= */}
@@ -234,35 +178,16 @@ const styles = StyleSheet.create({
 
   // Styling for the ScrollView content container
   scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 20, // Padding at the bottom to prevent content cutoff
   },
 
-  // Greeting Container
-  greetingContainer: {
-    marginTop: 40, // Space above the greeting
-    paddingHorizontal: 20, // Horizontal padding inside the container
-  },
-
-  // Greeting Text Style
-  greetingText: {
-    fontSize: 55, // Large font size for prominence
-    fontWeight: 'bold', // Bold font weight for emphasis
-    color: '#333333', // Dark gray color for readability
-  },
-
-  // Subtext Style below the greeting
-  subtext: {
-    marginTop: 20, // Space above the subtext
-    fontSize: 18, // Font size for the subtext
-    marginBottom: -12, // Negative margin to adjust spacing
-    color: '#C2B697', // Medium brown color for subtlety
-    fontWeight: 'bold', // Bold font weight for emphasis
-  },
-
-  // Location Categories Container
-  seasonContainer: {
-    paddingHorizontal: 20, // Horizontal padding inside the container
-    marginTop: 24, // Space above the cards
+  locationsHeading: {
+    fontSize: 18,
+    marginBottom: 12,
+    color: '#C2B697',
+    fontWeight: 'bold',
   },
 
   // Touchable Area for Each Card

@@ -250,7 +250,7 @@ async function renderFloatingNav(h, index, { bottom = 34, includeHome = false, n
   return { renderer, log, control };
 }
 
-test('floating bar: Home returns to the greeting from an inactive, nested Home stack', async () => {
+test('floating bar: Home returns to the landing screen from an inactive, nested Home stack', async () => {
   const nestedHome = homeStack(['Home', 'VancouverScreen', 'SeasonsScreen']);
   const { renderer, log, control } = await renderFloatingNav(createHarness(), 1, { nestedHome });
   await act(async () => control('Home').props.onPress());
