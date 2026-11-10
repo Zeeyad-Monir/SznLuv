@@ -1,36 +1,36 @@
-// The library: season favourites under "Saved", the user's own lists under "My lists",
-// and other people's lists they follow under "Following".
+// The library. "Saved" holds single places: spots the user hearted. "My lists" holds collections: the
+// lists they made and the seasonal collections they chose to keep. "Following" is other people's lists.
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+  ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useScrollToTop } from '@react-navigation/native';
 import EmptyCard from '../components/EmptyCard';
 import ListTile, { NewListTile } from '../components/ListTile';
 import SegmentPill from '../components/SegmentPill';
-import { SEASON_ART } from '../components/covers';
-import { GRID_GAP, GUTTER, cardShadow, colors, tileWidth } from '../components/theme';
+import HeartButton from '../components/HeartButton';
+import SpotCard from '../components/SpotCard';
+import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
+import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
+import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollections';
+import { catalogueRef, resolveSpot } from '../services/catalogue';
+import { collectionById, collectionCaption } from '../services/collections';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import PersonRow from '../components/PersonRow';
 import { loadFollowedLists, loadFollowedPeople } from '../services/follows';
 import { getPublicList } from '../services/lists';
-import { canNavigate } from '../services/venueNavigation';
+import { canNavigate, openVenue } from '../services/venueNavigation';
 
 const SEGMENTS = [
   { value: 'saved', label: 'Saved' },
   { value: 'lists', label: 'My lists' },
   { value: 'following', label: 'Following' },
 ];
-const SEASONS = [
-  { season: 'Fall', art: SEASON_ART.fall },
-  { season: 'Winter', art: SEASON_ART.winter },
-  { season: 'Spring', art: SEASON_ART.spring },
-  { season: 'Summer', art: SEASON_ART.summer },
-];
+const SEASON_ORDER = ['Fall', 'Winter', 'Spring', 'Summer'];
 
 // Coming back to the library shows the side you were last on, for as long as the app stays open.
 let lastSegment = 'saved';
@@ -46,7 +46,6 @@ export default function Favourites({ route }) {
 
   // Title, subtitle and the switch ease in once; tiles animate only as they first appear.
   const entrance = useEntrance(3);
-  const seasonEntrance = useItemEntrance(SEASONS.map(({ season }) => season));
 
   const choose = next => {
     lastSegment = next;
@@ -58,7 +57,9 @@ export default function Favourites({ route }) {
     if (SEGMENTS.some(option => option.value === requested)) choose(requested);
   }, [requested]);
   const open = (route, params) => {
-    if (canNavigate(navigation)) navigation.navigate(route, params);
+    if (!canNavigate(navigation)) return;
+    if (params) navigation.navigate(route, params);
+    else navigation.navigate(route);
   };
 
   return (
@@ -75,23 +76,10 @@ export default function Favourites({ route }) {
         </Animated.View>
 
         {segment === 'saved' ? (
-          <View style={styles.grid}>
-            {SEASONS.map(({ season, art }) => (
-              <Animated.View key={season} style={seasonEntrance.styleFor(season)}>
-                <TouchableOpacity
-                  style={[styles.seasonTile, { width: size, height: size }]}
-                  onPress={() => open('SeasonalFavourites', { season })}
-                  accessibilityLabel={`View ${season} Favourites`} accessibilityRole="button" activeOpacity={0.7}
-                >
-                  <ImageBackground source={art} style={styles.seasonArt} imageStyle={styles.seasonImage}>
-                    <Text style={styles.seasonText}>{season}</Text>
-                  </ImageBackground>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </View>
+          <Saved onExplore={() => navigation.navigate('HomeTab', { screen: 'SeasonsScreen', initial: false })} />
         ) : segment === 'lists' ? (
           <MyLists size={size} onOpen={list => open('ListScreen', { listId: list.id })}
+            onOpenCollection={collection => open(collection.screen)}
             onCreate={() => navigation.navigate('ListDetails')} />
         ) : (
           <Following size={size} onOpen={list => open('ListScreen', { listId: list.id })}
@@ -103,9 +91,57 @@ export default function Favourites({ route }) {
   );
 }
 
-function MyLists({ size, onOpen, onCreate }) {
+// Single places the user hearted, grouped by season. Removing one offers Undo.
+function Saved({ onExplore }) {
+  const navigation = useNavigation();
+  const [favourites, setFavourites] = useFavouriteSpots();
+  const { toggleFavouriteSpot } = useSaveSpot(favourites, setFavourites);
+  const groups = SEASON_ORDER.map(season => ({
+    season,
+    entries: Object.entries(favourites)
+      .filter(([, entry]) => entry?.isFavourite && entry.season === season)
+      .map(([name, entry]) => ({ name, entry }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  })).filter(group => group.entries.length);
+  const keys = groups.flatMap(group => group.entries.map(({ name }) => name));
+  const entrance = useItemEntrance(keys);
+
+  if (!groups.length) {
+    return (
+      <EmptyCard icon="favorite-border" title="Nothing saved yet"
+        text="Tap the heart on any spot to keep it here." actionLabel="Explore Vancouver" onAction={onExplore} />
+    );
+  }
+  return groups.map(({ season, entries }, index) => (
+    <View key={season}>
+      <Text style={[styles.sectionLabel, index === 0 && styles.firstLabel]} accessibilityRole="header">{season}</Text>
+      {entries.map(({ name, entry }) => {
+        // A spot SznLuv no longer lists stays here, so it can still be removed.
+        const resolved = resolveSpot(catalogueRef(name));
+        const spot = { ...resolved, missing: false, meta: resolved.missing ? 'No longer listed' : resolved.locality };
+        return (
+          <Animated.View key={name} style={entrance.styleFor(name)}>
+            <SpotCard spot={spot} saved
+              onPress={() => openVenue(navigation, Alert.alert, name)}
+              onToggleSave={() => toggleFavouriteSpot({ name, season: entry.season, address: entry.location })} />
+          </Animated.View>
+        );
+      })}
+    </View>
+  ));
+}
+
+// Collections the user kept with a heart, then the lists they made.
+function MyLists({ size, onOpen, onOpenCollection, onCreate }) {
   const { lists, status, retry } = useMyLists();
-  const entrance = useItemEntrance(lists.map(list => list.id), { ready: status === 'ready' });
+  const { saved, status: keptStatus, isSaved, retry: retryKept } = useSavedCollections();
+  const { toggleHeart } = useCollectionHeart();
+  // Oldest first, like lists. One the app no longer makes is left out rather than shown broken.
+  const kept = Object.keys(saved)
+    .sort((a, b) => (saved[a].savedAt ?? 0) - (saved[b].savedAt ?? 0))
+    .map(collectionById)
+    .filter(collection => collection && isSaved(collection.id));
+  const entrance = useItemEntrance([...kept.map(collection => collection.id), ...lists.map(list => list.id)], { ready: status === 'ready' });
 
   if (status === 'error') {
     return (
@@ -113,22 +149,58 @@ function MyLists({ size, onOpen, onCreate }) {
         text="Check your connection and try again." actionLabel="Try again" onAction={retry} />
     );
   }
-  if (status !== 'ready') return <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />;
+  if (status !== 'ready' || keptStatus === 'loading' || keptStatus === 'idle') {
+    return <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />;
+  }
+
+  const collections = kept.length > 0 && (
+    <>
+      <Text style={[styles.sectionLabel, styles.firstLabel]} accessibilityRole="header">Collections</Text>
+      <View style={styles.grid}>
+        {kept.map(collection => (
+          <Animated.View key={collection.id} style={entrance.styleFor(collection.id)}>
+            <ListTile list={{ title: collection.title, cover: { type: 'season', value: collection.key } }} size={size}
+              caption={collectionCaption(collection.id)} onPress={() => onOpenCollection(collection)} />
+            <HeartButton style={styles.tileHeart} saved size={20} hitSlop={8}
+              label={`Remove ${collection.title} collection from My lists`} onPress={() => toggleHeart(collection.id)} />
+          </Animated.View>
+        ))}
+      </View>
+    </>
+  );
+  const keptProblem = keptStatus === 'error' && (
+    <TouchableOpacity style={styles.inlineRetry} onPress={retryKept} accessibilityRole="button">
+      <Text style={styles.notice}>Couldn’t load your saved collections. Tap to try again.</Text>
+    </TouchableOpacity>
+  );
+
   if (!lists.length) {
     return (
-      <EmptyCard icon="bookmark-border" title="No lists yet"
-        text="Make a list for a plan, a mood, or a whole season." actionLabel="New list" onAction={onCreate} />
+      <>
+        {keptProblem}
+        {collections}
+        {kept.length > 0 && <Text style={styles.sectionLabel} accessibilityRole="header">Your lists</Text>}
+        <EmptyCard icon="bookmark-border" title="No lists yet"
+          text={kept.length ? 'Make a list for a plan, a mood, or a whole season.'
+            : 'Make a list for a plan, a mood, or a whole season. Or tap the heart on a season to keep it here.'}
+          actionLabel="New list" onAction={onCreate} />
+      </>
     );
   }
   return (
-    <View style={styles.grid}>
-      <NewListTile size={size} onPress={onCreate} />
-      {lists.map(list => (
-        <Animated.View key={list.id} style={entrance.styleFor(list.id)}>
-          <ListTile list={list} size={size} onPress={() => onOpen(list)} />
-        </Animated.View>
-      ))}
-    </View>
+    <>
+      {keptProblem}
+      {collections}
+      {kept.length > 0 && <Text style={styles.sectionLabel} accessibilityRole="header">Your lists</Text>}
+      <View style={styles.grid}>
+        <NewListTile size={size} onPress={onCreate} />
+        {lists.map(list => (
+          <Animated.View key={list.id} style={entrance.styleFor(list.id)}>
+            <ListTile list={list} size={size} onPress={() => onOpen(list)} />
+          </Animated.View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -216,12 +288,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#707070', textAlign: 'center', marginBottom: 24 },
   segments: { marginBottom: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
-  seasonTile: { borderRadius: 15, marginBottom: 16, overflow: 'hidden', ...cardShadow },
-  seasonArt: { flex: 1, justifyContent: 'center', alignItems: 'center', opacity: 0.85 },
-  seasonImage: { resizeMode: 'cover' },
-  seasonText: {
-    fontSize: 25, fontWeight: '700', color: colors.white, textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3,
+  tileHeart: {
+    position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
+  inlineRetry: { minHeight: 44, justifyContent: 'center' },
   loading: { marginTop: 32 },
 });

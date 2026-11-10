@@ -69,6 +69,18 @@ test('favourites and private user data belong to their owner only', async () => 
   await assertFails(getDocs(collection(alex, 'users/maya/followedPeople')));
 });
 
+test('kept collections belong to their owner and are keyed by the collection they keep', async () => {
+  const kept = { collectionId: 'vancouver-fall', cityId: 'vancouver', savedAt: 1 };
+  await assertSucceeds(setDoc(doc(maya, 'users/maya/savedCollections/vancouver-fall'), kept));
+  await assertSucceeds(getDocs(collection(maya, 'users/maya/savedCollections')));
+  await assertFails(setDoc(doc(maya, 'users/maya/savedCollections/vancouver-winter'), kept), 'the ID must match');
+  await assertFails(setDoc(doc(maya, 'users/maya/savedCollections/vancouver-fall'), { ...kept, extra: true }));
+  await assertFails(getDocs(collection(alex, 'users/maya/savedCollections')));
+  await assertFails(setDoc(doc(alex, 'users/maya/savedCollections/vancouver-fall'), kept));
+  await assertFails(deleteDoc(doc(alex, 'users/maya/savedCollections/vancouver-fall')));
+  await assertSucceeds(deleteDoc(doc(maya, 'users/maya/savedCollections/vancouver-fall')));
+});
+
 test('usernames can be checked and reserved, but never listed, taken over or deleted', async () => {
   await assertSucceeds(getDoc(doc(alex, 'usernames/maya')));
   await assertFails(getDocs(collection(alex, 'usernames')));

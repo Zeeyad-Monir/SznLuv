@@ -73,6 +73,14 @@ service cloud.firestore {
       match /followedPeople/{otherUid} {
         allow read, write: if isOwner(uid);
       }
+      // Collections kept with a heart (a city's season, or a later category). The document ID is the
+      // collection ID, so a collection can only be kept once.
+      match /savedCollections/{collectionId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.collectionId == collectionId
+          && request.resource.data.keys().hasOnly(['collectionId', 'cityId', 'savedAt']);
+      }
     }
 
     // Season hearts (and, until migrated, legacy collections).

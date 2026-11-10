@@ -58,6 +58,16 @@ export const socialScreens = [
   ['OwnSpotScreen', OwnSpotScreen],
   ['CustomSpotScreen', CustomSpotScreen],
 ];
+// A collection's own page: from the season cards at home, and from My lists once it has been saved.
+export const collectionScreens = [
+  ['FallDatesScreen', FallDatesScreen],
+  ['WinterDatesScreen', WinterDatesScreen],
+  ['SpringDatesScreen', SpringDatesScreen],
+  ['SummerDatesScreen', SummerDatesScreen],
+];
+const renderCollections = (Stack) => collectionScreens.map(([name, component]) => (
+  <Stack.Screen key={name} name={name} component={component} />
+));
 const renderVenues = (Stack) => [...venueScreens, ...socialScreens].map(([name, component]) => (
   <Stack.Screen key={name} name={name} component={component} />
 ));
@@ -68,10 +78,7 @@ function HomeSection() {
       <HomeStack.Screen name="Home" component={HomeScreen} />
       <HomeStack.Screen name="VancouverScreen" component={VancouverScreen} />
       <HomeStack.Screen name="SeasonsScreen" component={SeasonsScreen} />
-      <HomeStack.Screen name="FallDatesScreen" component={FallDatesScreen} />
-      <HomeStack.Screen name="WinterDatesScreen" component={WinterDatesScreen} />
-      <HomeStack.Screen name="SpringDatesScreen" component={SpringDatesScreen} />
-      <HomeStack.Screen name="SummerDatesScreen" component={SummerDatesScreen} />
+      {renderCollections(HomeStack)}
       {renderVenues(HomeStack)}
     </HomeStack.Navigator>
   );
@@ -82,6 +89,7 @@ function FavouritesSection() {
     <FavouritesStack.Navigator screenOptions={stackOptions}>
       <FavouritesStack.Screen name="Favourites" component={Favourites} />
       <FavouritesStack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
+      {renderCollections(FavouritesStack)}
       {renderVenues(FavouritesStack)}
     </FavouritesStack.Navigator>
   );

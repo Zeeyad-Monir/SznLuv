@@ -1,27 +1,17 @@
 // The cream spot card from the season screens, for lists: heart, name, where it is, an optional note.
 // In edit mode the heart gives way to move and remove controls and the note becomes tappable.
-import React, { useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { getReduceMotion } from '../hooks/useReduceMotion';
+import HeartButton from './HeartButton';
 import { cardShadow, colors, text } from './theme';
 
 export default function SpotCard({
   spot, note, saved = false, onPress, onToggleSave, onLongPress,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
-  const heartScale = useRef(new Animated.Value(1)).current;
   const disabled = spot.missing;
-
-  const toggleSave = () => {
-    if (!saved && !getReduceMotion()) {
-      Animated.sequence([
-        Animated.spring(heartScale, { toValue: 1.2, useNativeDriver: true, speed: 40, bounciness: 0 }),
-        Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 24, bounciness: 8 }),
-      ]).start();
-    }
-    onToggleSave?.();
-  };
+  const toggleSave = () => onToggleSave?.();
 
   const actions = editing
     ? [
@@ -47,18 +37,8 @@ export default function SpotCard({
         onAccessibilityAction={runAction}
       >
         {!editing && onToggleSave && !disabled && (
-          <TouchableOpacity
-            style={styles.heart}
-            hitSlop={11}
-            onPress={toggleSave}
-            accessibilityRole="button"
-            accessibilityLabel={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`}
-            accessibilityState={{ selected: saved }}
-          >
-            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-              <Icon name={saved ? 'favorite' : 'favorite-border'} size={23} color={saved ? colors.heart : colors.heartIdle} />
-            </Animated.View>
-          </TouchableOpacity>
+          <HeartButton style={styles.heart} saved={saved} onPress={toggleSave}
+            label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />
         )}
 
         <View style={styles.words}>

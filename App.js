@@ -27,6 +27,7 @@ import SharingSheet from './screens/SharingSheet';
 import ReportSheet from './screens/ReportSheet';
 import EditProfileSheet from './screens/EditProfileSheet';
 import { MyListsProvider } from './hooks/useMyLists';
+import { SavedCollectionsProvider } from './hooks/useSavedCollections';
 import * as Linking from 'expo-linking';
 import { parseLink } from './services/links';
 import { onPendingLink, setPendingLink, takePendingLink } from './services/pendingLink';
@@ -144,7 +145,7 @@ export default function App() {
         {shown === 'blocked' ? (
           <AccountAccessScreen status={registrationError ? 'error' : profile.status} message={registrationError || profile.message}
             onRetry={() => { setRegistrationError(null); setRetry(value => value + 1); }} />
-        ) : <MyListsProvider><View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={() => { if (signedIn) openPendingLink(); }}>
+        ) : <MyListsProvider><SavedCollectionsProvider><View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={() => { if (signedIn) openPendingLink(); }}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {shown === 'home' ? (
               <>
@@ -163,7 +164,7 @@ export default function App() {
               </>
             )}
           </Stack.Navigator>
-        </NavigationContainer></View></MyListsProvider>}
+        </NavigationContainer></View></SavedCollectionsProvider></MyListsProvider>}
       </SettingsProvider>
     </AuthContext.Provider>
     </SafeAreaProvider>

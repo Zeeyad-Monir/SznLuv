@@ -57,16 +57,35 @@ test('opening the app reads and writes no lists until the library is opened', as
   assert.equal(JSON.stringify([...h.documents]), before);
 });
 
-test('library: Saved shows the four seasons two to a row and opens a season', async () => {
-  const h = createHarness();
+test('library: Saved no longer shows season tiles; it lists hearted spots by season and opens them', async () => {
+  const h = createHarness({ documents: {
+    'users/audit': { username: 'audit' },
+    'favourites/audit': {
+      collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }],
+      'Maan Farms': { isFavourite: true, season: 'Fall', location: '790 McKenzie Rd, Abbotsford' },
+      'Gone Farm': { isFavourite: true, season: 'Fall', location: '' },
+    },
+  } });
   const screen = await mount(h, 'screens/Favourites.js');
-  const tiles = ['Fall', 'Winter', 'Spring', 'Summer'].map(season => screen.button(`View ${season} Favourites`));
-  assert.ok(tiles.every(Boolean));
-  const { width, height } = Object.assign({}, ...tiles[0].props.style);
-  assert.deepEqual([width, height], [167, 167], 'two tiles and a 16pt gap fill a 390pt screen with 20pt gutters');
-  await screen.press('View Winter Favourites');
-  assert.deepEqual(h.navigations.at(-1), ['SeasonalFavourites', { season: 'Winter' }]);
+  assert.equal(screen.button('View Fall Favourites'), undefined, 'no seasonal collection is shown unless the user keeps one');
+  assert.ok(screen.texts().includes('Fall'));
+  assert.ok(screen.texts().includes('Maan Farms'));
+  assert.ok(screen.texts().includes('No longer listed'), 'a spot SznLuv dropped stays, so it can be removed');
+  await screen.press('View details for Maan Farms');
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { placeID: 'maan_farms' }]);
+
+  await screen.press('Remove Gone Farm from favourites');
+  assert.equal(h.documents.get('favourites/audit')['Gone Farm'], undefined);
+  assert.deepEqual(screen.snackbar(), ['Removed from favourites', 'Undo']);
   assert.ok(h.documents.get('favourites/audit').collections, 'the Saved side alone migrates nothing');
+});
+
+test('library: Saved with nothing hearted invites the user to explore', async () => {
+  const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
+  const screen = await mount(h, 'screens/Favourites.js');
+  assert.ok(screen.texts().includes('Nothing saved yet'), screen.texts().join(' | '));
+  await screen.press('Explore Vancouver');
+  assert.deepEqual(h.navigations.at(-1), ['HomeTab', { screen: 'SeasonsScreen', initial: false }]);
 });
 
 test('library: My lists turns old collections into lists once, and offers New list', async () => {

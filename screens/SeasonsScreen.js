@@ -11,11 +11,9 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Animated,
-  ImageBackground,
 } from 'react-native';
 
 // Importing navigation hook to navigate between screens
@@ -28,6 +26,10 @@ import { fallSpotNames } from '../services/spots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
+import { useCollectionHeart } from '../hooks/useSavedCollections';
+import CollectionCard from '../components/CollectionCard';
+import { DEFAULT_CITY } from '../services/catalogue';
+import { collectionsForCity } from '../services/collections';
 import { canNavigate } from '../services/venueNavigation';
 
 // =========================
@@ -67,7 +69,11 @@ export default function SeasonsScreen() {
   const [springCount, setSpringCount] = useState(4);
   const [summerCount, setSummerCount] = useState(3);
 
-  const entrance = useEntrance(4);
+  const collections = collectionsForCity(DEFAULT_CITY.id);
+  const counts = { fall: fallCount, winter: winterCount, spring: springCount, summer: summerCount };
+  const entrance = useEntrance(collections.length);
+  // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.
+  const { isSaved, toggleHeart } = useCollectionHeart();
 
   // Two quick taps on different cards must not push two pages
   const openSeason = (route) => {
@@ -134,116 +140,21 @@ export default function SeasonsScreen() {
           <Text style={styles.subtext}>Seasons</Text>
         </View>
 
-        {/* Seasonal Categories Container */}
+        {/* Seasonal Categories Container: one card per collection SznLuv makes for this city */}
         <View style={styles.seasonContainer}>
-          {/* =========================
-              FALL SEASON CARD
-              ========================= */}
-          <Animated.View style={entrance[0]}>
-            <TouchableOpacity
-              style={styles.seasonTouchable} // Base styles for the touchable area
-              onPress={() => openSeason('FallDatesScreen')} // Navigates to FallDatesScreen on press
-              accessible={true} // Enables accessibility
-              accessibilityRole="button"
-              accessibilityLabel="Fall Season - View Active Date Ideas" // Accessibility label for screen readers
-            >
-              {/* Background Image for Fall Season */}
-              <ImageBackground
-                source={seasonalImages.fall} // Fall season image
-                style={styles.imageBackground} // Styles for the image background
-                imageStyle={{ borderRadius: 12, opacity: 1 }} // Additional image styles
-              >
-                {/* Text Container for Season Title and Subtitle */}
-                <View style={styles.textContainer}>
-                  {/* Fall Season Title */}
-                  <Text style={[styles.seasonTitle, styles.fallTitle]}>Fall</Text>
-
-                  {/* Fall Season Subtitle displaying active date idea count */}
-                  <Text style={[styles.seasonSubtitle, styles.fallSubtitle]}>
-                    {fallCount} Active Ideas
-                  </Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* =========================
-              WINTER SEASON CARD
-              ========================= */}
-          <Animated.View style={entrance[1]}>
-            <TouchableOpacity
-              style={styles.seasonTouchable}
-              onPress={() => openSeason('WinterDatesScreen')}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Winter Season - View Active Date Ideas"
-            >
-              <ImageBackground
-                source={seasonalImages.winter}
-                style={styles.imageBackground}
-                imageStyle={{ borderRadius: 12, opacity: 1 }}
-              >
-                <View style={styles.textContainer}>
-                  <Text style={[styles.seasonTitle, styles.winterTitle]}>Winter</Text>
-                  <Text style={[styles.seasonSubtitle, styles.winterSubtitle]}>
-                    {winterCount} Active Ideas
-                  </Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* =========================
-              SPRING SEASON CARD
-              ========================= */}
-          <Animated.View style={entrance[2]}>
-            <TouchableOpacity
-              style={styles.seasonTouchable}
-              onPress={() => openSeason('SpringDatesScreen')}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Spring Season - View Active Date Ideas"
-            >
-              <ImageBackground
-                source={seasonalImages.spring}
-                style={styles.imageBackground}
-                imageStyle={{ borderRadius: 12, opacity: 1 }}
-              >
-                <View style={styles.textContainer}>
-                  <Text style={[styles.seasonTitle, styles.springTitle]}>Spring</Text>
-                  <Text style={[styles.seasonSubtitle, styles.springSubtitle]}>
-                    {springCount} Active Ideas
-                  </Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* =========================
-              SUMMER SEASON CARD
-              ========================= */}
-          <Animated.View style={entrance[3]}>
-            <TouchableOpacity
-              style={styles.seasonTouchable}
-              onPress={() => openSeason('SummerDatesScreen')}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Summer Season - View Active Date Ideas"
-            >
-              <ImageBackground
-                source={seasonalImages.summer}
-                style={styles.imageBackground}
-                imageStyle={{ borderRadius: 12, opacity: 1 }}
-              >
-                <View style={styles.textContainer}>
-                  <Text style={[styles.seasonTitle, styles.summerTitle]}>Summer</Text>
-                  <Text style={[styles.seasonSubtitle, styles.summerSubtitle]}>
-                    {summerCount} Active Ideas
-                  </Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
+          {collections.map((collection, index) => (
+            <Animated.View key={collection.id} style={entrance[index]}>
+              <CollectionCard
+                title={collection.title}
+                count={counts[collection.key]}
+                art={seasonalImages[collection.key]}
+                accessibilityLabel={`${collection.title} Season - View Active Date Ideas`}
+                onPress={() => openSeason(collection.screen)}
+                saved={isSaved(collection.id)}
+                onToggleSave={() => toggleHeart(collection.id)}
+              />
+            </Animated.View>
+          ))}
 
           {/* Spacer at the bottom of the season cards */}
           <View style={{ height: 20 }} />
@@ -288,68 +199,6 @@ const styles = StyleSheet.create({
   seasonContainer: {
     paddingHorizontal: 20, // Horizontal padding inside the container
     marginTop: 24, // Space above the seasonal categories
-  },
-
-  // Touchable Area for Each Season Card
-  seasonTouchable: {
-    width: '100%', // Full width of the container
-    height: 160, // Fixed height for consistency
-    borderRadius: 12, // Rounded corners for aesthetics
-    marginBottom: 24, // Space below each season card
-    overflow: 'hidden', // Clips any child content outside the container
-  },
-
-  // Image Background for Season Cards
-  imageBackground: {
-    flex: 1, // Takes up the full available space
-    justifyContent: 'flex-start', // Aligns children at the top
-  },
-
-  // Text Container within Season Cards
-  textContainer: {
-    paddingHorizontal: 20, // Horizontal padding inside the container
-    paddingTop: 20, // Top padding for spacing
-  },
-
-  // Season Title Text Style
-  seasonTitle: {
-    fontSize: 35, // Large font size for the season title
-    fontWeight: 'bold', // Bold font weight for emphasis
-    color: '#FFFFFF', // White color for contrast against the background image
-  },
-
-  // Season Subtitle Text Style displaying active date idea counts
-  seasonSubtitle: {
-    marginTop: 2, // Space above the subtitle
-    fontSize: 14, // Font size for the subtitle
-    fontWeight: 'bold', // Bold font weight for emphasis
-    color: '#FFFFFF', // White color for readability
-  },
-
-  // Specific Title Colors for Each Season (can be customized if needed)
-  fallTitle: {
-    color: '#FFFFFF', // White color for Fall season
-  },
-  fallSubtitle: {
-    color: '#FFFFFF', // White color for Fall subtitle
-  },
-  winterTitle: {
-    color: '#FFFFFF', // White color for Winter season
-  },
-  winterSubtitle: {
-    color: '#FFFFFF', // White color for Winter subtitle
-  },
-  springTitle: {
-    color: '#FFFFFF', // White color for Spring season
-  },
-  springSubtitle: {
-    color: '#FFFFFF', // White color for Spring subtitle
-  },
-  summerTitle: {
-    color: '#FFFFFF', // White color for Summer season
-  },
-  summerSubtitle: {
-    color: '#FFFFFF', // White color for Summer subtitle
   },
 
   // Loading Container for ActivityIndicator

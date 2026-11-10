@@ -9,12 +9,14 @@ const flush = () => act(async () => { await new Promise(resolve => setTimeout(re
 async function mount(h, relative, { params, props, user = { uid: 'audit', email: 'audit@example.com' }, username = 'audit' } = {}) {
   const { SnackbarProvider } = h.load('components/Snackbar.js');
   const { MyListsProvider } = h.load('hooks/useMyLists.js');
+  const { SavedCollectionsProvider } = h.load('hooks/useSavedCollections.js');
   const Component = h.load(relative).default;
   const { AuthContext } = h.load('contexts/AuthContext.js');
   const renderer = await h.renderElement(React.createElement(AuthContext.Provider, { value: { user, username } },
     React.createElement(MyListsProvider, null,
-      React.createElement(SnackbarProvider, null,
-        React.createElement(Component, { navigation: h.navigation, route: { params: params ?? {} }, ...props })))));
+      React.createElement(SavedCollectionsProvider, null,
+        React.createElement(SnackbarProvider, null,
+          React.createElement(Component, { navigation: h.navigation, route: { params: params ?? {} }, ...props }))))));
   await flush();
   const all = type => renderer.root.findAllByType(type);
   const button = label => all('TouchableOpacity').find(node => node.props.accessibilityLabel === label)
