@@ -205,7 +205,7 @@ test('visitor page: the heart saves to the visitor\'s own favourites or lists; t
   assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: steps, sourceListId: 'm' }]);
 
   await screen.press('More options');
-  assert.deepEqual(h.menus.at(-1).options, ['Report list', 'Cancel']);
+  assert.deepEqual(h.menus.at(-1).options, ['Report list', 'Block maya', 'Cancel']);
   await act(async () => h.menus.at(-1).pick('Report list'));
   assert.deepEqual(h.navigations.at(-1), ['Report', { targetType: 'list', targetId: 'm', ownerUid: 'maya-uid', name: 'Golden Hour' }]);
 });
@@ -252,7 +252,7 @@ const cards = screen => screen.all('TouchableOpacity').map(node => node.props.ac
 test('explore: shows the newest lists from other people, never your own or a blocked person\'s', async () => {
   const h = createHarness({ documents: exploreDocuments() });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'Lists from people on SznLuv', 'New in Vancouver']);
+  assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'Lists and people', 'New in Vancouver']);
   assert.deepEqual(cards(screen), ['Golden Hour, by maya · 1 spot', 'Farm days, by alex · 1 spot']);
   await screen.press('Golden Hour, by maya · 1 spot');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'new' }]);

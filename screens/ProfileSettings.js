@@ -68,10 +68,8 @@ const ProfileSettings = () => {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
   // State to store the user's name fetched from the database
-  const [userName, setUserName] = useState('');
 
   // State to manage the loading indicator while fetching the username
-  const [loadingUsername, setLoadingUsername] = useState(true);
 
   // =========================
   // NAVIGATION HOOK
@@ -135,61 +133,6 @@ const ProfileSettings = () => {
     );
   };
 
-  // =========================
-  // EFFECTS SECTION
-  // =========================
-
-  /**
-   * useEffect hook to fetch the user's name from Firestore when the component mounts or when the user changes.
-   */
-  useEffect(() => {
-    /**
-     * Async function to fetch the user's name from the Firestore database.
-     */
-    const fetchUserName = async () => {
-      // If there is no authenticated user, set a default name and stop loading
-      if (!user) {
-        setUserName('User');
-        setLoadingUsername(false);
-        return;
-      }
-
-      try {
-        // Creating a reference to the user's document in Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-
-        // Fetching the user's document snapshot
-        const userDocSnap = await getDoc(userDocRef);
-
-        // Checking if the document exists
-        if (userDocSnap.exists()) {
-          // Extracting data from the document
-          const data = userDocSnap.data();
-
-          // Setting the user's name, defaulting to 'User' if not available
-          setUserName(data.username || 'User');
-        } else {
-          // Logging if no user data is found
-          console.log('No user data found!');
-
-          // Setting a default name
-          setUserName('User');
-        }
-      } catch (error) {
-        // Logging any errors that occur during the fetch
-        console.error('Error fetching user name:', error);
-
-        // Setting a default name in case of an error
-        setUserName('User');
-      } finally {
-        // Stopping the loading indicator regardless of success or failure
-        setLoadingUsername(false);
-      }
-    };
-
-    // Invoking the fetchUserName function
-    fetchUserName();
-  }, [user]); // Dependency array includes 'user' to refetch if user changes
 
   // =========================
   // RENDERING SECTION
@@ -199,31 +142,7 @@ const ProfileSettings = () => {
     <SignedInScreen style={styles.mainContainer}>
       {/* Scrollable content container */}
       <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
-        {/* PROFILE SECTION */}
-        <View style={styles.profileSection}>
-          {/* Profile Image Placeholder */}
-          <View style={[styles.profileImage, { backgroundColor: '#D24B3A' }]}>
-            <Text style={styles.profileImageText}>
-              {/* Displaying the first character of the user's name or a loading indicator */}
-              {loadingUsername ? '...' : userName.charAt(0)}
-            </Text>
-          </View>
-
-          {/* Displaying either a loading indicator or the user's name */}
-          {loadingUsername ? (
-            <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
-          ) : (
-            <Text style={styles.userName}>{userName}</Text>
-          )}
-
-          {/* Edit Profile Button */}
-          <TouchableOpacity onPress={() => {
-            // Informing the user that the feature is coming soon
-            Alert.alert('Info', 'Edit Profile feature coming soon.');
-          }}>
-            <Text style={styles.editProfileText}>Edit profile</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.settingsTitle} accessibilityRole="header">Settings</Text>
 
         {/* SETTINGS SECTION */}
         <View style={styles.settingsSection}>
@@ -294,6 +213,7 @@ const ProfileSettings = () => {
 // =========================
 
 const styles = StyleSheet.create({
+  settingsTitle: { alignSelf: 'flex-start', marginLeft: '5%', marginTop: 16, marginBottom: 16, fontSize: 34, fontWeight: '700', color: '#333333' },
   // Main container covering the entire screen
   mainContainer: {
     flex: 1, // Takes up the full available space

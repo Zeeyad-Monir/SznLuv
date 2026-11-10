@@ -1,4 +1,5 @@
-// Explore: the newest public lists, and a search over lists by title, creator, spot or town.
+// Explore: the newest public lists, lists from people you follow, and a search over lists
+// (by title, creator, spot or town) and people (by username).
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Animated, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -7,19 +8,24 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import EmptyCard from '../components/EmptyCard';
 import ListCard from '../components/ListCard';
+import PersonRow from '../components/PersonRow';
 import { colors } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { cityName, DEFAULT_CITY } from '../services/catalogue';
-import { getNewestPublicLists, searchPublicLists } from '../services/lists';
+import { getNewestPublicLists, getPublicListsBy, searchPublicLists } from '../services/lists';
 import { parseQuery, rankLists, visibleLists } from '../services/listSearch';
+import { loadFollowedPeople } from '../services/follows';
 import { getBlocked } from '../services/moderation';
+import { searchProfiles } from '../services/profiles';
 import { canNavigate } from '../services/venueNavigation';
 
 const PAGE = 20;
 const DEBOUNCE_MS = 300;
+const PEOPLE_SHOWN = 3;
+const FOLLOWED_SHOWN = 6;
 
 export default function ExploreScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -33,7 +39,9 @@ export default function ExploreScreen({ navigation }) {
   const [query, setQuery] = useState('');
   const [blocked, setBlocked] = useState([]);
   const [feed, setFeed] = useState({ status: 'loading', lists: [], more: false });
-  const [results, setResults] = useState({ status: 'idle', lists: [], query: '' });
+  const [results, setResults] = useState({ status: 'idle', lists: [], people: [], query: '' });
+  const [fromFollowed, setFromFollowed] = useState([]);
+  const [allPeople, setAllPeople] = useState(false);
   const feedRequest = useRef(0);
   const searchRequest = useRef(0);
   const searching = !!parseQuery(query);
@@ -55,8 +63,17 @@ export default function ExploreScreen({ navigation }) {
 
   // Fresh each time Explore comes into view, so a list published a moment ago is there.
   useFocusEffect(useCallback(() => {
+    let active = true;
     loadFeed();
     getBlocked(uid).then(setBlocked).catch(() => {});
+    // The latest lists from up to five people you follow.
+    loadFollowedPeople(uid)
+      .then(people => Promise.all(people.slice(0, 5).map(person => getPublicListsBy(person.uid))))
+      .then(theirLists => {
+        if (active) setFromFollowed(theirLists.flat().sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0)).slice(0, FOLLOWED_SHOWN));
+      })
+      .catch(() => {});
+    return () => { active = false; };
   }, [loadFeed, uid]));
 
   // Re-tapping the Explore slot goes back to the top and into the search field.
@@ -71,19 +88,20 @@ export default function ExploreScreen({ navigation }) {
     const request = ++searchRequest.current;
     setResults(previous => ({ ...previous, status: 'searching' }));
     try {
-      const candidates = await searchPublicLists(text);
+      const [candidates, people] = await Promise.all([searchPublicLists(text), searchProfiles(text)]);
       if (request !== searchRequest.current) return; // A newer search has started
-      setResults({ status: 'ready', lists: candidates, query: text });
+      setResults({ status: 'ready', lists: candidates, people, query: text });
+      setAllPeople(false);
     } catch (error) {
       console.error('Explore search failed:', { code: error?.code });
-      if (request === searchRequest.current) setResults({ status: 'error', lists: [], query: text });
+      if (request === searchRequest.current) setResults({ status: 'error', lists: [], people: [], query: text });
     }
   }, []);
 
   useEffect(() => {
     if (!searching) {
       searchRequest.current += 1;
-      setResults({ status: 'idle', lists: [], query: '' });
+      setResults({ status: 'idle', lists: [], people: [], query: '' });
       return undefined;
     }
     setResults(previous => ({ ...previous, status: 'searching' })); // The field shows it is working straight away
@@ -100,6 +118,11 @@ export default function ExploreScreen({ navigation }) {
   const awaitingFirstResults = searching && results.status === 'searching' && !results.query;
   const feedLists = hide(feed.lists);
   const found = rankLists(results.lists, results.query, { viewerUid: uid, blocked });
+  const people = results.people.filter(person => person.uid !== uid && !blocked.includes(person.uid));
+  const openPerson = person => {
+    Keyboard.dismiss();
+    if (canNavigate(navigation)) navigation.navigate('PersonScreen', { uid: person.uid });
+  };
   const typed = query.trim();
 
   return (
@@ -108,11 +131,11 @@ export default function ExploreScreen({ navigation }) {
         keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Animated.View style={entrance[0]}>
           <Text style={styles.title} accessibilityRole="header">Explore</Text>
-          <Text style={styles.label}>Lists from people on SznLuv</Text>
+          <Text style={styles.label}>Lists and people</Text>
           <View style={styles.searchBar}>
             <Icon name="search" size={22} color={colors.muted} accessible={false} importantForAccessibility="no" />
             <TextInput ref={inputRef} style={styles.searchInput} value={query} onChangeText={setQuery}
-              placeholder="Search lists" placeholderTextColor="#6B635A" accessibilityLabel="Search lists"
+              placeholder="Search lists and people" placeholderTextColor="#6B635A" accessibilityLabel="Search lists and people"
               autoCorrect={false} autoCapitalize="none" returnKeyType="search" onSubmitEditing={Keyboard.dismiss} />
             {results.status === 'searching' && <ActivityIndicator style={styles.searchSlot} color={colors.ink} />}
             {!!query && results.status !== 'searching' && (
@@ -128,14 +151,27 @@ export default function ExploreScreen({ navigation }) {
             <>
               {results.status === 'error' ? (
                 <EmptyCard icon="cloud-off" title="Couldn’t search" text="Check your connection and try again."
-                  actionLabel="Try again" onAction={() => runSearch(query)} />
-              ) : results.status === 'ready' && found.length === 0 ? (
+                  actionLabel="Try again" onAction={() => runSearch(query)} style={styles.searchState} />
+              ) : results.status === 'ready' && found.length === 0 && people.length === 0 ? (
                 <EmptyCard icon="search" title={`Nothing for “${typed}”`}
                   text="Try a creator’s username, a spot, a town, or a word from a list’s title."
-                  actionLabel="Clear search" onAction={() => setQuery('')} />
+                  actionLabel="Clear search" onAction={() => setQuery('')} style={styles.searchState} />
               ) : (
                 // While a new search runs, the last results stay in place, dimmed, so nothing jumps.
                 <View style={results.status === 'searching' && styles.dimmed}>
+                  {people.length > 0 && (
+                    <>
+                      <Text style={[styles.label, styles.section]} accessibilityRole="header">People</Text>
+                      {(allPeople ? people : people.slice(0, PEOPLE_SHOWN)).map(person => (
+                        <PersonRow key={person.uid} person={person} onPress={() => openPerson(person)} />
+                      ))}
+                      {!allPeople && people.length > PEOPLE_SHOWN && (
+                        <TouchableOpacity style={styles.more} accessibilityRole="button" onPress={() => setAllPeople(true)}>
+                          <Text style={styles.moreText}>See all people</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
                   {found.length > 0 && (
                     <Text style={styles.count} accessibilityLiveRegion="polite">{found.length} {found.length === 1 ? 'list' : 'lists'}</Text>
                   )}
@@ -145,6 +181,12 @@ export default function ExploreScreen({ navigation }) {
             </>
           ) : (
             <View style={awaitingFirstResults && styles.dimmed}>
+              {hide(fromFollowed).length > 0 && (
+                <>
+                  <Text style={[styles.label, styles.section]} accessibilityRole="header">From people you follow</Text>
+                  {hide(fromFollowed).map(list => <ListCard key={`followed-${list.id}`} list={list} onPress={() => open(list)} />)}
+                </>
+              )}
               <Text style={[styles.label, styles.section]} accessibilityRole="header">New in {cityName(DEFAULT_CITY.id)}</Text>
               {feed.status === 'loading' ? (
                 <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />
@@ -186,6 +228,7 @@ const styles = StyleSheet.create({
   searchSlot: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   count: { marginTop: 16, marginBottom: 12, fontSize: 14, fontWeight: '600', color: colors.summary },
   dimmed: { opacity: 0.5 },
+  searchState: { marginTop: 16 },
   loading: { marginTop: 32 },
   more: { alignSelf: 'center', minHeight: 44, paddingHorizontal: 16, justifyContent: 'center' },
   moreText: { fontSize: 15, fontWeight: '700', color: colors.ink, textDecorationLine: 'underline' },

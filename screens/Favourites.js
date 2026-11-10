@@ -15,7 +15,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
-import { loadFollowedLists } from '../services/follows';
+import PersonRow from '../components/PersonRow';
+import { loadFollowedLists, loadFollowedPeople } from '../services/follows';
 import { getPublicList } from '../services/lists';
 import { canNavigate } from '../services/venueNavigation';
 
@@ -94,6 +95,7 @@ export default function Favourites({ route }) {
             onCreate={() => navigation.navigate('ListDetails')} />
         ) : (
           <Following size={size} onOpen={list => open('ListScreen', { listId: list.id })}
+            onOpenPerson={person => open('PersonScreen', { uid: person.uid })}
             onExplore={() => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
         )}
       </ScrollView>
@@ -132,17 +134,17 @@ function MyLists({ size, onOpen, onCreate }) {
 
 // Lists made by other people. Each visit checks they are still shared: one that was made private or
 // deleted is dropped, with a line saying so.
-function Following({ size, onOpen, onExplore }) {
+function Following({ size, onOpen, onOpenPerson, onExplore }) {
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
-  const [state, setState] = useState({ status: 'loading', lists: [], removed: [] });
+  const [state, setState] = useState({ status: 'loading', lists: [], removed: [], people: [] });
   const entrance = useItemEntrance(state.lists.map(entry => entry.pointer.id), { ready: state.status === 'ready' });
 
   const load = useCallback(() => {
     let active = true;
-    loadFollowedLists(uid, getPublicList).then(({ lists, removed }) => {
+    Promise.all([loadFollowedLists(uid, getPublicList), loadFollowedPeople(uid)]).then(([{ lists, removed }, people]) => {
       // The notice about dropped lists stays until this side is left, not just until the next refresh.
-      if (active) setState(previous => ({ status: 'ready', lists, removed: [...previous.removed, ...removed] }));
+      if (active) setState(previous => ({ status: 'ready', lists, people, removed: [...previous.removed, ...removed] }));
     }).catch(error => {
       console.error('Followed lists unavailable:', { code: error?.code });
       if (active) setState(previous => ({ ...previous, status: previous.lists.length ? 'ready' : 'error' }));
@@ -162,18 +164,30 @@ function Following({ size, onOpen, onExplore }) {
   const notice = state.removed.map(title => (
     <Text key={title} style={styles.notice} accessibilityRole="alert">“{title}” is no longer shared.</Text>
   ));
+  const people = (
+    <>
+      <Text style={styles.sectionLabel} accessibilityRole="header">People</Text>
+      {state.people.length === 0 ? (
+        <EmptyCard icon="person-outline" title="Not following anyone yet"
+          text="Follow someone to keep their profile close." actionLabel="Find people" onAction={onExplore} />
+      ) : state.people.map(person => <PersonRow key={person.uid} person={person} onPress={() => onOpenPerson(person)} />)}
+    </>
+  );
   if (!state.lists.length) {
     return (
       <>
         {notice}
+        <Text style={[styles.sectionLabel, styles.firstLabel]} accessibilityRole="header">Lists</Text>
         <EmptyCard icon="bookmark-border" title="Not following any lists yet"
           text="Follow a list and it lives here, always up to date." actionLabel="Explore lists" onAction={onExplore} />
+        {people}
       </>
     );
   }
   return (
     <>
       {notice}
+      <Text style={[styles.sectionLabel, styles.firstLabel]} accessibilityRole="header">Lists</Text>
       <View style={styles.grid}>
         {state.lists.map(({ pointer, list, updated }) => {
           // A list that couldn't be re-read just now is shown from what was saved when it was followed.
@@ -187,11 +201,14 @@ function Following({ size, onOpen, onExplore }) {
           );
         })}
       </View>
+      {people}
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  sectionLabel: { marginTop: 20, marginBottom: 12, fontSize: 18, fontWeight: '700', color: colors.label },
+  firstLabel: { marginTop: 0 },
   notice: { marginBottom: 12, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.muted, textAlign: 'center' },
   container: { flex: 1, backgroundColor: colors.library },
   content: { paddingTop: 40, paddingHorizontal: GUTTER, paddingBottom: 24 },

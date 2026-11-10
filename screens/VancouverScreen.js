@@ -23,6 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
+import CommunityTeaser from '../components/CommunityTeaser';
 
 // =========================
 // CONSTANTS SECTION
@@ -83,6 +84,8 @@ export default function VancouverScreen() {
               </ImageBackground>
             </TouchableOpacity>
           </Animated.View>
+
+          <CommunityTeaser />
 
           {/* Spacer at the bottom of the cards */}
           <View style={{ height: 20 }} />

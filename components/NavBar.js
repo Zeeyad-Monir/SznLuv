@@ -25,6 +25,8 @@ const PARENT_TITLES = {
   SeasonalFavourites: 'Saved Spots',
   Explore: 'Explore',
   ListScreen: 'List',
+  PersonScreen: 'Profile',
+  Profile: 'Profile',
 };
 
 // Room for the back chevron beside the title; the bar's other contents don't move.

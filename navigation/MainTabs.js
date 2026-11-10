@@ -24,6 +24,8 @@ import OwnSpotScreen from '../screens/OwnSpotScreen';
 import CustomSpotScreen from '../screens/CustomSpotScreen';
 import SpinTheWheel from '../screens/SpinTheWheel';
 import ProfileSettings from '../screens/ProfileSettings';
+import ProfileScreen from '../screens/ProfileScreen';
+import PersonScreen from '../screens/PersonScreen';
 import AldorFamilyFarmScreen from '../screens/AldorFamilyFarmScreen';
 import LaityPumpkinPatch from '../screens/LaityPumpkinPatch';
 import EagleAcresDairy from '../screens/EagleAcresDairy';
@@ -38,6 +40,7 @@ const Tabs = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const FavouritesStack = createNativeStackNavigator();
 const ExploreStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 const stackOptions = { headerShown: false };
 
@@ -51,6 +54,7 @@ export const venueScreens = [
 // Lists and the pages they lead to, likewise available inside whichever section opened them.
 export const socialScreens = [
   ['ListScreen', ListScreen],
+  ['PersonScreen', PersonScreen],
   ['OwnSpotScreen', OwnSpotScreen],
   ['CustomSpotScreen', CustomSpotScreen],
 ];
@@ -89,6 +93,16 @@ function ExploreSection() {
       <ExploreStack.Screen name="Explore" component={ExploreScreen} />
       {renderVenues(ExploreStack)}
     </ExploreStack.Navigator>
+  );
+}
+
+function ProfileSection() {
+  return (
+    <ProfileStack.Navigator screenOptions={stackOptions}>
+      <ProfileStack.Screen name="Profile" component={ProfileScreen} />
+      <ProfileStack.Screen name="Settings" component={ProfileSettings} />
+      {renderVenues(ProfileStack)}
+    </ProfileStack.Navigator>
   );
 }
 
@@ -168,7 +182,7 @@ export default function MainTabs() {
           <Tabs.Screen name="ExploreTab" component={ExploreSection} />
           <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
           <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
-          <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
+          <Tabs.Screen name="ProfileTab" component={ProfileSection} />
         </Tabs.Navigator>
         </SnackbarProvider>
       </FloatingNavigationLayoutProvider>

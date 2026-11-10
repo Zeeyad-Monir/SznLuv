@@ -230,3 +230,19 @@ Built, tested, and walked through on the iPhone 16 Pro simulator against the loc
 - **Report** sheet for lists.
 
 Left for step 4: people (profiles, Top 4, follow person, people search, block), the Vancouver teaser, and the Spots · Map switch. The creator's name on a list is not tappable until profiles exist.
+
+## 15. Step 4 status: people
+
+Built, tested, and spot-checked on the iPhone 16 Pro simulator against the local emulators.
+
+- **Profile** (the header badge): avatar, username, bio, Edit profile; Top 4 with open slots, reorder and remove from each pick's menu, and a "Show Top 4 on my profile" switch that confirms any place you added yourself; your public lists; a row into **Settings**, which holds what the old profile screen had.
+- **Person page**: their public picks (never empty slots), their public lists, Follow, and a menu to report or block. A blocked or missing profile shows one neutral page.
+- **Explore**: search also finds people by the start of their username; lists from people you follow lead the page.
+- **Favourites › Following**: a People section under the lists.
+- **List page**: the creator's name opens their profile; Block is in the menu; a Spots · Map switch appears when two or more spots have a location.
+- **Vancouver page**: up to three community lists and a link into Explore, shown only when there is something to show.
+- **Links**: `sznluv://u/{username}` opens that person's page.
+
+Publish-to-search was checked three ways: a screen test (publish in the sheet, another user's Explore search finds it by title, half a word, town and creator, and it disappears when made private), the emulator service test under the real rules, and by hand (search empty, publish through the app's own publish code, same search finds it).
+
+Differences from sections 6.3 to 6.5: Top 4 picks come from the app's spots or places already in your lists (no "add your own spot" from the Top 4 sheet); a pick's actions are a native menu, not a sheet, and there is no Replace (remove, then add).

@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
 import AddSpotSheet, { ownSpotsFrom } from '../components/AddSpotSheet';
 import EmptyCard from '../components/EmptyCard';
+import ListMap, { mappable } from '../components/ListMap';
+import SegmentPill from '../components/SegmentPill';
 import { spotCount } from '../components/ListTile';
 import { useSnackbar } from '../components/Snackbar';
 import SpotCard from '../components/SpotCard';
@@ -30,11 +32,20 @@ import {
   LIMITS, addSpot, coverBackground, hasUnpublishedChanges, insertSpot, moveSpot, needsReview, removeSpot,
 } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
+import { blockUser } from '../services/moderation';
 import { shareList } from '../services/shareList';
 import { canNavigate, openVenue } from '../services/venueNavigation';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 const haptic = () => { if (Platform.OS === 'ios') selectionAsync().catch(() => {}); };
+const VIEWS = [{ value: 'spots', label: 'Spots' }, { value: 'map', label: 'Map' }];
+
+// The switch appears only when a map would say something: two or more spots with a known location.
+function useListView(spots) {
+  const [view, setView] = useState('spots');
+  const canMap = mappable(spots).length >= 2;
+  return { view: canMap ? view : 'spots', setView, canMap };
+}
 
 export default function ListScreen({ navigation, route }) {
   const { listId, from } = route.params;
@@ -127,6 +138,7 @@ function OwnerList({ navigation, list, setList, deleting }) {
   const entrance = useEntrance(3);
   const spots = useMemo(() => list.items.map(item => ({ item, spot: resolveSpot(item.spot) })), [list]);
   const full = list.items.length >= LIMITS.spots;
+  const { view, setView, canMap } = useListView(spots);
   const pending = list.public && hasUnpublishedChanges(list, published);
 
   // Shows the change at once, saves it, and puts the list back if the save fails.
@@ -261,12 +273,14 @@ function OwnerList({ navigation, list, setList, deleting }) {
         </Animated.View>
 
         <Animated.View style={entrance[2]}>
+          {canMap && !editing && <SegmentPill options={VIEWS} value={view} onChange={setView} style={styles.views} />}
+          {view === 'map' && !editing && <ListMap spots={spots} onOpen={openSpot} />}
           {spots.length === 0 && (
             <EmptyCard icon="add-location-alt" title="Add your first spot"
               text="Search the spots in SznLuv, or add a place of your own."
               actionLabel="Add a spot" onAction={() => setAdding(true)} />
           )}
-          {spots.map((entry, index) => (
+          {(view === 'spots' || editing) && spots.map((entry, index) => (
             <SpotCard
               key={entry.spot.key} spot={entry.spot} note={entry.item.note}
               saved={isSaved(entry.item.spot)} onToggleSave={() => saveRef(entry.item.spot)}
@@ -313,6 +327,7 @@ function VisitorList({ navigation, list, from }) {
   const working = useRef(false);
   const entrance = useEntrance(3);
   const spots = useMemo(() => list.items.map(item => ({ item, spot: resolveSpot(item.spot) })), [list]);
+  const { view, setView, canMap } = useListView(spots);
 
   // Opening a followed list clears its "Updated" mark.
   useEffect(() => {
@@ -358,20 +373,45 @@ function VisitorList({ navigation, list, from }) {
     else openVenue(navigation, Alert.alert, item.spot.name);
   };
 
+  const confirmBlock = () => Alert.alert(
+    `Block ${list.ownerUsername}?`,
+    'You won’t see their lists or profile, and you’ll stop following them. They aren’t told.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Block', style: 'destructive',
+        onPress: async () => {
+          try {
+            await blockUser(uid, list.ownerUid);
+            navigation.goBack();
+            snackbar.show({ message: `Blocked ${list.ownerUsername}` });
+          } catch (error) {
+            console.error('Error blocking:', { code: error?.code });
+            snackbar.show({ message: SAVE_FAILED });
+          }
+        },
+      },
+    ],
+    { cancelable: true },
+  );
+
   const openMenu = () => showMenu({
     title: list.title,
-    options: [{
-      label: 'Report list',
-      destructive: true,
-      onPress: () => navigation.navigate('Report', { targetType: 'list', targetId: list.id, ownerUid: list.ownerUid, name: list.title }),
-    }],
+    options: [
+      {
+        label: 'Report list',
+        onPress: () => navigation.navigate('Report', { targetType: 'list', targetId: list.id, ownerUid: list.ownerUid, name: list.title }),
+      },
+      { label: `Block ${list.ownerUsername}`, destructive: true, onPress: confirmBlock },
+    ],
   });
 
   const byline = (
-    <View style={styles.byline}>
+    <TouchableOpacity style={styles.byline} accessibilityRole="link" accessibilityLabel={`By ${list.ownerUsername}. Open profile`}
+      onPress={() => { if (canNavigate(navigation)) navigation.navigate('PersonScreen', { uid: list.ownerUid }); }}>
       <View style={styles.avatar}><Text style={styles.avatarText}>{(list.ownerUsername ?? '?').charAt(0).toUpperCase()}</Text></View>
       <Text style={text.summary}>by <Text style={styles.creator}>{list.ownerUsername}</Text></Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -397,7 +437,9 @@ function VisitorList({ navigation, list, from }) {
         </Animated.View>
 
         <Animated.View style={entrance[2]}>
-          {spots.map(entry => (
+          {canMap && <SegmentPill options={VIEWS} value={view} onChange={setView} style={styles.views} />}
+          {view === 'map' && <ListMap spots={spots} onOpen={openSpot} />}
+          {view === 'spots' && spots.map(entry => (
             <SpotCard key={entry.spot.key} spot={entry.spot} note={entry.item.note}
               saved={isSaved(entry.item.spot)} onToggleSave={() => saveRef(entry.item.spot)}
               onPress={() => openSpot(entry)} />
@@ -413,13 +455,14 @@ const styles = StyleSheet.create({
   centred: { alignItems: 'center', justifyContent: 'center' },
   unavailable: { justifyContent: 'center', paddingHorizontal: 20 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
-  byline: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  byline: { marginTop: 4, minHeight: 36, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
   avatarText: { color: colors.white, fontSize: 12, fontWeight: '700' },
-  creator: { fontWeight: '800' },
+  creator: { fontWeight: '800', textDecorationLine: 'underline' },
   place: { marginTop: 8, textAlign: 'center' },
   description: { marginTop: 8, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 20, marginBottom: 20 },
+  views: { marginBottom: 16, backgroundColor: 'rgba(255, 255, 255, 0.45)' },
   grow: { flex: 1 },
   withIcon: { flexDirection: 'row', gap: 6 },
   square: { width: 48, paddingHorizontal: 0 },

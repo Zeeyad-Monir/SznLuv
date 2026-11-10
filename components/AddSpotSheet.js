@@ -61,14 +61,16 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, ownSpots
               </View>
             ))}
             {matches.count === 0 && mine.length === 0 && (
-              <Text style={styles.none}>No spots match “{query.trim()}”. You can add it yourself below.</Text>
+              <Text style={styles.none}>No spots match “{query.trim()}”.{onAddOwn ? ' You can add it yourself below.' : ''}</Text>
             )}
           </ScrollView>
           <View style={[styles.footer, { paddingBottom: Math.max(12, bottom) }]}>
-            <TouchableOpacity style={styles.own} accessibilityRole="button" disabled={full}
-              onPress={() => { dismiss(); onAddOwn(query.trim()); }}>
-              <Text style={styles.ownText}>Can’t find it? <Text style={[styles.ownAction, full && styles.addDisabled]}>Add your own spot</Text></Text>
-            </TouchableOpacity>
+            {onAddOwn ? (
+              <TouchableOpacity style={styles.own} accessibilityRole="button" disabled={full}
+                onPress={() => { dismiss(); onAddOwn(query.trim()); }}>
+                <Text style={styles.ownText}>Can’t find it? <Text style={[styles.ownAction, full && styles.addDisabled]}>Add your own spot</Text></Text>
+              </TouchableOpacity>
+            ) : <View style={styles.own} />}
             <TouchableOpacity style={styles.done} accessibilityRole="button" onPress={dismiss}>
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>

@@ -25,6 +25,7 @@ import AddToListSheet from './screens/AddToListSheet';
 import NoteSheet from './screens/NoteSheet';
 import SharingSheet from './screens/SharingSheet';
 import ReportSheet from './screens/ReportSheet';
+import EditProfileSheet from './screens/EditProfileSheet';
 import { MyListsProvider } from './hooks/useMyLists';
 import * as Linking from 'expo-linking';
 import { parseLink } from './services/links';
@@ -44,16 +45,16 @@ const escapeBack = () => {
   if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
 };
 
-// Opens a shared list link (sznluv://list/{id}) once the signed-in app is on screen. The list opens
+// Opens a shared link (sznluv://list/{id} or sznluv://u/{username}) once the signed-in app is on screen. The list opens
 // on top of Explore, so going back lands somewhere sensible.
 function openPendingLink() {
   if (!navigationRef.isReady()) return;
   const target = takePendingLink();
-  if (target?.type !== 'list') return;
-  navigationRef.navigate('Main', {
-    screen: 'ExploreTab',
-    params: { screen: 'ListScreen', params: { listId: target.listId, from: 'link' }, initial: false },
-  });
+  if (!target) return;
+  const page = target.type === 'list'
+    ? { screen: 'ListScreen', params: { listId: target.listId, from: 'link' } }
+    : { screen: 'PersonScreen', params: { username: target.username } };
+  navigationRef.navigate('Main', { screen: 'ExploreTab', params: { ...page, initial: false } });
 }
 
 // The colour behind screens during a transition, so a push never flashes grey.
@@ -153,6 +154,7 @@ export default function App() {
                 <Stack.Screen name="Note" component={NoteSheet} options={bottomSheet} />
                 <Stack.Screen name="Sharing" component={SharingSheet} options={bottomSheet} />
                 <Stack.Screen name="Report" component={ReportSheet} options={bottomSheet} />
+                <Stack.Screen name="EditProfile" component={EditProfileSheet} options={bottomSheet} />
               </>
             ) : (
               <>
