@@ -17,9 +17,10 @@ import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useMySpots from '../hooks/useMySpots';
+import usePublicSpots from '../hooks/usePublicSpots';
 import { isMine, savedCustomSpots, toRef } from '../services/customSpotsState';
 import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollections';
-import { catalogueRef, resolveSpot } from '../services/catalogue';
+import { catalogueRef, locality, resolveSpot } from '../services/catalogue';
 import { collectionById, collectionCaption } from '../services/collections';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
@@ -103,16 +104,19 @@ function Saved({ onExplore }) {
   const { toggleFavouriteSpot, toggleCustomSpot } = useSaveSpot(favourites, setFavourites);
   const { byId } = useMySpots();
 
-  // Newest first, so a spot just made is at the top.
-  const custom = savedCustomSpots(favourites)
-    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)))
-    .map(entry => {
-      const record = byId[entry.id];
-      const ref = record ? toRef(entry.id, record) : { k: 'x', id: entry.id, ...(entry.owner ? { owner: entry.owner } : {}), name: entry.name };
-      const mine = isMine(ref, user?.uid);
-      const resolved = resolveSpot(ref);
-      return { ref, cover: record?.photos?.[0] ?? null, spot: { ...resolved, meta: mine ? (record?.category || resolved.meta) : 'Shared spot' } };
-    });
+  // Newest first, so a spot just made is at the top. Someone else's is shown from its public copy.
+  const entries = savedCustomSpots(favourites)
+    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)));
+  const copies = usePublicSpots(entries.filter(entry => entry.owner && entry.owner !== user?.uid).map(entry => entry.id));
+  const custom = entries.map(entry => {
+    const record = byId[entry.id];
+    const ref = record ? toRef(entry.id, record) : { k: 'x', id: entry.id, ...(entry.owner ? { owner: entry.owner } : {}), name: entry.name };
+    const resolved = resolveSpot(ref);
+    if (isMine(ref, user?.uid)) return { ref, cover: record?.photos?.[0] ?? null, spot: { ...resolved, meta: record?.category || resolved.meta } };
+    const copy = copies[entry.id];
+    const meta = copy ? (copy.category || locality(copy.address) || 'Shared spot') : copy === null ? 'No longer shared' : 'Shared spot';
+    return { ref, cover: copy?.photos?.[0] ?? null, spot: { ...resolved, name: copy?.name ?? resolved.name, meta } };
+  });
   const groups = SEASON_ORDER.map(season => ({
     season,
     entries: Object.entries(favourites)

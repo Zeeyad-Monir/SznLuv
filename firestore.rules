@@ -190,6 +190,45 @@ service cloud.firestore {
       allow delete: if ownsSpotId(spotId);
     }
 
+    function sharedSpot(spotId) {
+      return exists(/databases/$(database)/documents/publicSpots/$(spotId));
+    }
+
+    // What others see of a spot: it exists only while the spot is in at least one of its owner's public
+    // lists (services/lists.js writes and deletes it with the list's public copy).
+    match /publicSpots/{spotId} {
+      allow read: if signedIn();
+      allow create, update: if ownsSpotId(spotId)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUsername == myUsername()
+        && validSpotFields(request.resource.data)
+        && !('publicListIds' in request.resource.data);
+      // By the owner, even if their record of the spot is already gone.
+      allow delete: if ownsSpotId(spotId);
+
+      // One set of reviews per spot, whichever public lists it is in. While the spot isn't shared they
+      // are kept but only its owner can read them (to know a reviewed spot can't be moved far).
+      match /reviews/{reviewId} {
+        allow read: if signedIn() && (ownsSpotId(spotId) || sharedSpot(spotId));
+        allow create: if signedIn()
+          && sharedSpot(spotId)
+          && !ownsSpotId(spotId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.username == myUsername()
+          && request.resource.data.placeID == 'x:' + spotId
+          && request.resource.data.thumbsUpCount == 0
+          && request.resource.data.starRating is number
+          && request.resource.data.starRating >= 1 && request.resource.data.starRating <= 5
+          && shortText(request.resource.data.comment, 2000);
+        allow update: if signedIn()
+          && sharedSpot(spotId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['thumbsUpCount'])
+          && request.resource.data.thumbsUpCount == resource.data.get('thumbsUpCount', 0) + 1;
+        // Its author, or the spot's owner as moderator of their own page.
+        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || ownsSpotId(spotId));
+      }
+    }
+
     // ---------------------------------------------------------------- Public profiles
 
     // Only what a user has chosen to show: username, avatar colour, bio, public Top 4.
@@ -208,7 +247,7 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if signedIn()
         && request.resource.data.reporterUid == request.auth.uid
-        && request.resource.data.targetType in ['list', 'person']
+        && request.resource.data.targetType in ['list', 'person', 'spot', 'review']
         && request.resource.data.targetId is string
         && shortText(request.resource.data.reason, 40);
       allow read, update, delete: if false;

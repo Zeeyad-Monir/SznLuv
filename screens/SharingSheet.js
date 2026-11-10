@@ -12,6 +12,7 @@ import useMyLists from '../hooks/useMyLists';
 import usePublishedList, { rememberPublished } from '../hooks/usePublishedList';
 import { publishList, revertListToPublic, unpublishList } from '../services/lists';
 import { exposure, hasUnpublishedChanges, newExposure } from '../services/listsState';
+import { isMine } from '../services/customSpotsState';
 import { shareList } from '../services/shareList';
 
 const FAILED = 'Couldn’t save. Check your connection.';
@@ -78,6 +79,14 @@ export default function SharingSheet({ navigation, route }) {
     rememberPublished(list.id, await publishList(user?.uid, username, list.id));
   }, () => (list.public ? refresh() : show({ justPublished: true })));
 
+  // Spots the owner made go public with the list: where they are, their photos and details, and reviews.
+  const madeHere = list.items.filter(item => isMine(item.spot, user?.uid)).length;
+  const madeNote = madeHere > 0 && (
+    <Text style={[styles.body, styles.madeNote]}>
+      {madeHere === 1 ? 'The spot you made is' : `The ${madeHere} spots you made are`} shared too, with photos and details, and people can review {madeHere === 1 ? 'it' : 'them'}.
+    </Text>
+  );
+
   // ------------------------------------------------------------ Private: review, then make public
   if (!list.public) {
     const revealed = exposure(list);
@@ -90,6 +99,7 @@ export default function SharingSheet({ navigation, route }) {
           <Text style={styles.body}>“{list.title}”, with your username and {spotCount(list.items.length)}.</Text>
           <Reveal heading="Your notes" entries={revealed.notes} none="No notes." />
           <Reveal heading="Places you added yourself" entries={revealed.locations} none="None." />
+          {madeNote}
         </ScrollView>
         <Text style={styles.hint}>
           {empty ? 'Add a spot first.' : 'Anyone on SznLuv will be able to open it, and it will show on your profile.'}
@@ -110,6 +120,9 @@ export default function SharingSheet({ navigation, route }) {
       <>
         <Text style={styles.label} accessibilityRole="header">Make this list private?</Text>
         <Text style={styles.body}>The link stops working and it leaves followers’ libraries. Your list and its spots stay as they are.</Text>
+        {madeHere > 0 && (
+          <Text style={[styles.body, styles.madeNote]}>Spots you made stop being shared unless they’re in another public list. Their reviews are kept, out of sight.</Text>
+        )}
         {primary('Make private', () => run(() => unpublishList(list.id), close), { icon: 'lock-closed' })}
         {secondary('Keep it public', () => show({}))}
       </>,
@@ -129,6 +142,7 @@ export default function SharingSheet({ navigation, route }) {
               <Text style={styles.body}>Updating will also show:</Text>
               {fresh.notes.length > 0 && <Reveal heading="New notes" entries={fresh.notes} />}
               {fresh.locations.length > 0 && <Reveal heading="New places you added yourself" entries={fresh.locations} />}
+              {fresh.locations.length > 0 && madeNote}
             </ScrollView>
           ) : <Text style={styles.body}>Nothing personal is added by this update.</Text>}
           {primary('Update public list', publish)}
@@ -162,6 +176,7 @@ const styles = StyleSheet.create({
   label: { marginBottom: 6, fontSize: 16, fontWeight: '700', color: '#323232' },
   body: { fontSize: 15, lineHeight: 21, color: colors.summary },
   review: { maxHeight: 190, marginBottom: 4 },
+  madeNote: { marginTop: 10 },
   reveal: { marginTop: 10 },
   revealHeading: { fontSize: 13, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   revealNone: { fontSize: 15, lineHeight: 21, color: colors.muted },

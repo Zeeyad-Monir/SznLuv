@@ -419,8 +419,8 @@ test('add your own spot: a typed address is kept as written; a name the app list
 
 test('own spot page: shows where it is, opens directions, and offers Add to list', async () => {
   const h = createHarness();
-  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: steps, addedBy: 'maya' } });
-  assert.deepEqual(screen.texts().slice(0, 3), ['Waterfront steps', 'Dropped pin (49.2865, -123.1120)', 'Added by maya']);
+  const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: steps } });
+  assert.deepEqual(screen.texts().slice(0, 3), ['Add up to 3 photos', 'Waterfront steps', 'Dropped pin (49.2865, -123.1120)']);
   await screen.press('Directions');
   assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=49.28651%2C-123.112']);
   await screen.press('Add to list');

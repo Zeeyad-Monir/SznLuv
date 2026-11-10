@@ -148,6 +148,7 @@ const savedDocs = (extra = {}) => ({
     'Maan Farms': { isFavourite: true, season: 'Fall', location: '' },
   },
   'spots/audit_sunset': record({ category: 'Beaches' }),
+  'publicSpots/maya_lake': { ownerUid: 'maya', ownerUsername: 'maya', name: 'Secret Lake Lookout', address: 'Lake Rd, North Vancouver', photos: [] },
   ...extra,
 });
 
@@ -158,7 +159,7 @@ test('Saved: Add Your Own Spot sits on top; your spots come first and open their
   assert.ok(texts.indexOf('Following') < texts.indexOf('Add Your Own Spot'), texts.join(' | '));
   assert.ok(texts.indexOf('Add Your Own Spot') < texts.indexOf('Your spots') && texts.indexOf('Your spots') < texts.indexOf('Fall'));
   assert.ok(texts.indexOf('Hidden Sunset Viewpoint') < texts.indexOf('Secret Lake Lookout'), 'newest first');
-  assert.ok(texts.includes('Beaches') && texts.includes('Shared spot'));
+  assert.ok(texts.includes('Beaches') && texts.includes('North Vancouver'), 'someone else\'s spot is described from its public copy');
 
   await screen.press('Add Your Own Spot');
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { from: 'saved' }]);
@@ -364,14 +365,18 @@ test('opening Saved brings old own spots over to records once, keeping every lis
 
 // ---------------------------------------------------------------- The spot page
 
-test('spot page: the owner sees their latest edit and can open the editor; a visitor cannot', async () => {
+test('spot page: the owner sees their latest edit and can edit or delete it; a visitor can only report it', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 }, 'spots/audit_sunset': record({ name: 'Sunset Lookout', description: 'Fresh words' }) } });
   const screen = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: sunset } });
   assert.ok(screen.texts().includes('Sunset Lookout') && screen.texts().includes('Fresh words'));
-  await screen.press('Edit spot');
+  assert.ok(screen.texts().includes('Only you can see this spot. Add it to a public list to share it.'));
+  await screen.press('More options');
+  assert.deepEqual(h.menus.at(-1).options, ['Edit spot', 'Delete spot', 'Cancel']);
+  await act(async () => h.menus.at(-1).pick('Edit spot'));
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { spotId: 'audit_sunset' }]);
 
   const visitor = await mount(h, 'screens/CustomSpotScreen.js', { params: { spot: { k: 'x', id: 'maya_lake', owner: 'maya', name: 'Lake' }, addedBy: 'maya' } });
-  assert.equal(visitor.button('Edit spot'), undefined);
+  await visitor.press('More options');
+  assert.deepEqual(h.menus.at(-1).options, ['Report spot', 'Cancel']);
   assert.ok(!textOf(visitor.renderer.root).includes('Fresh words'));
 });

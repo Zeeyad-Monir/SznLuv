@@ -33,6 +33,8 @@ function signIn(uid) {
     follows: h.load('services/follows.js'),
     profiles: h.load('services/profiles.js'),
     moderation: h.load('services/moderation.js'),
+    spots: h.load('services/customSpots.js'),
+    reviews: h.load('services/reviews.js'),
   };
 }
 
@@ -282,4 +284,108 @@ test('reporting is write-only; blocking unfollows the person and their lists', a
   assert.equal((await getDoc(doc(alex.db, 'users/alex'))).data().username, 'alex');
   await alex.moderation.unblockUser('alex', 'maya');
   assert.deepEqual(await alex.moderation.getBlocked('alex'), []);
+});
+
+// ---------------------------------------------------------------- Spots people make, shared through lists
+
+const { toRef } = require('../../services/customSpotsState');
+const { removeSpot } = require('../../services/listsState');
+
+async function mayaMakes(count) {
+  const { maya } = people;
+  const made = [];
+  for (let index = 0; index < count; index += 1) {
+    const { id, spot } = await maya.spots.createSpot('maya', { name: `Spot ${index}`, lat: 49.2 + index / 1000, lng: -123.1 }, { save: index === 0 });
+    made.push(toRef(id, spot));
+  }
+  return made;
+}
+
+test('a list of 25 spots I made publishes in one go, sharing each, within the rules\' read limits', async () => {
+  const { maya, alex } = people;
+  const made = await mayaMakes(25);
+  assert.ok(made.every(ref => ref.id.startsWith('maya_')));
+  await denied(getDoc(doc(alex.db, 'spots', made[0].id)));
+
+  const list = await maya.lists.createNewList('maya', { title: 'Twenty five', items: made.map(spot => ({ spot, note: '' })) });
+  await maya.lists.publishList('maya', 'maya', list.id);
+  const shared = await alex.spots.getPublicSpot(made[24].id, { fresh: true });
+  assert.deepEqual([shared.name, shared.ownerUsername, 'publicListIds' in shared], ['Spot 24', 'maya', false]);
+
+  await maya.lists.unpublishList(list.id);
+  assert.equal(await alex.spots.getPublicSpot(made[24].id, { fresh: true }), null);
+  await maya.lists.deleteList(list.id);
+});
+
+test('reviews of a shared spot: one set across lists, gone from view once no public list has it', async () => {
+  const { maya, alex } = people;
+  const [spot] = await mayaMakes(1);
+  const first = await maya.lists.createNewList('maya', { title: 'Best Sunset Spots', items: [{ spot, note: '' }] });
+  const second = await maya.lists.createNewList('maya', { title: 'Evenings', items: [{ spot, note: '' }] });
+  const source = alex.reviews.reviewSource({ spotId: spot.id });
+  const review = { uid: 'alex', username: 'alex', profileColor: '#FF0000', comment: 'Worth it', starRating: 5 };
+
+  await denied(alex.reviews.submitReview(source, review));
+  await maya.lists.publishList('maya', 'maya', first.id);
+  await alex.reviews.submitReview(source, review);
+  await denied(alex.reviews.submitReview(source, { ...review, username: 'maya' }));
+  await maya.lists.publishList('maya', 'maya', second.id);
+
+  const read = () => firstSnapshot((next, fail) => alex.reviews.subscribeReviews(source, {}, next, fail));
+  assert.deepEqual((await read()).map(entry => entry.comment), ['Worth it']);
+
+  await maya.lists.unpublishList(first.id);
+  assert.deepEqual((await read()).map(entry => entry.comment), ['Worth it'], 'still shared through the second list');
+  await maya.lists.unpublishList(second.id);
+  await denied(realFirestore.getDocs(realFirestore.collection(alex.db, 'publicSpots', spot.id, 'reviews')));
+  assert.equal(await maya.reviews.spotHasReviews(spot.id), true, 'kept, and its owner can still tell');
+});
+
+test('editing a shared spot refreshes it in the public list and its public copy', async () => {
+  const { maya, alex } = people;
+  const [spot] = await mayaMakes(1);
+  const list = await maya.lists.createNewList('maya', { title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
+  await maya.lists.publishList('maya', 'maya', list.id);
+  await maya.spots.updateSpot('maya', spot.id, { name: 'Sunset Lookout', lat: spot.lat, lng: spot.lng, description: 'New words' });
+  const shown = await alex.lists.getPublicList(list.id);
+  assert.equal(shown.items[1].spot.name, 'Sunset Lookout');
+  assert.ok(shown.searchTerms.includes('sunset'));
+  assert.equal(shown.followerCount ?? 0, 0);
+  const copy = await alex.spots.getPublicSpot(spot.id, { fresh: true });
+  assert.deepEqual([copy.name, copy.description], ['Sunset Lookout', 'New words']);
+  const draft = await getDoc(doc(maya.db, 'lists', list.id));
+  assert.equal(hasUnpublishedChanges(draft.data(), shown), false, 'the draft and the public copy still agree');
+});
+
+test('deleting a shared spot leaves no trace of it in lists, Saved or public copies', async () => {
+  const { maya, alex } = people;
+  const [spot, other] = await mayaMakes(2);
+  const kept = await maya.lists.createNewList('maya', { title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
+  const alone = await maya.lists.createNewList('maya', { title: 'Only this', items: [{ spot, note: '' }] });
+  const unrelated = await maya.lists.createNewList('maya', { title: 'Other', items: [{ spot: other, note: '' }] });
+  await maya.lists.publishList('maya', 'maya', kept.id);
+  await maya.lists.publishList('maya', 'maya', alone.id);
+  await maya.lists.publishList('maya', 'maya', unrelated.id);
+  await alex.reviews.submitReview(alex.reviews.reviewSource({ spotId: spot.id }), { uid: 'alex', username: 'alex', comment: 'Nice', starRating: 4 });
+
+  await maya.spots.deleteSpot('maya', spot.id);
+  assert.equal((await getDoc(doc(maya.db, 'spots', spot.id))).exists(), false);
+  assert.equal(await alex.spots.getPublicSpot(spot.id, { fresh: true }), null);
+  assert.deepEqual((await alex.lists.getPublicList(kept.id)).items.map(item => item.spot.name), ['Aldor Family Farm']);
+  assert.equal(await alex.lists.getPublicList(alone.id), null, 'left empty, so made private');
+  assert.ok(await alex.spots.getPublicSpot(other.id, { fresh: true }), 'other spots are untouched');
+  const favourites = (await getDoc(doc(maya.db, 'favourites', 'maya'))).data();
+  assert.equal(favourites[`x:${spot.id}`], undefined);
+});
+
+test('old own-spot references become records once, and running it again changes nothing', async () => {
+  const { maya } = people;
+  const old = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+  const list = await maya.lists.createNewList('maya', { title: 'Old one', items: [{ spot: old, note: 'Left side' }] });
+  const lists = async () => (await firstSnapshot((next, fail) => maya.lists.subscribeMyLists('maya', next, fail)));
+  assert.equal(await maya.spots.migrateLegacySpots('maya', await lists()), 1);
+  const moved = (await getDoc(doc(maya.db, 'lists', list.id))).data().items[0];
+  assert.deepEqual([moved.spot.id, moved.spot.owner, moved.note], ['maya_steps1', 'maya', 'Left side']);
+  assert.equal((await getDoc(doc(maya.db, 'spots', 'maya_steps1'))).data().legacyId, 'steps1');
+  assert.equal(await maya.spots.migrateLegacySpots('maya', await lists()), 0);
 });

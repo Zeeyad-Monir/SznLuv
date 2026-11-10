@@ -18,6 +18,7 @@ function createHarness(options = {}) {
     navigate: (...args) => navigations.push(args),
     popTo: (...args) => { calls.push(['popTo', ...args]); navigations.push(args); },
     goBack: () => calls.push(['goBack']),
+    pop: count => calls.push(['pop', count]),
     replace: (...args) => { calls.push(['replace', ...args]); navigations.push(args); },
     dispatch: action => dispatches.push(action),
     isFocused: () => options.focused !== false,
@@ -32,7 +33,8 @@ function createHarness(options = {}) {
   const liveListeners = new Set();
   let autoId = 0;
   const makeRef = (parent, segments, type) => {
-    const parts = [...(parent?.path ? [parent.path] : []), ...segments];
+    // Like Firestore, "a/b" as one argument is two segments.
+    const parts = [...(parent?.path ? parent.path.split('/') : []), ...segments.flatMap(segment => String(segment).split('/'))];
     if (type === 'doc' && parts.length % 2) parts.push('auto' + (++autoId));
     const refPath = parts.join('/');
     return { path: refPath, id: parts.at(-1), type };

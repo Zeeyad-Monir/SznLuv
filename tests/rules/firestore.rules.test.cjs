@@ -246,6 +246,55 @@ test('public profiles are readable when signed in and writable only by their own
   await assertSucceeds(deleteDoc(doc(maya, 'profiles/maya')));
 });
 
+test('a shared spot\'s public copy is written only by its owner, under their own username', async () => {
+  const shown = { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint', lat: 49.3, lng: -123.1, photos: [], updatedAt: 1 };
+  await assertSucceeds(setDoc(doc(maya, 'publicSpots/maya_sunset'), shown));
+  await assertSucceeds(getDoc(doc(alex, 'publicSpots/maya_sunset')));
+  await assertFails(getDoc(doc(guest, 'publicSpots/maya_sunset')));
+  await assertFails(setDoc(doc(alex, 'publicSpots/maya_sunset'), { ...shown, name: 'Mine now' }));
+  await assertFails(setDoc(doc(alex, 'publicSpots/maya_other'), { ...shown, ownerUid: 'alex', ownerUsername: 'alex' }), 'not under someone else\'s ID');
+  await assertFails(setDoc(doc(alex, 'publicSpots/alex_fake'), shown), 'not claiming to be someone else');
+  await assertFails(setDoc(doc(maya, 'publicSpots/maya_sunset'), { ...shown, ownerUsername: 'alex' }));
+  await assertFails(setDoc(doc(maya, 'publicSpots/maya_sunset'), { ...shown, publicListIds: ['l1'] }), 'which lists stays private');
+  await assertFails(deleteDoc(doc(alex, 'publicSpots/maya_sunset')));
+  await assertSucceeds(deleteDoc(doc(maya, 'publicSpots/maya_sunset')));
+  await assertSucceeds(deleteDoc(doc(maya, 'publicSpots/maya_gone')), 'clearing one that is already gone');
+});
+
+test('reviews on a spot someone made: readable and writable by others only while it is shared', async () => {
+  const shown = { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint', photos: [], updatedAt: 1 };
+  const review = { uid: 'alex', username: 'alex', profileColor: '#FF0000', comment: 'Worth the climb', starRating: 5, timestamp: new Date(), placeID: 'x:maya_sunset', thumbsUpCount: 0 };
+  const reviews = context => collection(context, 'publicSpots/maya_sunset/reviews');
+  await assertFails(addDoc(reviews(alex), review), 'not before it is shared');
+
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'publicSpots/maya_sunset'), shown));
+  const posted = await assertSucceeds(addDoc(reviews(alex), review));
+  await assertSucceeds(getDocs(reviews(alex)));
+  await assertFails(getDocs(reviews(guest)));
+  await assertFails(addDoc(reviews(alex), { ...review, uid: 'maya' }), 'as someone else');
+  await assertFails(addDoc(reviews(alex), { ...review, username: 'maya' }), 'under someone else\'s name');
+  await assertFails(addDoc(reviews(alex), { ...review, placeID: 'x:other' }));
+  await assertFails(addDoc(reviews(alex), { ...review, starRating: 6 }));
+  await assertFails(addDoc(reviews(maya), { ...review, uid: 'maya', username: 'maya' }), 'not on your own spot');
+  await assertSucceeds(updateDoc(doc(maya, posted.path), { thumbsUpCount: 1 }));
+  await assertFails(updateDoc(doc(maya, posted.path), { thumbsUpCount: 5 }));
+  await assertFails(updateDoc(doc(maya, posted.path), { comment: 'Edited by someone else' }));
+
+  // Made private: kept, but only the owner can still read them.
+  await env.withSecurityRulesDisabled(context => deleteDoc(doc(context.firestore(), 'publicSpots/maya_sunset')));
+  await assertFails(getDocs(reviews(alex)));
+  await assertFails(getDoc(doc(alex, posted.path)));
+  await assertSucceeds(getDocs(reviews(maya)));
+  await assertFails(addDoc(reviews(alex), review));
+  await assertFails(updateDoc(doc(alex, posted.path), { thumbsUpCount: 2 }));
+
+  // The author, or the spot's owner, can delete one.
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'publicSpots/maya_sunset/reviews/another'), review));
+  await assertFails(deleteDoc(doc(guest, 'publicSpots/maya_sunset/reviews/another')));
+  await assertSucceeds(deleteDoc(doc(alex, posted.path)));
+  await assertSucceeds(deleteDoc(doc(maya, 'publicSpots/maya_sunset/reviews/another')));
+});
+
 test('reports are write-once and unreadable from the app', async () => {
   const report = { reporterUid: 'alex', targetType: 'list', targetId: 'mayaList', ownerUid: 'maya', reason: 'Spam', createdAt: 1 };
   const created = await assertSucceeds(addDoc(collection(alex, 'reports'), report));
@@ -253,7 +302,10 @@ test('reports are write-once and unreadable from the app', async () => {
   await assertFails(getDocs(collection(alex, 'reports')));
   await assertFails(updateDoc(created, { reason: 'Other' }));
   await assertFails(addDoc(collection(alex, 'reports'), { ...report, reporterUid: 'maya' }));
-  await assertFails(addDoc(collection(alex, 'reports'), { ...report, targetType: 'review' }));
+  // Spots people share, and reviews on them, can be reported too; nothing else.
+  await assertSucceeds(addDoc(collection(alex, 'reports'), { ...report, targetType: 'spot', targetId: 'maya_sunset' }));
+  await assertSucceeds(addDoc(collection(alex, 'reports'), { ...report, targetType: 'review', targetId: 'publicSpots/maya_sunset/reviews/r1' }));
+  await assertFails(addDoc(collection(alex, 'reports'), { ...report, targetType: 'everything' }));
   await assertFails(addDoc(collection(guest, 'reports'), report));
 });
 

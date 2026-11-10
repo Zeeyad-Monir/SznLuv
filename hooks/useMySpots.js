@@ -5,14 +5,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { MyListsContext } from './useMyLists';
-import { migrateLegacySpots, subscribeMySpots } from '../services/customSpots';
+import { migrateLegacySpots, reconcilePublicSpots, subscribeMySpots } from '../services/customSpots';
 import { isLegacyRef } from '../services/customSpotsState';
 
 const IDLE = { spots: [], status: 'idle' };
 const MySpotsContext = createContext({ ...IDLE, byId: {}, request() {}, retry() {} });
 
 export function MySpotsProvider({ children }) {
-  const { user } = useContext(AuthContext);
+  const { user, username } = useContext(AuthContext);
   const uid = user?.uid;
   const lists = useContext(MyListsContext);
   const [loaded, setLoaded] = useState({ uid: null, ...IDLE });
@@ -32,7 +32,9 @@ export function MySpotsProvider({ children }) {
   }, [uid, requested, attempt, requestLists]);
 
   // Once per account per session (for Top 4), then whenever a list turns up an old reference.
+  // The first time, shared copies of the user's spots are also checked against their public lists.
   const checked = useRef(null);
+  const reconciled = useRef(null);
   const running = useRef(false);
   const listsReady = lists.status === 'ready';
   const hasLegacy = listsReady && lists.lists.some(list => list.items.some(item => isLegacyRef(item.spot)));
@@ -42,11 +44,16 @@ export function MySpotsProvider({ children }) {
     running.current = true;
     migrateLegacySpots(uid, lists.lists)
       .catch(error => console.error('Own spots not brought over:', { code: error?.code }))
+      .then(() => {
+        if (reconciled.current === uid || !username) return undefined;
+        reconciled.current = uid;
+        return reconcilePublicSpots(uid, username).catch(error => console.error('Shared spots not checked:', { code: error?.code }));
+      })
       .finally(() => {
         checked.current = uid;
         running.current = false;
       });
-  }, [requested, listsReady, hasLegacy, uid, lists.lists]);
+  }, [requested, listsReady, hasLegacy, uid, username, lists.lists]);
 
   const request = useCallback(() => setRequestedUid(uid ?? null), [uid]);
   const retry = useCallback(() => setAttempt(count => count + 1), []);

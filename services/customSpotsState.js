@@ -77,6 +77,9 @@ const linkRef = ref => ({ k: 'x', id: ref.id, ...(ref.owner ? { owner: ref.owner
 const isLegacyRef = ref => ref?.k === 'x' && !ref.owner;
 const isMine = (ref, uid) => ref?.k === 'x' && !!uid && ref.owner === uid;
 
+// The owner's own spots among a list's items.
+const mySpotIdsIn = (items = [], uid) => [...new Set(items.filter(item => isMine(item.spot, uid)).map(item => item.spot.id))];
+
 // What goes into one of my lists when I add a spot: someone else's spot is linked by ID and name only.
 // An old reference with no owner is kept whole; bringing it over makes it one of mine (migrateLegacy).
 const storedRef = (ref, uid) => (ref?.k === 'x' && ref.owner && ref.owner !== uid ? linkRef(ref) : ref);
@@ -182,7 +185,7 @@ function migrateLegacy({ uid, lists = [], top4 = null, existing = new Set(), now
 
 module.exports = {
   SPOT_LIMITS, SPOT_CATEGORIES, SPOT_SEASONS, REVIEWED_MOVE_LIMIT_KM,
-  spotIdFor, ownerOfSpotId, savedKey, spotProblem, spotFields, thinFields, thinChanged, toRef, linkRef, storedRef, isLegacyRef, isMine,
+  mySpotIdsIn, spotIdFor, ownerOfSpotId, savedKey, spotProblem, spotFields, thinFields, thinChanged, toRef, linkRef, storedRef, isLegacyRef, isMine,
   toPublicSpot, matchesSpot, findSameSpot, findListedSpot, withinReach,
   replaceRefInList, removeRefFromList, replaceRefInTop4, removeRefFromTop4, top4Has, savedEntry, savedCustomSpots, migrateLegacy,
 };

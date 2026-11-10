@@ -1,14 +1,18 @@
 // Spots people make, in Firestore. `spots/{id}` is the owner's record; nobody else can read it.
 // Every change runs through the pure functions in customSpotsState.js inside a transaction. Transactions
 // read everything before writing anything, and never query: lists that hold a spot are found first.
-import { collection, doc, getDoc, getDocs, onSnapshot, query, runTransaction, updateDoc, where } from 'firebase/firestore';
+import {
+  collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, runTransaction, updateDoc, where,
+} from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { spotKey } from './catalogue';
 import { buildSearchTerms } from './listSearch';
 import { addSpot, publicFields } from './listsState';
 import {
-  migrateLegacy, replaceRefInList, replaceRefInTop4, savedEntry, savedKey, spotIdFor, thinChanged, toPublicSpot, toRef, top4Has,
+  migrateLegacy, mySpotIdsIn, removeRefFromList, removeRefFromTop4, replaceRefInList, replaceRefInTop4, savedEntry, savedKey,
+  spotIdFor, thinChanged, toPublicSpot, toRef, top4Has,
 } from './customSpotsState';
+import { cleanOrphans } from './spotPhotos';
 
 const spotsCollection = () => collection(db, 'spots');
 const withId = snapshot => ({ id: snapshot.id, ...snapshot.data() });
@@ -216,4 +220,158 @@ export async function migrateLegacySpots(uid, lists) {
     console.error('Public Top 4 not migrated:', { code: error?.code });
   }
   return outcome.created;
+}
+
+// ---------------------------------------------------------------- Someone else's spot
+
+// What a visitor can read of a spot: its public copy, or null when it isn't shared (or is gone).
+// Kept for the session so lists and Saved don't read the same spot twice; a spot page asks afresh.
+const publicCopies = new Map();
+export async function getPublicSpot(id, { fresh = false } = {}) {
+  if (!fresh && publicCopies.has(id)) return publicCopies.get(id);
+  const snapshot = await getDoc(doc(db, 'publicSpots', id));
+  const value = snapshot.exists() ? { id, ...snapshot.data() } : null;
+  publicCopies.set(id, value);
+  return value;
+}
+export const cachedPublicSpot = id => publicCopies.get(id);
+
+// ---------------------------------------------------------------- Keeping shared copies right
+
+// Puts each of my spots' sharing back in line with my public lists as they are now: a spot in a public
+// list gets its public copy, one in none loses it. Covers lists made public or private by an older
+// version of the app, and spots brought over from before they had records. Resolves to how many it fixed.
+// Reads my lists and spots afresh, so it can run straight after old spots are brought over.
+export async function reconcilePublicSpots(uid, username) {
+  if (!uid || !username) return 0;
+  let copies, spots;
+  try {
+    const [lists, mine] = await Promise.all([
+      getDocs(query(collection(db, 'lists'), where('ownerUid', '==', uid))),
+      getDocs(query(spotsCollection(), where('ownerUid', '==', uid))),
+    ]);
+    spots = mine.docs.map(withId);
+    const publicOnes = lists.docs.filter(list => list.data().public);
+    copies = await Promise.all(publicOnes.map(list => getDoc(doc(db, 'publicLists', list.id))));
+  } catch (error) {
+    console.error('Shared spots not checked:', { code: error?.code });
+    return 0; // Without every list, a spot could look unshared when it isn't: change nothing
+  }
+  const wanted = new Map();
+  copies.filter(copy => copy.exists() && copy.data().ownerUid === uid).forEach(copy => {
+    mySpotIdsIn(copy.data().items, uid).forEach(id => wanted.set(id, [...(wanted.get(id) ?? []), copy.id]));
+  });
+  const mirrors = await getDocs(query(collection(db, 'publicSpots'), where('ownerUid', '==', uid)));
+  const mirrored = new Set(mirrors.docs.map(entry => entry.id));
+  let fixed = 0;
+  for (const spot of spots) {
+    const want = [...(wanted.get(spot.id) ?? [])].sort();
+    const have = [...(spot.publicListIds ?? [])].sort();
+    if (JSON.stringify(want) === JSON.stringify(have) && want.length > 0 === mirrored.has(spot.id)) continue;
+    await runTransaction(db, async transaction => {
+      const spotRef = doc(spotsCollection(), spot.id);
+      const current = await transaction.get(spotRef);
+      if (!current.exists()) return;
+      transaction.update(spotRef, { publicListIds: want });
+      const publicRef = doc(db, 'publicSpots', spot.id);
+      if (want.length) transaction.set(publicRef, toPublicSpot({ ...current.data(), publicListIds: want }, username, Date.now()));
+      else transaction.delete(publicRef);
+    });
+    fixed += 1;
+  }
+  const known = new Set(spots.map(spot => spot.id));
+  for (const id of mirrored) {
+    if (known.has(id)) continue; // A public copy whose spot was deleted
+    await deleteDoc(doc(db, 'publicSpots', id));
+    fixed += 1;
+  }
+  return fixed;
+}
+
+// ---------------------------------------------------------------- Deleting
+
+// What deleting would change, for the confirmation: my lists that hold it, and which public ones would
+// be left empty (and so made private).
+export function deletionEffects(id, lists) {
+  const key = `x:${id}`;
+  const holding = lists.filter(list => list.items.some(item => spotKey(item.spot) === key));
+  return { holding, emptied: holding.filter(list => list.public && list.items.length === 1) };
+}
+
+// The deliberate way to make a spot go away: from every list of mine (a public list left empty becomes
+// private), from Saved and Top 4, its public copy, its reviews and its photos. Lists other people saved
+// it to keep its name, with nothing else to show.
+export async function deleteSpot(uid, id) {
+  requireUser(uid);
+  const key = `x:${id}`;
+  const spotRef = doc(spotsCollection(), id);
+  const existing = await getDoc(spotRef);
+  if (!existing.exists()) return;
+  const { publicListIds = [] } = existing.data();
+
+  try {
+    const reviews = await getDocs(collection(db, 'publicSpots', id, 'reviews'));
+    await Promise.all(reviews.docs.map(review => deleteDoc(review.ref)));
+  } catch (error) {
+    console.error('Reviews not removed:', { code: error?.code });
+  }
+
+  for (const listId of publicListIds) {
+    try {
+      await runTransaction(db, async transaction => {
+        const publicRef = doc(db, 'publicLists', listId);
+        const draftRef = doc(db, 'lists', listId);
+        const current = await transaction.get(publicRef);
+        const draft = await transaction.get(draftRef);
+        if (!current.exists() || current.data().ownerUid !== uid) return;
+        const next = removeRefFromList(current.data(), key);
+        if (next.items.length === current.data().items.length) return;
+        const now = Date.now();
+        if (!next.items.length) {
+          transaction.delete(publicRef);
+          if (draft.exists()) transaction.set(draftRef, { ...removeRefFromList(draft.data(), key), public: false, publishedAt: null, updatedAt: now });
+          return;
+        }
+        transaction.update(publicRef, {
+          items: next.items,
+          spotCount: next.items.length,
+          searchTerms: buildSearchTerms({ ...publicFields(next), ownerUsername: current.data().ownerUsername }),
+          updatedAt: now,
+        });
+      });
+    } catch (error) {
+      console.error('Public list not updated:', { code: error?.code });
+    }
+  }
+
+  const holding = await myListsHolding(uid, id);
+  const userRef = doc(db, 'users', uid);
+  const favouritesRef = doc(db, 'favourites', uid);
+  await runTransaction(db, async transaction => {
+    const lists = await Promise.all(holding.map(listId => transaction.get(doc(db, 'lists', listId))));
+    const favourites = await transaction.get(favouritesRef);
+    const user = await transaction.get(userRef);
+    const now = Date.now();
+    lists.filter(list => list.exists() && list.data().ownerUid === uid)
+      .forEach(list => transaction.set(list.ref, { ...removeRefFromList(list.data(), key), updatedAt: now }));
+    const saved = favourites.exists() ? favourites.data() : {};
+    if (saved[savedKey(id)]) {
+      const { [savedKey(id)]: _removed, ...rest } = saved;
+      transaction.set(favouritesRef, rest);
+    }
+    const top4 = user.data()?.top4;
+    if (top4Has(top4, key)) transaction.update(userRef, { top4: removeRefFromTop4(top4, key) });
+    transaction.delete(spotRef);
+  });
+
+  try {
+    const profileRef = doc(db, 'profiles', uid);
+    const profile = await getDoc(profileRef);
+    if (profile.exists() && top4Has(profile.data().top4, key)) await updateDoc(profileRef, { top4: removeRefFromTop4(profile.data().top4, key) });
+  } catch (error) {
+    console.error('Public Top 4 not updated:', { code: error?.code });
+  }
+  await deleteDoc(doc(db, 'publicSpots', id)).catch(error => console.error('Public copy not removed:', { code: error?.code }));
+  publicCopies.delete(id);
+  await cleanOrphans(uid, id, []);
 }

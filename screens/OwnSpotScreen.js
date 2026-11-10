@@ -14,14 +14,16 @@ import { useSnackbar } from '../components/Snackbar';
 import { colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useAfterTransition from '../hooks/useAfterTransition';
+import useDeleteSpot from '../hooks/useDeleteSpot';
 import useMySpots from '../hooks/useMySpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { DEFAULT_CITY, catalogueRef } from '../services/catalogue';
 import { addExistingSpot, createSpot, newSpotId, updateSpot } from '../services/customSpots';
 import {
-  SPOT_CATEGORIES, SPOT_LIMITS, SPOT_SEASONS, findListedSpot, findSameSpot, spotFields, spotProblem, toRef,
+  SPOT_CATEGORIES, SPOT_LIMITS, SPOT_SEASONS, findListedSpot, findSameSpot, spotFields, spotProblem, toRef, withinReach,
 } from '../services/customSpotsState';
+import { spotHasReviews } from '../services/reviews';
 import { restoreSavedSpot } from '../services/favourites';
 import { cleanOrphans } from '../services/spotPhotos';
 import { mutateList } from '../services/lists';
@@ -66,6 +68,7 @@ export default function OwnSpotScreen({ navigation, route }) {
   const snackbar = useSnackbar();
   const { spots: mySpots, byId, status } = useMySpots();
   const { isLocationEnabled } = useContext(SettingsContext);
+  const askToDelete = useDeleteSpot();
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
   const mapReady = useAfterTransition(); // The map mounts after the slide, so it can't stutter the push
   const spot = editing ? byId[spotId] : null;
@@ -186,6 +189,10 @@ export default function OwnSpotScreen({ navigation, route }) {
     const fields = spotFields(input);
     if (editing) {
       run(async () => {
+        // Reviews belong to a place: a reviewed spot can be nudged, not moved somewhere else.
+        if (!withinReach(spot, fields) && await spotHasReviews(spotId)) {
+          throw Object.assign(new Error('This spot has reviews, so it can’t move somewhere else. Add a new spot for the new place instead.'), { code: 'spot/reviewed' });
+        }
         await updateSpot(uid, spotId, fields, { photos: slots.saved });
         cleanOrphans(uid, spotId, slots.saved);
         return 'Changes saved';
@@ -326,6 +333,15 @@ export default function OwnSpotScreen({ navigation, route }) {
             disabled={blocked} accessibilityRole="button" accessibilityState={{ disabled: blocked }}>
             <Text style={controls.primaryText}>{action}</Text>
           </TouchableOpacity>
+          {editing && (
+            <TouchableOpacity style={[controls.secondary, styles.delete]} accessibilityRole="button" disabled={saving}
+              onPress={() => askToDelete({ id: spotId, name: spot.name, shared: (spot.publicListIds?.length ?? 0) > 0 }, () => {
+                done.current = true;
+                navigation.pop(2); // This editor and the deleted spot's page
+              })}>
+              <Text style={[controls.secondaryText, styles.deleteText]}>Delete spot</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SignedInScreen>
@@ -381,4 +397,6 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 16, fontWeight: '700', color: colors.ink },
   problem: { marginTop: 16, fontSize: 14, lineHeight: 20, color: colors.error },
   save: { marginTop: 24 },
+  delete: { marginTop: 12 },
+  deleteText: { color: colors.danger },
 });

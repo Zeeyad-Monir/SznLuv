@@ -44,7 +44,7 @@ export default function ReportSheet({ navigation, route }) {
         </>
       ) : (
         <>
-          <Text style={styles.body}>What’s wrong with {targetType === 'person' ? name : `“${name}”`}?</Text>
+          <Text style={styles.body}>What’s wrong with {targetType === 'person' || targetType === 'review' ? name : `“${name}”`}?</Text>
           <View style={styles.reasons}>
             {REPORT_REASONS.map(option => {
               const selected = option === reason;
