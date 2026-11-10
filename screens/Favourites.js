@@ -1,415 +1,210 @@
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { updateCollection } from '../services/favourites';
-// Favourites.js
-
-import React, { useRef, useState, useContext } from "react";
+// The library: season favourites under "Saved", the user's own lists under "My lists",
+// and other people's lists they follow under "Following".
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  ImageBackground,
-  Dimensions,
-  Animated,
-  Alert,
-} from "react-native";
-import { useNavigation } from '@react-navigation/native';
+  ActivityIndicator, Animated, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+} from 'react-native';
+import { useFocusEffect, useNavigation, useScrollToTop } from '@react-navigation/native';
+import EmptyCard from '../components/EmptyCard';
+import ListTile, { NewListTile } from '../components/ListTile';
+import SegmentPill from '../components/SegmentPill';
+import { SEASON_ART } from '../components/covers';
+import { GRID_GAP, GUTTER, cardShadow, colors, tileWidth } from '../components/theme';
+import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
+import { AuthContext } from '../contexts/AuthContext';
+import useMyLists from '../hooks/useMyLists';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
-import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
+import { loadFollowedLists } from '../services/follows';
+import { getPublicList } from '../services/lists';
 import { canNavigate } from '../services/venueNavigation';
-import { doc, getDoc } from "firebase/firestore";
-import { AuthContext } from '../contexts/AuthContext';
-import { db } from "../firebaseConfig";
 
-const { width } = Dimensions.get('window');
+const SEGMENTS = [
+  { value: 'saved', label: 'Saved' },
+  { value: 'lists', label: 'My lists' },
+  { value: 'following', label: 'Following' },
+];
+const SEASONS = [
+  { season: 'Fall', art: SEASON_ART.fall },
+  { season: 'Winter', art: SEASON_ART.winter },
+  { season: 'Spring', art: SEASON_ART.spring },
+  { season: 'Summer', art: SEASON_ART.summer },
+];
 
-const Favourites = () => {
-  const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
+// Coming back to the library shows the side you were last on, for as long as the app stays open.
+let lastSegment = 'saved';
+
+export default function Favourites({ route }) {
+  const floatingScrollStyle = useFloatingScrollStyle(styles.content);
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
-  const { user } = useContext(AuthContext);
+  const [segment, setSegment] = useState(lastSegment);
+  const size = tileWidth(width);
 
-  // ======== COLLECTIONS STATE ========
-  const [collections, setCollections] = useState([]);
+  // Title, subtitle and the switch ease in once; tiles animate only as they first appear.
+  const entrance = useEntrance(3);
+  const seasonEntrance = useItemEntrance(SEASONS.map(({ season }) => season));
 
-  // ======== CREATE BUTTON ANIMATION ========
-  const createButtonScale = useRef(new Animated.Value(1)).current;
-
-  // Title, subtitle, Create and the four season tiles ease in once. Saved collections animate only as they first appear.
-  const entrance = useEntrance(7);
-  const collectionEntrance = useItemEntrance(collections.map(collection => collection.title));
-
-  useFocusEffect(React.useCallback(() => {
-    if (!user) return;
-    let current = true;
-    getDoc(doc(db, "favourites", user.uid)).then((snapshot) => {
-      if (!current) return;
-      const saved = snapshot.exists() ? snapshot.data().collections : null;
-      setCollections(Array.isArray(saved) ? saved : []); // Updates in place, so returning here never blanks the list
-    }).catch((error) => console.error("Error fetching user-defined collections:", error));
-    return () => { current = false; };
-  }, [user]));
-
-  const handleSeasonPress = (season) => {
-    if (!canNavigate(navigation)) return;
-    navigation.navigate('SeasonalFavourites', { season });
+  const choose = next => {
+    lastSegment = next;
+    setSegment(next);
   };
-
-  // Updated handleCollectionPress to navigate with collection object and userId
-  const handleCollectionPress = (collection) => {
-    if (!canNavigate(navigation)) return;
-    navigation.navigate('CustomCollectionScreen', { collection: { ...collection, userId: user.uid } });
-  };
-
-  const handleDeleteCollection = (collection) => {
-    Alert.alert(
-      "Confirm Deletion",
-      "Are you sure you want to delete this collection?",
-      [
-        {
-          text: "No",
-          style: "cancel",
-        },
-        {
-          text: "Yes",
-          onPress: () => deleteCollection(collection),
-          style: "destructive",
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const deleteCollection = (collectionToDelete) => {
-    collectionEntrance.exit(collectionToDelete.title, async () => {
-      try {
-        const next = await updateCollection(user.uid, { type: 'delete', title: collectionToDelete.title });
-        setCollections(next.collections);
-        Alert.alert('Success', 'Collection deleted successfully.');
-      } catch (error) {
-        console.error("Error deleting collection:", error);
-        setCollections(previous => [...previous]); // The card animates back in
-        Alert.alert("Error", "Failed to delete the collection. Please try again.");
-      }
-    });
-  };
-
-  // ======== CREATE BUTTON ANIMATION HANDLERS ========
-  const handleCreateButtonPressIn = () => {
-    Animated.spring(createButtonScale, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleCreateButtonPressOut = () => {
-    Animated.spring(createButtonScale, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
+  // Another screen can ask for a particular side, e.g. Explore's "Make a list".
+  const requested = route?.params?.segment;
+  useEffect(() => {
+    if (SEGMENTS.some(option => option.value === requested)) choose(requested);
+  }, [requested]);
+  const open = (route, params) => {
+    if (canNavigate(navigation)) navigation.navigate(route, params);
   };
 
   return (
     <SignedInScreen style={styles.container}>
       <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
-        {/* Header Container */}
-        <Animated.View style={[styles.headerContainer, entrance[0]]}>
-          <Text style={styles.title}>Favourites</Text>
+        <Animated.View style={entrance[0]}>
+          <Text style={styles.title} accessibilityRole="header">Favourites</Text>
         </Animated.View>
-
-        {/* Subtitle */}
-        <Animated.View style={[styles.subtitleContainer, entrance[1]]}>
+        <Animated.View style={entrance[1]}>
           <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
         </Animated.View>
-
-        {/* Create Button with Entrance and Press Animations */}
-        <Animated.View style={[entrance[2], { transform: [...entrance[2].transform, { scale: createButtonScale }] }]}>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => navigation.navigate('CreateCollection')}
-            accessibilityLabel="Create a new collection"
-            accessibilityRole="button"
-            activeOpacity={0.7}
-            onPressIn={handleCreateButtonPressIn}
-            onPressOut={handleCreateButtonPressOut}
-          >
-            <Text style={styles.buttonText}>Create</Text>
-          </TouchableOpacity>
+        <Animated.View style={entrance[2]}>
+          <SegmentPill options={SEGMENTS} value={segment} onChange={choose} style={styles.segments} />
         </Animated.View>
 
-        <View style={styles.gridContainer}>
-          {/* Seasons */}
-          <Animated.View style={entrance[3]}>
-            <TouchableOpacity
-              style={styles.gridItem}
-              onPress={() => handleSeasonPress('Fall')}
-              accessibilityLabel="View Fall Favourites"
-              accessibilityRole="button"
-              activeOpacity={0.7}
-            >
-              <ImageBackground
-                source={require('../assets/fall2.png')}
-                style={styles.imageBackground}
-                imageStyle={styles.imageStyle}
-              >
-                <Text style={styles.gridItemText}>Fall</Text>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={entrance[4]}>
-            <TouchableOpacity
-              style={styles.gridItem}
-              onPress={() => handleSeasonPress('Winter')}
-              accessibilityLabel="View Winter Favourites"
-              accessibilityRole="button"
-              activeOpacity={0.7}
-            >
-              <ImageBackground
-                source={require('../assets/winter2.png')}
-                style={styles.imageBackground}
-                imageStyle={styles.imageStyle}
-              >
-                <Text style={styles.gridItemText}>Winter</Text>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={entrance[5]}>
-            <TouchableOpacity
-              style={styles.gridItem}
-              onPress={() => handleSeasonPress('Spring')}
-              accessibilityLabel="View Spring Favourites"
-              accessibilityRole="button"
-              activeOpacity={0.7}
-            >
-              <ImageBackground
-                source={require('../assets/spring2.png')}
-                style={styles.imageBackground}
-                imageStyle={styles.imageStyle}
-              >
-                <Text style={styles.gridItemText}>Spring</Text>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={entrance[6]}>
-            <TouchableOpacity
-              style={styles.gridItem}
-              onPress={() => handleSeasonPress('Summer')}
-              accessibilityLabel="View Summer Favourites"
-              accessibilityRole="button"
-              activeOpacity={0.7}
-            >
-              <ImageBackground
-                source={require('../assets/summer3.png')}
-                style={styles.imageBackground}
-                imageStyle={styles.imageStyle}
-              >
-                <Text style={styles.gridItemText}>Summer</Text>
-              </ImageBackground>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* User-Defined Collections with Animations */}
-          {collections.map((collection) => {
-            return (
-              <Animated.View key={collection.title} style={collectionEntrance.styleFor(collection.title)}>
+        {segment === 'saved' ? (
+          <View style={styles.grid}>
+            {SEASONS.map(({ season, art }) => (
+              <Animated.View key={season} style={seasonEntrance.styleFor(season)}>
                 <TouchableOpacity
-                  style={[styles.customCollectionItem, { backgroundColor: collection.color }]}
-                  accessibilityActions={[{ name: 'delete', label: `Delete ${collection.title}` }]}
-                  onAccessibilityAction={() => handleDeleteCollection(collection)}
-                  onPress={() => handleCollectionPress(collection)}  // Pass the entire collection object
-                  accessibilityLabel={`View ${collection.title} Collection`}
-                  accessibilityRole="button"
-                  activeOpacity={0.8}
+                  style={[styles.seasonTile, { width: size, height: size }]}
+                  onPress={() => open('SeasonalFavourites', { season })}
+                  accessibilityLabel={`View ${season} Favourites`} accessibilityRole="button" activeOpacity={0.7}
                 >
-                  {/* "X" Button for Deletion */}
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    hitSlop={14}
-                    onPress={(e) => {
-                      e.stopPropagation(); // Prevent triggering the parent onPress
-                      handleDeleteCollection(collection);
-                    }}
-                    accessibilityLabel={`Delete ${collection.title} Collection`}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.deleteButtonText}>X</Text>
-                  </TouchableOpacity>
-                  
-                  {/* Collection Title */}
-                  <Text style={styles.customCollectionText}>{collection.title}</Text>
+                  <ImageBackground source={art} style={styles.seasonArt} imageStyle={styles.seasonImage}>
+                    <Text style={styles.seasonText}>{season}</Text>
+                  </ImageBackground>
                 </TouchableOpacity>
               </Animated.View>
-            );
-          })}
-        </View>
+            ))}
+          </View>
+        ) : segment === 'lists' ? (
+          <MyLists size={size} onOpen={list => open('ListScreen', { listId: list.id })}
+            onCreate={() => navigation.navigate('ListDetails')} />
+        ) : (
+          <Following size={size} onOpen={list => open('ListScreen', { listId: list.id })}
+            onExplore={() => navigation.navigate('ExploreTab', { screen: 'Explore' })} />
+        )}
       </ScrollView>
-
     </SignedInScreen>
   );
-};
+}
 
-const getBoxSize = () => {
-  if (width >= 768) {
-    return 200;
-  } else if (width >= 480) {
-    return 160;
-  } else if (width >= 400) {
-    return 155;
-  } else if (width >= 250) {
-    return 140;
-  } else {
-    return 130;
+function MyLists({ size, onOpen, onCreate }) {
+  const { lists, status, retry } = useMyLists();
+  const entrance = useItemEntrance(lists.map(list => list.id), { ready: status === 'ready' });
+
+  if (status === 'error') {
+    return (
+      <EmptyCard icon="cloud-off" title="Couldn’t load your lists"
+        text="Check your connection and try again." actionLabel="Try again" onAction={retry} />
+    );
   }
-};
-const BOX_SIZE = getBoxSize();
+  if (status !== 'ready') return <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />;
+  if (!lists.length) {
+    return (
+      <EmptyCard icon="bookmark-border" title="No lists yet"
+        text="Make a list for a plan, a mood, or a whole season." actionLabel="New list" onAction={onCreate} />
+    );
+  }
+  return (
+    <View style={styles.grid}>
+      <NewListTile size={size} onPress={onCreate} />
+      {lists.map(list => (
+        <Animated.View key={list.id} style={entrance.styleFor(list.id)}>
+          <ListTile list={list} size={size} onPress={() => onOpen(list)} />
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
+// Lists made by other people. Each visit checks they are still shared: one that was made private or
+// deleted is dropped, with a line saying so.
+function Following({ size, onOpen, onExplore }) {
+  const { user } = useContext(AuthContext);
+  const uid = user?.uid;
+  const [state, setState] = useState({ status: 'loading', lists: [], removed: [] });
+  const entrance = useItemEntrance(state.lists.map(entry => entry.pointer.id), { ready: state.status === 'ready' });
+
+  const load = useCallback(() => {
+    let active = true;
+    loadFollowedLists(uid, getPublicList).then(({ lists, removed }) => {
+      // The notice about dropped lists stays until this side is left, not just until the next refresh.
+      if (active) setState(previous => ({ status: 'ready', lists, removed: [...previous.removed, ...removed] }));
+    }).catch(error => {
+      console.error('Followed lists unavailable:', { code: error?.code });
+      if (active) setState(previous => ({ ...previous, status: previous.lists.length ? 'ready' : 'error' }));
+    });
+    return () => { active = false; };
+  }, [uid]);
+  useFocusEffect(load);
+
+  if (state.status === 'error') {
+    return (
+      <EmptyCard icon="cloud-off" title="Couldn’t load the lists you follow"
+        text="Check your connection and try again." actionLabel="Try again" onAction={load} />
+    );
+  }
+  if (state.status !== 'ready') return <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />;
+
+  const notice = state.removed.map(title => (
+    <Text key={title} style={styles.notice} accessibilityRole="alert">“{title}” is no longer shared.</Text>
+  ));
+  if (!state.lists.length) {
+    return (
+      <>
+        {notice}
+        <EmptyCard icon="bookmark-border" title="Not following any lists yet"
+          text="Follow a list and it lives here, always up to date." actionLabel="Explore lists" onAction={onExplore} />
+      </>
+    );
+  }
+  return (
+    <>
+      {notice}
+      <View style={styles.grid}>
+        {state.lists.map(({ pointer, list, updated }) => {
+          // A list that couldn't be re-read just now is shown from what was saved when it was followed.
+          const shown = list ?? { ...pointer, items: [] };
+          const by = `by ${shown.ownerUsername ?? 'someone'}`;
+          return (
+            <Animated.View key={pointer.id} style={entrance.styleFor(pointer.id)}>
+              <ListTile list={shown} size={size} caption={updated ? `Updated · ${by}` : by} badge={updated ? 'dot' : null}
+                onPress={() => onOpen(pointer)} />
+            </Animated.View>
+          );
+        })}
+      </View>
+    </>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#F5E7D8",
-    flex: 1,
-    width: '100%',
-    height: '100%',
+  notice: { marginBottom: 12, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.muted, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: colors.library },
+  content: { paddingTop: 40, paddingHorizontal: GUTTER, paddingBottom: 24 },
+  title: { fontSize: 48, fontWeight: '700', color: '#4A4A4A', textAlign: 'center', marginBottom: 12 },
+  subtitle: { fontSize: 14, color: '#707070', textAlign: 'center', marginBottom: 24 },
+  segments: { marginBottom: 24 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
+  seasonTile: { borderRadius: 15, marginBottom: 16, overflow: 'hidden', ...cardShadow },
+  seasonArt: { flex: 1, justifyContent: 'center', alignItems: 'center', opacity: 0.85 },
+  seasonImage: { resizeMode: 'cover' },
+  seasonText: {
+    fontSize: 25, fontWeight: '700', color: colors.white, textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3,
   },
-  contentContainer: {
-    paddingTop: 40, // Add top padding so user can scroll fully to top
-    paddingHorizontal: 25,
-    width: '90%',
-    alignSelf: 'center',
-  },
-  headerContainer: {
-    // No absolute positioning; part of the scrollable content
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: "#4A4A4A",
-    textAlign: 'center',
-    marginBottom: 16, 
-    // Removed negative margin, now scrolling should behave correctly.
-  },
-  subtitleContainer: {
-    width: '100%',
-    // Removed flexDirection: 'row' since the button is no longer inline
-    alignItems: 'center',
-    marginBottom: 20, // Reduced margin to accommodate the button
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: "#707070",
-    textAlign: 'center',
-    marginBottom: 10, // Space between subtitle and button
-  },
-  createButton: {
-    backgroundColor: '#8DA9F2', // Pastel blue
-    paddingVertical: 10, // Top & Bottom Padding
-    paddingHorizontal: 0, // Removed horizontal padding as width is set
-    width: '35%', // 35% of parent container width
-    borderRadius: 12,
-    alignSelf: 'center', // Center horizontally
-    marginBottom: 40, // Space before the cards
-    shadowColor: '#000', // Optional shadow effect
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3, // Shadow for Android
-  },
-  buttonText: {
-    color: '#FFFFFF', // White Text
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 100, // Extra space at bottom for comfortable scrolling
-  },
-  gridItem: {
-    width: BOX_SIZE,
-    height: BOX_SIZE,
-    borderRadius: 15,
-    marginBottom: 30,
-    marginRight: 3,
-    overflow: 'hidden',
-    minWidth: 50,
-    minHeight: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  imageBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.85,
-  },
-  imageStyle: {
-    resizeMode: 'cover',
-  },
-  gridItemText: {
-    fontSize: 25,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  customCollectionItem: {
-    width: BOX_SIZE,
-    height: BOX_SIZE,
-    borderRadius: 15,
-    marginBottom: 30,
-    marginRight: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  customCollectionText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff', // Changed to white
-  },
-
-  // ======== DELETE BUTTON STYLES ========
-  deleteButton: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', // Semi-transparent background
-    borderRadius: 10,
-    width: 17,
-    height: 17,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1, // Ensure it appears above other elements
-  },
-  deleteButtonText: {
-    color: '#000000', // Red color for visibility
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-
+  loading: { marginTop: 32 },
 });
-
-export default Favourites;

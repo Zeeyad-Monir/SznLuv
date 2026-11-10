@@ -172,4 +172,5 @@ function findMatchingSpots(index, query, filters) {
 module.exports = {
   DISTANCE_OPTIONS, DEFAULT_FILTERS, hasCoordinates, distanceKm, createSpotIndex,
   usesOrigin, hasActiveFilters, withoutCurrentLocation, findMatchingSpots,
+  normalize, wordForm,
 };

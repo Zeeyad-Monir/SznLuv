@@ -13,11 +13,12 @@ global.cancelAnimationFrame ??= clearTimeout;
 function createHarness(options = {}) {
   const cache = new Map(), listeners = new Set();
   const documents = new Map(Object.entries(options.documents || { 'users/audit': { username: 'audit' }, 'favourites/audit': { collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }] } }));
-  const alerts = [], navigations = [], calls = [], dispatches = [], timings = [];
+  const alerts = [], navigations = [], calls = [], dispatches = [], timings = [], menus = [];
   const navigation = {
     navigate: (...args) => navigations.push(args),
     popTo: (...args) => { calls.push(['popTo', ...args]); navigations.push(args); },
     goBack: () => calls.push(['goBack']),
+    replace: (...args) => { calls.push(['replace', ...args]); navigations.push(args); },
     dispatch: action => dispatches.push(action),
     isFocused: () => options.focused !== false,
     addListener: () => () => {},
@@ -25,26 +26,107 @@ function createHarness(options = {}) {
   const route = { params: { season: 'Fall', collection: { title: 'Weekend', color: '#A7C8FF', dates: [], userId: 'audit' } } };
   const auth = { currentUser: options.user || null, onAuthStateChanged: callback => { listeners.add(callback); callback(auth.currentUser); return () => listeners.delete(callback); } };
   const setUser = user => { auth.currentUser = user; for (const callback of listeners) callback(user); };
-  const snapshot = ref => ({ exists: () => documents.has(ref.path), data: () => documents.get(ref.path), docs: [] });
+  // A small in-memory Firestore: documents by path, equality/range/array queries, merges, and live listeners
+  // that hear about every write, so screens under test update the way they do against the real thing.
+  const REMOVE = Symbol('deleteField');
+  const liveListeners = new Set();
+  let autoId = 0;
+  const makeRef = (parent, segments, type) => {
+    const parts = [...(parent?.path ? [parent.path] : []), ...segments];
+    if (type === 'doc' && parts.length % 2) parts.push('auto' + (++autoId));
+    const refPath = parts.join('/');
+    return { path: refPath, id: parts.at(-1), type };
+  };
+  const docSnapshot = ref => ({ id: ref.id, ref, exists: () => documents.has(ref.path), data: () => documents.get(ref.path) });
+  const satisfies = (data, { field, op, value }) => {
+    const actual = data?.[field];
+    if (op === '==') return actual === value;
+    if (op === '>=') return actual >= value;
+    if (op === '<=') return actual <= value;
+    if (op === 'array-contains') return Array.isArray(actual) && actual.includes(value);
+    if (op === 'array-contains-any') return Array.isArray(actual) && value.some(item => actual.includes(item));
+    return true;
+  };
+  const querySnapshot = ref => {
+    const prefix = ref.path + '/';
+    const wheres = (ref.constraints || []).filter(constraint => constraint?.type === 'where');
+    const docs = [...documents.keys()]
+      .filter(key => key.startsWith(prefix) && !key.slice(prefix.length).includes('/'))
+      .map(key => docSnapshot({ path: key, id: key.split('/').pop(), type: 'doc' }))
+      .filter(candidate => wheres.every(constraint => satisfies(candidate.data(), constraint)));
+    const constraint = type => (ref.constraints || []).find(candidate => candidate?.type === type);
+    const order = constraint('orderBy');
+    let ordered = docs;
+    if (order) {
+      const [field, direction] = order.args;
+      ordered = [...docs].sort((a, b) => (direction === 'desc' ? -1 : 1) * ((a.data()[field] ?? 0) - (b.data()[field] ?? 0)));
+      const after = constraint('startAfter');
+      if (after) ordered = ordered.filter(candidate => (direction === 'desc' ? candidate.data()[field] < after.value : candidate.data()[field] > after.value));
+    }
+    const cap = constraint('limit');
+    if (cap) ordered = ordered.slice(0, cap.count);
+    return { docs: ordered, empty: !ordered.length, size: ordered.length, exists: () => false, data: () => undefined };
+  };
+  const snapshot = ref => (ref.type === 'collection' ? querySnapshot(ref) : { ...docSnapshot(ref), docs: [] });
+  const resolveFields = (current, data) => {
+    const next = { ...current };
+    for (const [key, value] of Object.entries(data)) {
+      if (value === REMOVE) delete next[key];
+      else if (value?.arrayUnion) next[key] = [...new Set([...(next[key] || []), ...value.arrayUnion])];
+      else if (value?.arrayRemove) next[key] = (next[key] || []).filter(item => !value.arrayRemove.includes(item));
+      else next[key] = value;
+    }
+    return next;
+  };
+  const write = (ref, data, { merge = false } = {}) => documents.set(ref.path, resolveFields(merge ? documents.get(ref.path) : {}, data));
+  const notifyListeners = () => [...liveListeners].forEach(({ ref, next }) => next(snapshot(ref)));
+  const failWrite = () => { if (options.writeError) throw Object.assign(new Error('Write failed'), { code: options.writeError }); };
   const firestore = {
-    doc: (_, ...segments) => ({ path: segments.join('/') }),
-    collection: (_, ...segments) => ({ path: segments.join('/') }),
+    doc: (parent, ...segments) => makeRef(parent, segments, 'doc'),
+    collection: (parent, ...segments) => makeRef(parent, segments, 'collection'),
     getDoc: async ref => { if (options.beforeRead) await options.beforeRead(ref); if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return snapshot(ref); },
-    onSnapshot: (ref, next) => { next(snapshot(ref)); return () => {}; },
-    query: ref => ref, where: (...args) => args, orderBy: (...args) => args,
-    setDoc: async (ref, data) => documents.set(ref.path, data),
-    addDoc: async (ref, data) => documents.set(ref.path + '/audit', data),
+    getDocs: async ref => { if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return querySnapshot(ref); },
+    onSnapshot: (ref, next) => {
+      const listener = { ref, next };
+      liveListeners.add(listener);
+      next(snapshot(ref));
+      return () => liveListeners.delete(listener);
+    },
+    query: (ref, ...constraints) => ({ ...ref, constraints: [...(ref.constraints || []), ...constraints] }),
+    where: (field, op, value) => ({ type: 'where', field, op, value }),
+    orderBy: (...args) => ({ type: 'orderBy', args }), limit: count => ({ type: 'limit', count }), startAfter: value => ({ type: 'startAfter', value }),
+    deleteField: () => REMOVE, arrayUnion: (...items) => ({ arrayUnion: items }), arrayRemove: (...items) => ({ arrayRemove: items }),
+    setDoc: async (ref, data, settings) => { failWrite(); write(ref, data, settings); notifyListeners(); },
+    updateDoc: async (ref, data) => { failWrite(); write(ref, data, { merge: true }); notifyListeners(); },
+    deleteDoc: async ref => { failWrite(); documents.delete(ref.path); notifyListeners(); },
+    addDoc: async (ref, data) => { documents.set(ref.path + '/audit', data); notifyListeners(); },
     serverTimestamp: () => new Date(0),
+    writeBatch: () => {
+      const steps = [];
+      return {
+        set: (ref, data, settings) => steps.push(() => write(ref, data, settings)),
+        update: (ref, data) => steps.push(() => write(ref, data, { merge: true })),
+        delete: ref => steps.push(() => documents.delete(ref.path)),
+        commit: async () => { failWrite(); steps.forEach(step => step()); notifyListeners(); },
+      };
+    },
     runTransaction: async (_, callback) => {
-      const writes = [];
-      const result = await callback({ get: async ref => snapshot(ref), set: (ref, data) => writes.push([ref.path, data]), update: (ref, data) => writes.push([ref.path, { ...documents.get(ref.path), ...data }]) });
+      const steps = [];
+      const result = await callback({
+        get: async ref => snapshot(ref),
+        set: (ref, data, settings) => steps.push(() => write(ref, data, settings)),
+        update: (ref, data) => steps.push(() => write(ref, data, { merge: true })),
+        delete: ref => steps.push(() => documents.delete(ref.path)),
+      });
       if (options.beforeCommit) await options.beforeCommit();
-      for (const [key, value] of writes) documents.set(key, value);
+      if (steps.length) failWrite(); // A transaction that only read has nothing to fail on
+      steps.forEach(step => step());
+      notifyListeners();
       return result;
     },
   };
   const firebase = {
-    auth, db: {}, storage: {},
+    auth, db: options.db || {}, storage: {},
     login: async (email, password) => { calls.push(['login', email, password]); if (options.loginError) throw Object.assign(new Error('Login failed'), { code: options.loginError }); setUser({ uid: 'audit', email }); },
     register: async (email, password) => { calls.push(['register', email, password]); const user = { uid: 'new-audit', email }; setUser(user); return { user }; },
     logout: async () => { calls.push(['logout']); setUser(null); },
@@ -52,6 +134,8 @@ function createHarness(options = {}) {
   const animation = { start: callback => callback?.({ finished: true }), stop: () => {} };
   class Value { constructor(value) { this.value = value; } setValue(value) { this.value = value; } interpolate() { return this.value; } stopAnimation() {} }
   const Animated = { Value, View: 'AnimatedView', Text: 'AnimatedText', Image: 'AnimatedImage', ScrollView: 'AnimatedScrollView', timing: (value, config) => { timings.push(config); return animation; }, spring: () => animation, parallel: () => animation, sequence: () => animation, stagger: () => animation, delay: () => animation, loop: () => ({ start() {}, stop() {} }), createAnimatedComponent: component => component, add: (a, b) => a + b.value };
+  const urlListeners = new Set();
+  const openUrl = url => [...urlListeners].forEach(listener => listener({ url }));
   const appStateListeners = new Set();
   const appState = state => appStateListeners.forEach(listener => listener(state));
   const keyboardListeners = new Map(), accessibilityListeners = new Map();
@@ -59,7 +143,13 @@ function createHarness(options = {}) {
     listeners.set(event, callback);
     return { remove: () => listeners.delete(event) };
   };
-  const keyboardEvent = event => keyboardListeners.get(event)?.();
+  // Several components listen for the keyboard at once (the tab pill, the snackbar).
+  const listenKeyboard = (event, callback) => {
+    if (!keyboardListeners.has(event)) keyboardListeners.set(event, new Set());
+    keyboardListeners.get(event).add(callback);
+    return { remove: () => keyboardListeners.get(event)?.delete(callback) };
+  };
+  const keyboardEvent = (event, payload) => [...(keyboardListeners.get(event) ?? [])].forEach(callback => callback(payload));
   const accessibilityEvent = (event, value) => accessibilityListeners.get(event)?.(value);
   const platform = options.platform ?? 'ios';
   const rn = new Proxy({
@@ -70,9 +160,12 @@ function createHarness(options = {}) {
     Keyboard: {
       dismiss() {},
       isVisible: () => false,
-      addListener: (event, callback) => listen(keyboardListeners, event, callback),
+      addListener: listenKeyboard,
     },
     AppState: { addEventListener: (_, listener) => { appStateListeners.add(listener); return { remove: () => appStateListeners.delete(listener) }; } },
+    ActionSheetIOS: { showActionSheetWithOptions: (config, onPick) => menus.push({ ...config, pick: label => onPick(config.options.indexOf(label)) }) },
+    LayoutAnimation: { configureNext: () => calls.push(['layoutAnimation']), Presets: { easeInEaseOut: {} } },
+    Share: { share: async content => { calls.push(['share', content]); return { action: 'sharedAction' }; } },
     Linking: { openSettings: async () => calls.push(['openSettings']), openURL: async url => calls.push(['openURL', url]) },
     Modal: ({ visible, onShow, onDismiss, ...props }) => {
       React.useEffect(() => { if (visible) onShow(); else onDismiss(); }, [visible]);
@@ -123,10 +216,17 @@ function createHarness(options = {}) {
     },
     'expo-linear-gradient': { LinearGradient: 'Gradient' },
     'expo-blur': { BlurView: 'BlurView' },
+    'expo-linking': {
+      createURL: linkPath => 'sznluv://' + linkPath,
+      getInitialURL: async () => options.initialUrl ?? null,
+      addEventListener: (_, listener) => { urlListeners.add(listener); return { remove: () => urlListeners.delete(listener) }; },
+    },
     'expo-haptics': { selectionAsync: async () => { calls.push(['selectionHaptic']); } },
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
   };
+  // Lets a test swap a stub for the real module, e.g. real Firestore against the emulator.
+  Object.assign(stubs, options.stubs);
   function load(relative) {
     const filename = path.resolve(repo, relative);
     if (filename.endsWith('firebaseConfig.js')) return firebase;
@@ -189,6 +289,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, renderElement, load, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
+  return { render, renderElement, load, menus, openUrl, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
 }
 module.exports = { createHarness, act };

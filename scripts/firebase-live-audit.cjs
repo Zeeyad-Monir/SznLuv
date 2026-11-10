@@ -75,25 +75,17 @@ async function login() { return signInWithEmailAndPassword(auth, account.email, 
     await login();
     assert.equal((await getDoc(doc(db, 'usernames', account.username))).data().uid, account.uid);
   });
-  await check('Concurrent favourites and collection changes retain all data', async () => {
-    const title = 'Codex audit concurrency ' + Date.now();
-    await favourites.updateCollection(account.uid, { type: 'create', title, color: '#A7C8FF' });
+  await check('Concurrent favourite changes retain all data', async () => {
     await Promise.all([
       favourites.toggleSavedSpot(account.uid, 'Codex audit A', { isFavourite: true, season: 'Fall' }),
       favourites.toggleSavedSpot(account.uid, 'Codex audit B', { isFavourite: true, season: 'Winter' }),
-      favourites.updateCollection(account.uid, { type: 'add', title, spot: 'Codex audit A' }),
-      favourites.updateCollection(account.uid, { type: 'add', title, spot: 'Codex audit B' }),
     ]);
     const data = (await getDoc(doc(db, 'favourites', account.uid))).data();
     assert.ok(data['Codex audit A'] && data['Codex audit B']);
-    assert.deepEqual(data.collections.find(c => c.title === title).dates.sort(), ['Codex audit A', 'Codex audit B']);
     await favourites.removeSavedSpot(account.uid, 'Codex audit A');
-    await favourites.updateCollection(account.uid, { type: 'remove', title, spot: 'Codex audit A' });
     const removed = (await getDoc(doc(db, 'favourites', account.uid))).data();
     assert.equal(removed['Codex audit A'], undefined);
     assert.ok(removed['Codex audit B']);
-    assert.deepEqual(removed.collections.find(c => c.title === title).dates, ['Codex audit B']);
-    await favourites.updateCollection(account.uid, { type: 'delete', title });
     await favourites.removeSavedSpot(account.uid, 'Codex audit B');
   });
   await check('A repeated review upvote counts once, including concurrent requests', async () => {

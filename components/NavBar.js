@@ -23,7 +23,8 @@ const PARENT_TITLES = {
   SummerDatesScreen: 'Summer Dates',
   Favourites: 'Favourites',
   SeasonalFavourites: 'Saved Spots',
-  CustomCollectionScreen: 'Collection',
+  Explore: 'Explore',
+  ListScreen: 'List',
 };
 
 // Room for the back chevron beside the title; the bar's other contents don't move.

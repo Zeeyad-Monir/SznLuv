@@ -1,7 +1,7 @@
-import { toggleSavedSpot, updateCollection } from '../services/favourites';
+import { summerCategories } from '../services/seasonSpots';
+import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import { openVenue } from '../services/venueNavigation';
-import { openCollectionPicker } from '../services/collectionPicker';
-import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
+import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance from '../hooks/useEntrance';
 import useSpotDiscovery from '../hooks/useSpotDiscovery';
@@ -32,8 +32,6 @@ import {
 // Importing Material Icons for icon usage in the UI
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Importing Firestore functions for database interactions
-import { doc, onSnapshot } from 'firebase/firestore';
 
 // Importing Firebase authentication and database configurations
 import { auth, db } from '../firebaseConfig'; // Firebase configuration
@@ -59,17 +57,8 @@ const screenHeight = Dimensions.get('window').height;
 // COMPONENT DEFINITION
 // =========================
 
-const categories = [
-  {
-    title: 'Beaches',
-    spots: [
-      { name: 'Sunset Beach', address: '123 Ocean Drive' },
-      { name: 'Golden Sands', address: '456 Shoreline Ave' },
-      { name: 'Coral Cove', address: '789 Seaside Blvd' },
-    ],
-  },
-  // You can add more categories and spots as needed
-];
+// Sections and spots live in services/seasonSpots.js so lists, search and this screen stay in sync.
+const categories = summerCategories;
 
 /**
  * SummerDatesScreen Component
@@ -81,8 +70,6 @@ const categories = [
  */
 export default function SummerDatesScreen({ navigation }) {
   const floatingScrollStyle = useFloatingScrollStyle(styles.contentContainer);
-  const navClearance = useFloatingNavClearance();
-  const notificationBottom = Math.max(styles.successNotification.bottom, navClearance);
   
   // =========================
   // CONTEXT USAGE
@@ -91,139 +78,20 @@ export default function SummerDatesScreen({ navigation }) {
   // Accessing the authenticated user from AuthContext
   const { user } = useContext(AuthContext); // Access user context
 
-  // =========================
-  // STATE VARIABLES
-  // =========================
-
-  // State to manage user's favorite spots
-  const [favorites, setFavorites] = useState({}); // Local state for favorites
-
-  // NEW STATES: Notification Controls
-  const [showChooseCollectionNotification, setShowChooseCollectionNotification] = useState(false);
-  const [newlyFavouritedSpot, setNewlyFavouritedSpot] = useState(null);
-  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
-
-  // The header and each category section ease in together; the push itself carries the page.
   const entrance = useEntrance(1 + categories.length);
   const discovery = useSpotDiscovery('summer', categories);
 
-  // =========================
-  // EFFECTS SECTION
-  // =========================
+  // Saved spots, kept live. The heart saves to Summer favourites and offers "Add to list" in a snackbar.
+  const [favorites, setFavorites] = useFavouriteSpots(() => {
+    Alert.alert('Favourites unavailable', 'Could not load your saved spots. Please check your connection and account access.');
+  });
+  const { toggleFavouriteSpot } = useSaveSpot(favorites, setFavorites);
+  const toggleFavorite = (spotName, spotAddress) => toggleFavouriteSpot({ name: spotName, address: spotAddress, season: 'Summer' });
 
-  /**
-   * useEffect Hook: Fetch and synchronize user's favorites from Firestore on component mount
-   * 
-   * This effect runs once when the component mounts. It retrieves the user's favorites from Firestore
-   * and initializes the favorites state.
-   */
-  useEffect(() => {
-    if (!user) return;
-    return onSnapshot(doc(db, 'favourites', user.uid), snapshot => {
-      setFavorites(snapshot.exists() ? snapshot.data() : {});
-    }, error => {
-      console.error('Favourites subscription failed:', { code: error.code });
-      Alert.alert('Favourites unavailable', 'Could not load your saved spots. Please check your connection and account access.');
-    });
-  }, [user]);
-
-  // =========================
-  // FUNCTIONS SECTION
-  // =========================
-
-  /**
-   * NEW FUNCTION: Add spot to a specific collection
-   * 
-   * This asynchronous function adds a given spot to a specified collection in Firestore.
-   * It ensures that duplicates are not added and provides user feedback upon success or failure.
-   * 
-   * @param {string} collectionTitle - The title of the collection to add the spot to
-   * @param {string} spotName - The name of the spot to be added
-   */
-  const addSpotToCollection = async (collectionTitle, spotName) => {
-    try {
-      await updateCollection(user?.uid, { type: 'add', title: collectionTitle, spot: spotName });
-      setShowSuccessNotification(true);
-      setTimeout(() => setShowSuccessNotification(false), 2000);
-    } catch (error) {
-      console.error('Error adding spot to collection:', error);
-      Alert.alert('Could not save spot', error.message);
-    }
-  };
-
-  /**
-   * toggleFavorite Function
-   * 
-   * This asynchronous function toggles the favorite status of a given spot.
-   * It updates the favorites state and synchronizes the change with Firestore.
-   * Additionally, it triggers the "Choose Collection" notification for newly favorited spots.
-   * 
-   * @param {string} spotName - The name of the spot to toggle as favorite
-   * @param {string} spotAddress - The address/location of the spot
-   */
-  const toggleFavorite = async (spotName, spotAddress) => {
-    try {
-      const next = await toggleSavedSpot(user?.uid, spotName, {
-        isFavourite: true, season: 'Summer', location: spotAddress,
-      });
-      setFavorites(next);
-      const added = !!next[spotName]?.isFavourite;
-      Alert.alert(added ? 'Added to Favorites' : 'Removed from Favorites', spotName);
-      if (added) {
-        setNewlyFavouritedSpot({ name: spotName });
-        setShowChooseCollectionNotification(true);
-        setTimeout(() => setShowChooseCollectionNotification(false), 5000);
-      }
-    } catch (error) {
-      console.error('Error updating favorites:', error);
-      Alert.alert('Could not save favourite', 'Your change was not saved. Please check your connection and try again.');
-    }
-  };
-
-  /**
-   * handleSpotPress Function
-   * 
-   * This function handles the navigation when a user presses on a spot card.
-   * Depending on the spot's name, it navigates to the corresponding detail screen
-   * or shows a "Coming Soon" alert.
-   * 
-   * @param {Object} spot - The spot object containing name and address
-   */
   const handleSpotPress = (spot) => {
     Keyboard.dismiss();
     openVenue(navigation, Alert.alert, spot.name);
   };
-
-  /**
-   * NEW FUNCTION: Handle "Choose Collection" button press in notification
-   * 
-   * This function is triggered when the user taps on the "Choose Collection" notification.
-   * It opens the collection sheet.
-   */
-  const handleChooseCollectionPress = () => {
-    // Hide the notification bar
-    setShowChooseCollectionNotification(false);
-
-    // Open the collection sheet with the collections this screen already has live
-    openCollectionPicker(navigation, favorites.collections || [], handleCollectionSelect);
-  };
-
-  /**
-   * NEW FUNCTION: Handle user selecting a collection in the sheet
-   * 
-   * This function is triggered when the user selects a collection from the sheet.
-   * It adds the newly favorited spot to the selected collection; the sheet has already closed.
-   * 
-   * @param {string} collectionTitle - The title of the selected collection
-   */
-  const handleCollectionSelect = (collectionTitle) => {
-    if (!newlyFavouritedSpot) return;
-    addSpotToCollection(collectionTitle, newlyFavouritedSpot.name);
-  };
-
-  // =========================
-  // RENDERING SECTION
-  // =========================
 
   return (
     <SignedInScreen style={styles.container}>
@@ -387,36 +255,6 @@ export default function SummerDatesScreen({ navigation }) {
           </Animated.View>
         ))}
       </ScrollView>
-
-      {/* =========================
-          NEW: "Choose Collection" Notification
-          ========================= */}
-
-      {/* NEW: "Choose Collection" Notification Styled Like Success Notification */}
-      {showChooseCollectionNotification && (
-        <TouchableOpacity
-          style={[styles.successNotification, { bottom: notificationBottom }]}
-          onPress={handleChooseCollectionPress}
-          accessibilityLabel="Choose Collection"
-          accessibilityRole="button"
-        >
-          <Text style={styles.successNotificationText}>Choose Collection</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* =========================
-          NEW: Success Notification
-          ========================= */}
-
-      {/* NEW: Success Notification */}
-      {showSuccessNotification && (
-        <View style={[styles.successNotification, { bottom: notificationBottom }]}>
-          <Text style={styles.successNotificationText}>
-            Added to Collection
-          </Text>
-        </View>
-      )}
-
     </SignedInScreen>
   );
 }
@@ -524,28 +362,5 @@ const styles = StyleSheet.create({
     marginLeft: 16, // Left margin to separate from text
   },
 
-  // =========================
-  // NEW: Success and "Choose Collection" Notification Styles
-  // =========================
 
-  // NEW: Success and "Choose Collection" Notification Styles
-  successNotification: {
-    position: 'absolute',
-    bottom: 60,
-    alignSelf: 'center',
-    backgroundColor: '#4A90E2', // Blue background
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  successNotificationText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
 });

@@ -5,7 +5,7 @@ const path = require('path');
 const { createHarness, act } = require('./renderHarness.cjs');
 const { detailedFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'CustomCollectionScreen', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'ProfileSettings', 'AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -146,7 +146,7 @@ function textOf(node) {
 }
 
 // ---- top bar and sections
-const SECTIONS = ['HomeTab', 'FavouritesTab', 'SpinTab', 'ProfileTab'];
+const SECTIONS = ['HomeTab', 'ExploreTab', 'FavouritesTab', 'SpinTab', 'ProfileTab'];
 const tabState = (index, nested) => ({ index, routes: SECTIONS.map((name, i) => ({ key: `${name}-key`, name, state: i === index ? nested : undefined })) });
 const homeStack = names => ({ key: 'home-stack', index: names.length - 1, routes: names.map(name => ({ key: name, name })) });
 async function renderTopBar(state, top = 62) {
@@ -260,19 +260,32 @@ test('floating bar: Home returns to the landing screen from an inactive, nested 
   await act(async () => renderer.unmount());
 });
 
-test('floating bar: Favorites and Explore keep their route keys and only a real switch triggers a haptic', async () => {
+test('floating bar: four slots in order, each with its own name', async () => {
   const h = createHarness();
-  const { renderer, log, control } = await renderFloatingNav(h, 1);
+  const { renderer, control } = await renderFloatingNav(h, 1);
+  const tabs = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityRole === 'tab');
+  assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Spin the Wheel']);
+  assert.deepEqual(control('Explore').props.accessibilityState, { selected: true });
+  assert.equal(control('Explore').props.accessibilityHint, 'Search lists from other people');
+  assert.equal(control('Spin the Wheel').props.accessibilityHint, undefined);
+  // 84pt slots on a 390pt phone; they shrink to fit a narrow one and stay a full touch target.
+  assert.equal(Object.assign({}, ...tabs[0].props.style).width, 84);
+  await act(async () => renderer.unmount());
+});
+
+test('floating bar: Favorites and Spin keep their route keys and only a real switch triggers a haptic', async () => {
+  const h = createHarness();
+  const { renderer, log, control } = await renderFloatingNav(h, 2);
   assert.deepEqual(control('Favorites').props.accessibilityState, { selected: true });
-  assert.deepEqual(control('Explore').props.accessibilityState, { selected: false });
+  assert.deepEqual(control('Spin the Wheel').props.accessibilityState, { selected: false });
   await act(async () => control('Favorites').props.onPress());
   assert.deepEqual(log.emitted.at(-1), { type: 'tabPress', target: 'FavouritesTab-key', canPreventDefault: true });
   log.blocked = true;
-  await act(async () => control('Explore').props.onPress());
+  await act(async () => control('Spin the Wheel').props.onPress());
   assert.deepEqual(log.navigated, []);
   assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
   log.blocked = false;
-  await act(async () => control('Explore').props.onPress());
+  await act(async () => control('Spin the Wheel').props.onPress());
   assert.deepEqual(log.navigated, ['SpinTab']);
   assert.equal(log.emitted.at(-1).target, 'SpinTab-key');
   assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 1);
@@ -312,9 +325,9 @@ test('floating bar: respects Reduce Transparency and uses the opaque treatment o
   await act(async () => renderer.unmount());
 
   const android = createHarness({ platform: 'android' });
-  const androidNav = await renderFloatingNav(android, 2);
+  const androidNav = await renderFloatingNav(android, 3);
   assert.equal(androidNav.renderer.root.findAllByType('BlurView').length, 0);
-  assert.deepEqual(androidNav.control('Explore').props.accessibilityState, { selected: true });
+  assert.deepEqual(androidNav.control('Spin the Wheel').props.accessibilityState, { selected: true });
   await act(async () => androidNav.control('Favorites').props.onPress());
   assert.equal(android.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
   await act(async () => androidNav.renderer.unmount());
@@ -338,58 +351,6 @@ test('a spot card offers its heart to VoiceOver as a custom action', async () =>
   await act(async () => card.props.onAccessibilityAction());
   assert.ok(h.documents.get('favourites/audit')['Aldor Family Farm'].isFavourite, 'the action saves the favourite');
   await act(async () => renderer.unmount());
-});
-test('choose-collection sheet closes first, then hands the pick back to the season screen', async () => {
-  const h = createHarness();
-  const picked = [], order = [];
-  h.navigation.goBack = () => order.push('closed');
-  const { openCollectionPicker } = h.load('services/collectionPicker.js');
-  openCollectionPicker(h.navigation, [{ title: 'Weekend', color: '#A7C8FF' }], title => { order.push('delivered'); picked.push(title); });
-  assert.deepEqual(h.navigations.at(-1), ['ChooseCollection', { collections: [{ title: 'Weekend', color: '#A7C8FF' }] }]);
-  const renderer = await h.render('screens/ChooseCollectionSheet.js', { props: { route: { params: h.navigations.at(-1)[1] } } });
-  await act(async () => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Add to Weekend Collection').props.onPress());
-  assert.deepEqual(order, ['closed', 'delivered']);
-  assert.deepEqual(picked, ['Weekend']);
-  await act(async () => renderer.unmount());
-});
-test('choose-collection sheet explains an empty list and can be closed with its X', async () => {
-  const h = createHarness();
-  const renderer = await h.render('screens/ChooseCollectionSheet.js', { props: { route: { params: { collections: [] } } } });
-  assert.match(JSON.stringify(renderer.toJSON()), /No Collections Available/);
-  await act(async () => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Close Collections').props.onPress());
-  assert.ok(h.calls.some(([name]) => name === 'goBack'));
-  await act(async () => renderer.unmount());
-});
-async function fillCreateSheet(h, title) {
-  const renderer = await h.render('screens/CreateCollectionSheet.js');
-  await act(async () => renderer.root.findByType('TextInput').props.onChangeText(title));
-  await act(async () => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Blue colour').props.onPress());
-  return { renderer, create: () => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Create new collection') };
-}
-test('create-collection sheet saves once, then closes', async () => {
-  let release;
-  const blocked = new Promise(resolve => { release = resolve; });
-  const h = createHarness({ beforeCommit: () => blocked });
-  const { renderer, create } = await fillCreateSheet(h, ' Road Trips ');
-  let first, second;
-  await act(async () => { first = create().props.onPress(); second = create().props.onPress(); await Promise.resolve(); });
-  assert.ok(!h.calls.some(([name]) => name === 'goBack'), 'stays open until saved');
-  await act(async () => { release(); await Promise.all([first, second]); });
-  assert.equal(h.calls.filter(([name]) => name === 'goBack').length, 1);
-  assert.deepEqual(h.documents.get('favourites/audit').collections.map(col => col.title), ['Weekend', 'Road Trips']);
-  await act(async () => renderer.unmount());
-});
-test('create-collection sheet stays open and explains a duplicate title', async () => {
-  const h = createHarness();
-  const realError = console.error;
-  console.error = () => {};
-  try {
-    const { renderer, create } = await fillCreateSheet(h, 'weekend');
-    await act(async () => create().props.onPress());
-    assert.deepEqual(h.alerts.at(-1), ['Error', 'Title already exists.']);
-    assert.ok(!h.calls.some(([name]) => name === 'goBack'));
-    await act(async () => renderer.unmount());
-  } finally { console.error = realError; }
 });
 async function loadEntrance(options) {
   const h = createHarness(options);
@@ -467,7 +428,7 @@ test('venue pages hold the map back until the push has finished', async () => {
   assert.equal(renderer.root.findAllByType('MapView').length, 0);
   await act(async () => renderer.unmount());
 });
-test('main tabs: four sections with shared navigation, venue pages reachable from Home and Favourites', async () => {
+test('main tabs: five sections with shared navigation; venue and list pages reachable from Home, Explore and Favourites', async () => {
   const React = require('react'), Renderer = require('react-test-renderer');
   const h = createHarness();
   const renderer = await h.render('navigation/MainTabs.js');
@@ -478,12 +439,12 @@ test('main tabs: four sections with shared navigation, venue pages reachable fro
   assert.equal(navigator.props.backBehavior, 'none', 'VoiceOver back cannot jump between sections');
   const tabs = renderer.root.findAllByType(h.Screen);
   assert.deepEqual(tabs.map(node => node.props.name), SECTIONS);
-  for (const [index, root] of [[0, 'Home'], [1, 'Favourites']]) {
+  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites']]) {
     let section;
     await act(async () => { section = Renderer.create(React.createElement(tabs[index].props.component)); });
     const names = section.root.findAllByType(h.Screen).map(node => node.props.name);
     assert.equal(names[0], root, 'the section starts on its own root screen');
-    for (const venue of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy', 'SpotDetailScreen']) assert.ok(names.includes(venue), `${root} section opens ${venue}`);
+    for (const venue of ['AldorFamilyFarmScreen', 'LaityPumpkinPatch', 'EagleAcresDairy', 'SpotDetailScreen', 'ListScreen', 'OwnSpotScreen', 'CustomSpotScreen']) assert.ok(names.includes(venue), `${root} section opens ${venue}`);
     await act(async () => section.unmount());
   }
   await act(async () => renderer.unmount());

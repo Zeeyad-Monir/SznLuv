@@ -26,7 +26,8 @@ export async function saveProfile(user, username) {
       if (profileSnap.data().username !== username) throw new Error('This account already has a username. Please sign out and log in.');
       return;
     }
-    transaction.set(usernameRef, { uid: user.uid, email: user.email });
+    // Only the uid: this document can be fetched by anyone signed in, so it holds nothing private.
+    transaction.set(usernameRef, { uid: user.uid });
     transaction.set(profileRef, {
       username, email: user.email, createdAt: serverTimestamp(),
     }, { merge: true });

@@ -1,6 +1,6 @@
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { toggleFavourite, removeFavourite, changeCollection } from './favouritesState';
+import { toggleFavourite, removeFavourite } from './favouritesState';
 
 // Recompute against the latest document on every Firestore transaction retry.
 export async function mutateFavourites(uid, change) {
@@ -14,5 +14,13 @@ export async function mutateFavourites(uid, change) {
   });
 }
 export const toggleSavedSpot = (uid, name, entry) => mutateFavourites(uid, data => toggleFavourite(data, name, entry));
-export const removeSavedSpot = (uid, name) => mutateFavourites(uid, data => removeFavourite(data, name));
-export const updateCollection = (uid, action) => mutateFavourites(uid, data => changeCollection(data, action));
+// With `returnPrevious`, resolves to the entry that was removed so the caller can offer Undo.
+export async function removeSavedSpot(uid, name, { returnPrevious = false } = {}) {
+  let previous;
+  const next = await mutateFavourites(uid, data => {
+    previous = data[name];
+    return removeFavourite(data, name);
+  });
+  return returnPrevious ? previous : next;
+}
+export const restoreSavedSpot = (uid, name, entry) => mutateFavourites(uid, data => ({ ...data, [name]: entry ?? data[name] }));

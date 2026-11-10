@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { removeSavedSpot } from '../services/favourites';
+import { removeSavedSpot, restoreSavedSpot } from '../services/favourites';
+import { useSnackbar } from '../components/Snackbar';
 import { openVenue } from '../services/venueNavigation';
 // SeasonalFavourites.js
 // This screen displays only the favourites for a specific season.
@@ -29,8 +30,6 @@ import { getReduceMotion } from '../hooks/useReduceMotion';
 
 const SeasonalFavourites = () => {
   const floatingScrollStyle = useFloatingScrollStyle();
-  const navClearance = useFloatingNavClearance();
-  const notificationBottom = Math.max(styles.notificationContainer.bottom, navClearance);
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
@@ -38,13 +37,11 @@ const SeasonalFavourites = () => {
 
   const [favourites, setFavourites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [notificationMessage, setNotificationMessage] = useState('');
+  const snackbar = useSnackbar();
 
   // The header eases in once; each saved spot animates only when it first appears, so returning never blanks the list.
   const entrance = useEntrance(1, { ready: !loading });
   const itemEntrance = useItemEntrance(favourites, { ready: !loading });
-  const notificationTranslateY = useRef(new Animated.Value(50)).current;
-  const notificationOpacity = useRef(new Animated.Value(0)).current;
 
   const seasonTitle = `${season.charAt(0).toUpperCase() + season.slice(1)} Spots`;
 
@@ -90,44 +87,6 @@ const SeasonalFavourites = () => {
     return () => { current = false; };
   }, [user, season]));
 
-  useEffect(() => {
-    if (notificationMessage !== '') {
-      Animated.parallel([
-        Animated.timing(notificationTranslateY, {
-          toValue: 0,
-          duration: getReduceMotion() ? 0 : 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(notificationOpacity, {
-          toValue: 1,
-          duration: getReduceMotion() ? 0 : 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      const timeout = setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(notificationTranslateY, {
-            toValue: 50,
-            duration: getReduceMotion() ? 0 : 500,
-            easing: Easing.in(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(notificationOpacity, {
-            toValue: 0,
-            duration: getReduceMotion() ? 0 : 500,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          setNotificationMessage('');
-        });
-      }, 3000);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [notificationMessage]);
-
   const removeFavourite = async (spotName) => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to remove favourites.');
@@ -135,12 +94,24 @@ const SeasonalFavourites = () => {
     }
 
     try {
-      await removeSavedSpot(user.uid, spotName);
+      const before = (await removeSavedSpot(user.uid, spotName, { returnPrevious: true }));
       setFavourites(previous => previous.filter(name => name !== spotName));
-      setNotificationMessage(`"${spotName}" removed from favourites.`);
+      snackbar.show({
+        message: `Removed ${spotName}`,
+        actionLabel: 'Undo',
+        onAction: async () => {
+          try {
+            await restoreSavedSpot(user.uid, spotName, before);
+            setFavourites(previous => [...new Set([...previous, spotName])].sort((a, b) => a.localeCompare(b)));
+          } catch (error) {
+            console.error('Error restoring favourite:', error);
+            snackbar.show({ message: 'Couldn’t save. Check your connection.' });
+          }
+        },
+      });
     } catch (error) {
       console.error('Error removing favourite:', error);
-      Alert.alert('Error', 'Failed to remove favourite. Please try again.');
+      snackbar.show({ message: 'Couldn’t save. Check your connection.' });
     }
   };
 
@@ -156,20 +127,6 @@ const SeasonalFavourites = () => {
 
   return (
     <SignedInScreen style={styles.container}>
-      {notificationMessage !== '' && (
-        <Animated.View
-          style={[
-            styles.notificationContainer,
-            { bottom: notificationBottom },
-            {
-              opacity: notificationOpacity,
-              transform: [{ translateY: notificationTranslateY }],
-            },
-          ]}
-        >
-          <Text style={styles.notificationText}>{notificationMessage}</Text>
-        </Animated.View>
-      )}
 
       <Animated.View style={[styles.headerTextContainer, entrance[0]]}>
         <Text style={styles.title}>Favourites</Text>
@@ -308,22 +265,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  notificationContainer: {
-    position: 'absolute',
-    bottom: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: '#323232',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 1,
-    alignItems: 'center',
-  },
-  notificationText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: "Gramatika-Black",
   },
 });
 

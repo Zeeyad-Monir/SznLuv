@@ -1,0 +1,152 @@
+rules_version = '2';
+
+// SznLuv Firestore rules.
+//
+// Not deployed automatically. Before publishing, export the rules currently live on the
+// `sznluv` project and compare: this file is written to replace them, and it closes the
+// hole described in docs/FIRESTORE_OWNERSHIP_FIX.md (any signed-in user could read and
+// edit another user's favourites).
+//
+// Tested by tests/rules/*.test.cjs against the emulator (npm run test:rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function myUsername() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
+    }
+
+    function shortText(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    // ---------------------------------------------------------------- Private, per user
+
+    // Profile check at sign-in, username, Top 4 draft, blocked list.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /votes/{reviewId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /followedLists/{listId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /followedPeople/{otherUid} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Season hearts (and, until migrated, legacy collections).
+    match /favourites/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Username reservations. Old documents also hold an email, so they can be fetched
+    // by exact name during signup but never listed.
+    match /usernames/{username} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------- Lists
+
+    function validListFields(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 40
+        && shortText(data.description, 120)
+        && data.cityId is string
+        && data.cover is map
+        && data.items is list && data.items.size() <= 50;
+    }
+
+    // The owner's working copy. Nobody else can read it, public or not.
+    match /lists/{listId} {
+      allow get: if signedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && validListFields(request.resource.data);
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && validListFields(request.resource.data);
+      allow delete: if signedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
+    }
+
+    // What visitors see. Written only by publishing from a list the writer owns.
+    match /publicLists/{listId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && (resource == null || resource.data.ownerUid == request.auth.uid)
+        && get(/databases/$(database)/documents/lists/$(listId)).data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUsername == myUsername()
+        && validListFields(request.resource.data)
+        && request.resource.data.items.size() >= 1
+        && request.resource.data.searchTerms is list
+        && request.resource.data.searchTerms.size() <= 120;
+      // Deleting a list that was never public also clears this path, so "nothing there" is allowed.
+      allow delete: if signedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
+    }
+
+    // ---------------------------------------------------------------- Public profiles
+
+    // Only what a user has chosen to show: username, avatar colour, bio, public Top 4.
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid)
+        && request.resource.data.username == myUsername()
+        && (!('bio' in request.resource.data) || shortText(request.resource.data.bio, 80))
+        && (!('top4' in request.resource.data) || request.resource.data.top4 is map);
+      allow delete: if isOwner(uid);
+    }
+
+    // ---------------------------------------------------------------- Moderation
+
+    // Reports are write-once and read only from the Firebase console.
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.targetType in ['list', 'person']
+        && request.resource.data.targetId is string
+        && shortText(request.resource.data.reason, 40);
+      allow read, update, delete: if false;
+    }
+
+    // ---------------------------------------------------------------- Existing shared data
+
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.thumbsUpCount == 0
+        && request.resource.data.placeID is string
+        && request.resource.data.starRating is number
+        && request.resource.data.starRating >= 1 && request.resource.data.starRating <= 5
+        && shortText(request.resource.data.comment, 2000);
+      // An upvote: the count goes up by exactly one and nothing else changes.
+      // One vote per user is enforced by the transaction with users/{uid}/votes.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['thumbsUpCount'])
+        && request.resource.data.thumbsUpCount == resource.data.get('thumbsUpCount', 0) + 1;
+      // Reviews carry a username, not a uid, so that is the only ownership signal.
+      allow delete: if signedIn() && resource.data.username == myUsername();
+    }
+
+    match /dateCounts/{season} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+  }
+}

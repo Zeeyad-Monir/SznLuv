@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import NavBar, { getMinimumNavBarHeight } from '../components/NavBar';
 import FloatingTabBar from '../components/FloatingTabBar';
+import { SnackbarProvider } from '../components/Snackbar';
 import HomeScreen from '../screens/HomeScreen';
 import VancouverScreen from '../screens/VancouverScreen';
 import SeasonsScreen from '../screens/SeasonsScreen';
@@ -17,7 +18,10 @@ import SpringDatesScreen from '../screens/SpringDatesScreen';
 import SummerDatesScreen from '../screens/SummerDatesScreen';
 import Favourites from '../screens/Favourites';
 import SeasonalFavourites from '../screens/SeasonalFavourites';
-import CustomCollectionScreen from '../screens/CustomCollectionScreen';
+import ExploreScreen from '../screens/ExploreScreen';
+import ListScreen from '../screens/ListScreen';
+import OwnSpotScreen from '../screens/OwnSpotScreen';
+import CustomSpotScreen from '../screens/CustomSpotScreen';
 import SpinTheWheel from '../screens/SpinTheWheel';
 import ProfileSettings from '../screens/ProfileSettings';
 import AldorFamilyFarmScreen from '../screens/AldorFamilyFarmScreen';
@@ -33,6 +37,7 @@ import { TopNavigationHeightContext } from './topNavigationLayout';
 const Tabs = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const FavouritesStack = createNativeStackNavigator();
+const ExploreStack = createNativeStackNavigator();
 
 const stackOptions = { headerShown: false };
 
@@ -43,7 +48,13 @@ export const venueScreens = [
   ['EagleAcresDairy', EagleAcresDairy],
   ['SpotDetailScreen', SpotDetailScreen],
 ];
-const renderVenues = (Stack) => venueScreens.map(([name, component]) => (
+// Lists and the pages they lead to, likewise available inside whichever section opened them.
+export const socialScreens = [
+  ['ListScreen', ListScreen],
+  ['OwnSpotScreen', OwnSpotScreen],
+  ['CustomSpotScreen', CustomSpotScreen],
+];
+const renderVenues = (Stack) => [...venueScreens, ...socialScreens].map(([name, component]) => (
   <Stack.Screen key={name} name={name} component={component} />
 ));
 
@@ -67,9 +78,17 @@ function FavouritesSection() {
     <FavouritesStack.Navigator screenOptions={stackOptions}>
       <FavouritesStack.Screen name="Favourites" component={Favourites} />
       <FavouritesStack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
-      <FavouritesStack.Screen name="CustomCollectionScreen" component={CustomCollectionScreen} />
       {renderVenues(FavouritesStack)}
     </FavouritesStack.Navigator>
+  );
+}
+
+function ExploreSection() {
+  return (
+    <ExploreStack.Navigator screenOptions={stackOptions}>
+      <ExploreStack.Screen name="Explore" component={ExploreScreen} />
+      {renderVenues(ExploreStack)}
+    </ExploreStack.Navigator>
   );
 }
 
@@ -83,6 +102,14 @@ const bottomItems = [
     ),
   },
   {
+    route: 'ExploreTab',
+    label: 'Explore',
+    hint: 'Search lists from other people',
+    renderIcon: ({ selected, color }) => (
+      <Ionicons name={selected ? 'search' : 'search-outline'} size={26} color={color} />
+    ),
+  },
+  {
     route: 'FavouritesTab',
     label: 'Favorites',
     renderIcon: ({ selected, color }) => (
@@ -91,8 +118,7 @@ const bottomItems = [
   },
   {
     route: 'SpinTab',
-    label: 'Explore',
-    hint: 'Opens Spin the Wheel',
+    label: 'Spin the Wheel',
     renderIcon: () => <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.discoveryIcon} />,
   },
 ];
@@ -126,6 +152,7 @@ export default function MainTabs() {
   return (
     <SpotDiscoveryProvider key={user?.uid}>
       <FloatingNavigationLayoutProvider>
+        <SnackbarProvider>
         <Tabs.Navigator
           // iOS has no hardware back; 'none' stops VoiceOver's back gesture jumping between sections.
           backBehavior={Platform.OS === 'ios' ? 'none' : 'firstRoute'}
@@ -138,10 +165,12 @@ export default function MainTabs() {
           }}
         >
           <Tabs.Screen name="HomeTab" component={HomeSection} />
+          <Tabs.Screen name="ExploreTab" component={ExploreSection} />
           <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
           <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
           <Tabs.Screen name="ProfileTab" component={ProfileSettings} />
         </Tabs.Navigator>
+        </SnackbarProvider>
       </FloatingNavigationLayoutProvider>
     </SpotDiscoveryProvider>
   );

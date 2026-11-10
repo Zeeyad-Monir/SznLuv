@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { registerWithProfile } = require('../services/registrationFlow');
 const { firebaseErrorMessage } = require('../services/firebaseErrors');
-const { toggleFavourite, removeFavourite, changeCollection } = require('../services/favouritesState');
+const { toggleFavourite, removeFavourite } = require('../services/favouritesState');
 const { sessionAccess } = require('../services/sessionAccess');
 const { openVenue, venueRoutes, SPOT_DETAIL_ROUTE } = require('../services/venueNavigation');
 const { buildForecastUrl, processDailyData, fetchForecast, WEATHER_UNAVAILABLE } = require('../services/weather');
@@ -77,20 +77,6 @@ test('separate favourite additions retain both changes when applied to fresh sta
 });
 test('explicit removal does not accidentally toggle an absent favourite back on', () => {
   assert.deepEqual(removeFavourite(removeFavourite(base, 'Farm'), 'Farm'), removeFavourite(base, 'Farm'));
-});
-test('collection edits preserve favourites and existing membership and reject duplicates', () => {
-  const next = changeCollection(base, { type: 'add', title: 'Weekend', spot: 'Garden' });
-  assert.deepEqual(next.collections[0].dates, ['Farm', 'Garden']);
-  assert.deepEqual(base.collections[0].dates, ['Farm']);
-  assert.deepEqual(changeCollection(next, { type: 'add', title: 'Weekend', spot: 'Garden' }), next);
-  assert.deepEqual(changeCollection(next, { type: 'remove', title: 'Weekend', spot: 'Farm' }).collections[0].dates, ['Garden']);
-  assert.equal(next.Other, base.Other);
-  assert.throws(() => changeCollection(base, { type: 'create', title: 'weekend', color: 'blue' }), /already exists/);
-});
-test('deleted collections cannot be recreated by delayed membership updates', () => {
-  const next = changeCollection(base, { type: 'delete', title: 'Weekend' });
-  assert.ok(next.Farm);
-  assert.throws(() => changeCollection(next, { type: 'add', title: 'Weekend', spot: 'Garden' }), /not found/);
 });
 
 test('provisioning and incomplete profiles never grant Home access', () => {

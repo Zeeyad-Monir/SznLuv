@@ -12,7 +12,9 @@ export function focusAccessibility(element) {
   if (tag != null) AccessibilityInfo.setAccessibilityFocus(tag);
 }
 
-export default function DiscoveryBottomSheet({ title, onClosing, onDismiss, children }) {
+export default function DiscoveryBottomSheet({
+  title, onClosing = () => {}, onDismiss, children, closeLabel = 'Close filters', testID = 'spot-filter',
+}) {
   const { height } = useWindowDimensions();
   const { top, left, right } = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
@@ -75,10 +77,10 @@ export default function DiscoveryBottomSheet({ title, onClosing, onDismiss, chil
 
   return (
     <Modal transparent visible={visible} animationType="none" statusBarTranslucent
-      onRequestClose={dismiss} onShow={show} onDismiss={onDismiss} testID="spot-filter-modal">
+      onRequestClose={dismiss} onShow={show} onDismiss={onDismiss} testID={`${testID}-modal`}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.scrim, { opacity: progress }]} />
       <Pressable style={StyleSheet.absoluteFillObject} onPress={dismiss}
-        accessible={false} importantForAccessibility="no" testID="spot-filter-backdrop" />
+        accessible={false} importantForAccessibility="no" testID={`${testID}-backdrop`} />
       <KeyboardAvoidingView
         style={[styles.container, { paddingTop: top + 8, paddingLeft: left, paddingRight: right }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -91,8 +93,8 @@ export default function DiscoveryBottomSheet({ title, onClosing, onDismiss, chil
             accessibilityViewIsModal
             onAccessibilityEscape={dismiss}
           >
-            <SheetHeader title={title} closeLabel="Close filters" onClose={dismiss} titleRef={heading} />
-            <View style={styles.handleTouchArea} {...pan.panHandlers} accessible={false} testID="spot-filter-handle">
+            <SheetHeader title={title} closeLabel={closeLabel} onClose={dismiss} titleRef={heading} />
+            <View style={styles.handleTouchArea} {...pan.panHandlers} accessible={false} testID={`${testID}-handle`}>
               <View style={styles.handle} />
             </View>
             {children(dismiss)}

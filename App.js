@@ -20,8 +20,15 @@ import { firebaseErrorMessage } from './services/firebaseErrors';
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import MainTabs from './navigation/MainTabs';
-import ChooseCollectionSheet from './screens/ChooseCollectionSheet';
-import CreateCollectionSheet from './screens/CreateCollectionSheet';
+import ListDetailsSheet from './screens/ListDetailsSheet';
+import AddToListSheet from './screens/AddToListSheet';
+import NoteSheet from './screens/NoteSheet';
+import SharingSheet from './screens/SharingSheet';
+import ReportSheet from './screens/ReportSheet';
+import { MyListsProvider } from './hooks/useMyLists';
+import * as Linking from 'expo-linking';
+import { parseLink } from './services/links';
+import { onPendingLink, setPendingLink, takePendingLink } from './services/pendingLink';
 
 // Import SettingsProvider
 import { SettingsProvider } from './screens/SettingsContext';
@@ -36,6 +43,18 @@ const navigationRef = createNavigationContainerRef();
 const escapeBack = () => {
   if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
 };
+
+// Opens a shared list link (sznluv://list/{id}) once the signed-in app is on screen. The list opens
+// on top of Explore, so going back lands somewhere sensible.
+function openPendingLink() {
+  if (!navigationRef.isReady()) return;
+  const target = takePendingLink();
+  if (target?.type !== 'list') return;
+  navigationRef.navigate('Main', {
+    screen: 'ExploreTab',
+    params: { screen: 'ListScreen', params: { listId: target.listId, from: 'link' }, initial: false },
+  });
+}
 
 // The colour behind screens during a transition, so a push never flashes grey.
 const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#FFF5E4' } };
@@ -89,6 +108,24 @@ export default function App() {
   if (access !== 'loading') heldOnAuth.current = access === 'auth';
   const shown = access === 'loading' && heldOnAuth.current ? 'auth' : access;
 
+  // A link can arrive at launch or while the app is open. It waits until someone is signed in:
+  // tapped while signed out, it opens right after login.
+  useEffect(() => {
+    const receive = url => {
+      const target = parseLink(url);
+      if (target) setPendingLink(target);
+    };
+    Linking.getInitialURL().then(receive).catch(() => {});
+    const subscription = Linking.addEventListener('url', ({ url }) => receive(url));
+    return () => subscription.remove();
+  }, []);
+  const signedIn = shown === 'home';
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    openPendingLink();
+    return onPendingLink(openPendingLink);
+  }, [signedIn]);
+
   // Show loading spinner if app is initializing
   if (shown === 'loading') {
     return (
@@ -106,13 +143,16 @@ export default function App() {
         {shown === 'blocked' ? (
           <AccountAccessScreen status={registrationError ? 'error' : profile.status} message={registrationError || profile.message}
             onRetry={() => { setRegistrationError(null); setRetry(value => value + 1); }} />
-        ) : <View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme}>
+        ) : <MyListsProvider><View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={() => { if (signedIn) openPendingLink(); }}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {shown === 'home' ? (
               <>
                 <Stack.Screen name="Main" component={MainTabs} options={crossDissolve} />
-                <Stack.Screen name="ChooseCollection" component={ChooseCollectionSheet} options={bottomSheet} />
-                <Stack.Screen name="CreateCollection" component={CreateCollectionSheet} options={bottomSheet} />
+                <Stack.Screen name="ListDetails" component={ListDetailsSheet} options={bottomSheet} />
+                <Stack.Screen name="AddToList" component={AddToListSheet} options={bottomSheet} />
+                <Stack.Screen name="Note" component={NoteSheet} options={bottomSheet} />
+                <Stack.Screen name="Sharing" component={SharingSheet} options={bottomSheet} />
+                <Stack.Screen name="Report" component={ReportSheet} options={bottomSheet} />
               </>
             ) : (
               <>
@@ -121,7 +161,7 @@ export default function App() {
               </>
             )}
           </Stack.Navigator>
-        </NavigationContainer></View>}
+        </NavigationContainer></View></MyListsProvider>}
       </SettingsProvider>
     </AuthContext.Provider>
     </SafeAreaProvider>
