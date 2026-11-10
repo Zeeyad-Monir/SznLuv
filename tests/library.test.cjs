@@ -6,41 +6,17 @@ const { createHarness, act } = require('./renderHarness.cjs');
 const { mount, textOf, quiet, flush } = require('./support.cjs');
 const { catalogueRef } = require('../services/catalogue');
 const { createList, addSpot, setNote } = require('../services/listsState');
-const { ownSpotProblem, buildOwnSpot } = require('../services/ownSpots');
 const { directionsUrl } = require('../services/directions');
 
 const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
-const steps = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+// The record behind `steps`: what "My spots" and the spot page read.
+const stepsRecord = { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [], createdAt: 1, updatedAt: 1 };
 const listDoc = (title, refs = [], extra = {}) => ({
   ...refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid: 'audit', title, now: 1 })), ...extra,
 });
-// ---------------------------------------------------------------- Own spots and directions (pure)
-
-test('own spot form: needs a name, and a moved pin or a typed address', () => {
-  assert.equal(ownSpotProblem({ name: ' ', mode: 'pin', pin: null }), 'Give the spot a name.');
-  assert.equal(ownSpotProblem({ name: 'x'.repeat(61), mode: 'pin', pin: {} }), 'Names can be up to 60 characters.');
-  assert.equal(ownSpotProblem({ name: 'Steps', mode: 'pin', pin: null }), 'Move the map so the pin sits on your spot.');
-  assert.equal(ownSpotProblem({ name: 'Steps', mode: 'address', address: '  ' }), 'Type an address, or drop a pin instead.');
-  assert.equal(ownSpotProblem({ name: 'Steps', mode: 'pin', pin: { latitude: 1, longitude: 2 } }), null);
-  assert.equal(ownSpotProblem({ name: 'Steps', mode: 'address', address: '12 Main St' }), null);
-});
-
-test('own spot: stores a rounded pin or an address, and reuses a spot that already exists', () => {
-  const pin = { latitude: 49.286512345, longitude: -123.112009876 };
-  assert.deepEqual(buildOwnSpot({ name: ' Waterfront steps ', mode: 'pin', pin }, [], 'id1'),
-    { ref: { k: 'x', id: 'id1', name: 'Waterfront steps', lat: 49.28651, lng: -123.11201 }, matched: false });
-  assert.deepEqual(buildOwnSpot({ name: 'Corner cafe', mode: 'address', address: ' 12 Main St ' }, [], 'id2'),
-    { ref: { k: 'x', id: 'id2', name: 'Corner cafe', address: '12 Main St' }, matched: false });
-  // A looked-up address keeps its full label and gains coordinates for directions.
-  assert.deepEqual(buildOwnSpot({ name: 'Corner cafe', mode: 'address', address: '12 main', label: '12 Main St, Vancouver, BC', pin }, [], 'id3').ref,
-    { k: 'x', id: 'id3', name: 'Corner cafe', address: '12 Main St, Vancouver, BC', lat: 49.28651, lng: -123.11201 });
-
-  assert.deepEqual(buildOwnSpot({ name: 'aldor family farm', mode: 'pin', pin }, [], 'id4'), { ref: farm, matched: true });
-  const mine = [{ k: 'x', id: 'old', name: 'Waterfront Steps', lat: 49.28651, lng: -123.11201 }];
-  assert.deepEqual(buildOwnSpot({ name: 'waterfront steps', mode: 'pin', pin }, mine, 'id5'), { ref: mine[0], matched: true });
-  assert.equal(buildOwnSpot({ name: 'waterfront steps', mode: 'pin', pin: { latitude: 49.3, longitude: -123.1 } }, mine, 'id6').ref.id, 'id6');
-});
+// ---------------------------------------------------------------- Directions (pure; own spots are in customSpots.test.cjs)
 
 test('directions open the phone\'s own maps app, by pin when there is one', () => {
   assert.equal(directionsUrl({ latitude: 49.2, longitude: -123.1, address: '12 Main St' }, 'ios'), 'http://maps.apple.com/?daddr=49.2%2C-123.1');
@@ -77,7 +53,7 @@ test('library: Saved no longer shows season tiles; it lists hearted spots by sea
   await screen.press('Remove Gone Farm from favourites');
   assert.equal(h.documents.get('favourites/audit')['Gone Farm'], undefined);
   assert.deepEqual(screen.snackbar(), ['Removed from favourites', 'Undo']);
-  assert.ok(h.documents.get('favourites/audit').collections, 'the Saved side alone migrates nothing');
+  assert.ok(h.documents.get('favourites/audit')['Maan Farms'].isFavourite, 'hearts are untouched by bringing old data over');
 });
 
 test('library: Saved with nothing hearted invites the user to explore', async () => {
@@ -275,13 +251,13 @@ test('note: saves a trimmed note on the right spot and can clear it', async () =
 // ---------------------------------------------------------------- List page
 
 async function openList(list, options = {}) {
-  const h = createHarness({ documents: withLists({ a: list, other: listDoc('Elsewhere', [steps]) }), ...options });
+  const h = createHarness({ documents: { ...withLists({ a: list, other: listDoc('Elsewhere', [steps]) }), 'spots/audit_steps1': stepsRecord }, ...options });
   const screen = await mount(h, 'screens/ListScreen.js', { params: { listId: 'a' } });
   return { h, screen };
 }
 
 test('list page: shows the title, place, count, description and each spot with its note', async () => {
-  const list = setNote(listDoc('Golden Hour', [farm, steps], { description: 'Last light.' }), 'x:steps1', 'Sit on the left.');
+  const list = setNote(listDoc('Golden Hour', [farm, steps], { description: 'Last light.' }), 'x:audit_steps1', 'Sit on the left.');
   const { h, screen } = await openList(list);
   assert.deepEqual(screen.texts().slice(0, 3), ['Golden Hour', 'Vancouver · 2 spots', 'Last light.']);
   assert.ok(screen.texts().includes('Langley · Fall') && screen.texts().includes('Dropped pin') && screen.texts().includes('Sit on the left.'));
@@ -295,14 +271,22 @@ test('list page: shows the title, place, count, description and each spot with i
   assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: steps, addedBy: null }]);
 });
 
-test('list page: the heart saves an app spot to its season and sends an own spot to the list picker', async () => {
+test('list page: the heart saves an app spot to its season and a spot of your own to Saved', async () => {
   const { h, screen } = await openList(listDoc('Golden Hour', [farm, steps]));
   await screen.press('Save Aldor Family Farm');
   assert.equal(h.documents.get('favourites/audit')['Aldor Family Farm'].season, 'Fall');
   assert.deepEqual(screen.snackbar(), ['Saved to Fall favourites', 'Add to list']);
   assert.ok(screen.button('Remove Aldor Family Farm from favourites'));
   await screen.press('Save Waterfront steps');
+  const saved = h.documents.get('favourites/audit')['x:audit_steps1'];
+  assert.deepEqual([saved.isFavourite, saved.owner, saved.name], [true, 'audit', 'Waterfront steps']);
+  assert.deepEqual(screen.snackbar(), ['Saved Waterfront steps', 'Add to list']);
+  await screen.press('Add to list');
   assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: steps }]);
+  await screen.press('Remove Waterfront steps from favourites');
+  assert.equal(h.documents.get('favourites/audit')['x:audit_steps1'], undefined);
+  assert.deepEqual(screen.snackbar(), ['Removed from Saved', 'Undo']);
+  assert.deepEqual(h.documents.get('lists/a').items.map(item => item.spot.name), ['Aldor Family Farm', 'Waterfront steps'], 'unsaving never removes the spot');
 });
 
 test('list page: edit mode reorders and removes, and removal can be undone into place', async () => {
@@ -425,6 +409,11 @@ test('add your own spot: a typed address is kept as written; a name the app list
   await second.press('Type an address');
   await act(async () => second.all('TextInput')[1].props.onChangeText('somewhere'));
   await second.press('Add to list');
+  const [title, , choices] = h.alerts.at(-1);
+  assert.equal(title, 'SznLuv already lists Maan Farms');
+  assert.deepEqual(choices.map(choice => choice.text), ['Cancel', 'Make my own', 'Use SznLuv’s page']);
+  await act(async () => { await choices[2].onPress(); });
+  await flush();
   assert.deepEqual(h.documents.get('lists/a').items[1].spot, maan);
 });
 

@@ -126,7 +126,7 @@ const hasUnpublishedChanges = (draft, published) => !!published && !sameContent(
 function exposure(list) {
   return {
     notes: list.items.filter(item => item.note).map(item => ({ key: spotKey(item.spot), name: item.spot.name, text: item.note })),
-    locations: list.items.filter(item => isOwnSpot(item.spot))
+    locations: list.items.filter(item => isOwnSpot(item.spot) && describeWhere(item.spot))
       .map(item => ({ key: spotKey(item.spot), name: item.spot.name, text: describeWhere(item.spot) })),
   };
 }

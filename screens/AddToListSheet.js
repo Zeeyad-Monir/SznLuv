@@ -1,6 +1,6 @@
 // Bottom sheet for filing a spot into your lists. Each row toggles that list; the sheet stays open
 // so one spot can go into several. Opened with { spot } (a spot reference).
-import React, { useRef, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,9 @@ import SheetHeader from '../components/SheetHeader';
 import { spotCount } from '../components/ListTile';
 import { colors, controls } from '../components/theme';
 import useMyLists from '../hooks/useMyLists';
+import { AuthContext } from '../contexts/AuthContext';
 import { spotKey } from '../services/catalogue';
+import { storedRef } from '../services/customSpotsState';
 import { mutateList } from '../services/lists';
 import { addSpot, coverBackground, hasSpot, removeSpot } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
@@ -18,7 +20,9 @@ const ROW_HEIGHT = 64; // 56pt row + 8pt gap; the list shows four rows, then scr
 export default function AddToListSheet({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { lists, status, retry } = useMyLists();
-  const spot = route?.params?.spot;
+  const { user } = useContext(AuthContext);
+  // Someone else's spot is linked by ID, never copied, so it stays theirs to change or stop sharing.
+  const spot = route?.params?.spot && storedRef(route.params.spot, user?.uid);
   const sourceListId = route?.params?.sourceListId;
   const [error, setError] = useState('');
   const busy = useRef(new Set());
@@ -29,7 +33,7 @@ export default function AddToListSheet({ navigation, route }) {
     setError('');
     const adding = !hasSpot(list, spot);
     try {
-      // Only the place is copied. A note belongs to the list it was written for.
+      // Only the place goes in. A note belongs to the list it was written for.
       await mutateList(list.id, current => (adding ? addSpot(current, { ...spot }) : removeSpot(current, spotKey(spot))));
       if (adding && !list.items.length) track(EVENTS.firstSpotAdded, { entry: 'save' });
       if (adding && sourceListId) track(EVENTS.spotSavedFromList, { listId: sourceListId });

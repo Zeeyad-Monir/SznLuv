@@ -1,6 +1,6 @@
 // The page for a spot someone added themselves: its name, where it is, a map, directions.
 // Opened with { spot } (an own-spot reference) and optionally { addedBy } (a username).
-import React from 'react';
+import React, { useContext } from 'react';
 import { Animated, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,12 +10,21 @@ import useAfterTransition from '../hooks/useAfterTransition';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { AuthContext } from '../contexts/AuthContext';
+import useMySpots from '../hooks/useMySpots';
 import { describeWhere, resolveSpot } from '../services/catalogue';
+import { isMine, toRef } from '../services/customSpotsState';
 import { directionsUrl } from '../services/directions';
 
 export default function CustomSpotScreen({ navigation, route }) {
-  const { spot: ref, addedBy } = route.params;
+  const { spot: given, addedBy } = route.params;
+  const { user } = useContext(AuthContext);
+  const { byId } = useMySpots();
+  // My own spot is shown as it is now, so an edit made a moment ago is already here.
+  const record = byId[given.id];
+  const ref = record ? toRef(given.id, record) : given;
   const spot = resolveSpot(ref);
+  const mine = isMine(ref, user?.uid);
   const snackbar = useSnackbar();
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
   const mapReady = useAfterTransition();
@@ -32,6 +41,7 @@ export default function CustomSpotScreen({ navigation, route }) {
           <Text style={styles.title} accessibilityRole="header">{spot.name}</Text>
           <Text style={[text.summary, styles.where]}>{describeWhere(ref) || 'No location given'}</Text>
           {!!addedBy && <Text style={[text.meta, styles.addedBy]}>Added by {addedBy}</Text>}
+          {!!record?.description && <Text style={[text.body, styles.description]}>{record.description}</Text>}
         </Animated.View>
 
         <Animated.View style={entrance[1]}>
@@ -59,6 +69,13 @@ export default function CustomSpotScreen({ navigation, route }) {
               <Text style={controls.secondaryText}>Add to list</Text>
             </TouchableOpacity>
           </View>
+          {mine && (
+            <TouchableOpacity style={[controls.secondary, styles.edit]} accessibilityRole="button"
+              onPress={() => navigation.navigate('OwnSpotScreen', { spotId: ref.id })}>
+              <Ionicons name="create-outline" size={18} color={colors.ink} />
+              <Text style={controls.secondaryText}>Edit spot</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </ScrollView>
     </SignedInScreen>
@@ -75,4 +92,6 @@ const styles = StyleSheet.create({
   mapFrame: { height: 240, marginTop: 20, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E8E1D5' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 20 },
   action: { flex: 1, flexDirection: 'row', gap: 6 },
+  edit: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  description: { marginTop: 12 },
 });

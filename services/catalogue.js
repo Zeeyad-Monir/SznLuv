@@ -36,10 +36,12 @@ const catalogueSections = SEASONS.map(({ season }) => ({
 }));
 
 // A list or Top 4 entry points at a spot: { k: 'c', name } for a catalogue spot,
-// or { k: 'x', id, name, address?, lat?, lng? } for one a user added themselves.
+// or { k: 'x', id, owner, name, ... } for one a user made (see services/customSpotsState.js).
 const catalogueRef = name => ({ k: 'c', name });
 const spotKey = ref => (ref.k === 'c' ? `c:${ref.name}` : `x:${ref.id}`);
+// A spot someone made, whoever made it. services/customSpotsState.js isMine tells whether it is yours.
 const isOwnSpot = ref => ref.k === 'x';
+const isCustomSpot = isOwnSpot;
 
 const hasPin = ref => Number.isFinite(ref.lat) && Number.isFinite(ref.lng);
 
@@ -66,19 +68,21 @@ function resolveSpot(ref) {
       own: false,
     };
   }
+  // Someone else's spot carries only its name; where it is comes from their public copy.
   return {
     key: spotKey(ref),
     name: ref.name,
-    meta: ref.address ? (locality(ref.address) || ref.address) : 'Dropped pin',
+    meta: ref.address ? (locality(ref.address) || ref.address) : hasPin(ref) ? 'Dropped pin' : '',
     locality: locality(ref.address),
     latitude: hasPin(ref) ? ref.lat : undefined,
     longitude: hasPin(ref) ? ref.lng : undefined,
     missing: false,
     own: true,
+    owner: ref.owner,
   };
 }
 
 module.exports = {
   CITIES, DEFAULT_CITY, cityName, locality, catalogueSpots, catalogueSections,
-  findCatalogueSpot, seasonOf, catalogueRef, spotKey, isOwnSpot, hasPin, describeWhere, resolveSpot,
+  findCatalogueSpot, seasonOf, catalogueRef, spotKey, isOwnSpot, isCustomSpot, hasPin, describeWhere, resolveSpot,
 };

@@ -185,8 +185,16 @@ function createHarness(options = {}) {
     FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
   function Screen() { return null; }
+  // usePreventRemove: the latest screen to ask holds the guard; leave() tries to go back past it.
+  const preventRemove = { prevent: false, callback: null };
+  const leave = () => {
+    const action = { type: 'GO_BACK' };
+    if (preventRemove.prevent) preventRemove.callback({ data: { action } });
+    else dispatches.push(action);
+  };
   const nav = {
     useNavigation: () => navigation, useRoute: () => route, useFocusEffect: callback => React.useEffect(callback, [callback]),
+    usePreventRemove: (prevent, callback) => { preventRemove.prevent = prevent; preventRemove.callback = callback; },
     useIsFocused: () => options.focused !== false, useScrollToTop: () => {},
     NavigationContainer: React.forwardRef(({ children }, ref) => React.createElement('NavigationContainer', null, children)),
     createNavigationContainerRef: () => ({ current: null, isReady: () => false, canGoBack: () => false, goBack: () => {} }),
@@ -289,6 +297,6 @@ function createHarness(options = {}) {
     list: [0, 1, 2, 3, 4].map(day => ({ dt: noon + day * 86400, main: { temp: 10 + day, humidity: 60 }, weather: [{ icon: '01d', description: 'clear sky' }], wind: { speed: 3 } })),
   };
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
-  return { render, renderElement, load, menus, openUrl, alerts, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
+  return { render, renderElement, load, menus, openUrl, alerts, leave, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
 }
 module.exports = { createHarness, act };

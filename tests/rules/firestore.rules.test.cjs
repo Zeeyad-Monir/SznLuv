@@ -81,6 +81,32 @@ test('kept collections belong to their owner and are keyed by the collection the
   await assertSucceeds(deleteDoc(doc(maya, 'users/maya/savedCollections/vancouver-fall')));
 });
 
+test('a spot someone makes is theirs alone: its ID carries their uid, and nobody else can read or touch it', async () => {
+  const spot = { ownerUid: 'maya', name: 'Hidden Sunset Viewpoint', lat: 49.3, lng: -123.1, photos: [], publicListIds: [], createdAt: 1, updatedAt: 1 };
+  await assertSucceeds(getDoc(doc(maya, 'spots/maya_sunset')), 'checking for one of your own that is not there');
+  await assertSucceeds(setDoc(doc(maya, 'spots/maya_sunset'), spot));
+  await assertSucceeds(getDoc(doc(maya, 'spots/maya_sunset')));
+  await assertSucceeds(getDocs(query(collection(maya, 'spots'), where('ownerUid', '==', 'maya'))));
+  await assertSucceeds(updateDoc(doc(maya, 'spots/maya_sunset'), { description: 'Best at 8pm.' }));
+
+  await assertFails(getDoc(doc(alex, 'spots/maya_sunset')));
+  await assertFails(getDocs(query(collection(alex, 'spots'), where('ownerUid', '==', 'maya'))));
+  await assertFails(getDocs(collection(alex, 'spots')));
+  await assertFails(updateDoc(doc(alex, 'spots/maya_sunset'), { name: 'Mine now' }));
+  await assertFails(deleteDoc(doc(alex, 'spots/maya_sunset')));
+  await assertFails(getDoc(doc(guest, 'spots/maya_sunset')));
+
+  // Nobody can make a spot under someone else's name, or claim one with a different owner.
+  await assertFails(setDoc(doc(alex, 'spots/maya_squat'), { ...spot, ownerUid: 'alex' }));
+  await assertFails(setDoc(doc(alex, 'spots/alex_x'), spot));
+  await assertFails(getDoc(doc(alex, 'spots/maya_other')), 'not even whether it exists');
+  // Limits, and only the owner deletes.
+  await assertFails(setDoc(doc(maya, 'spots/maya_long'), { ...spot, name: 'x'.repeat(61) }));
+  await assertFails(setDoc(doc(maya, 'spots/maya_photos'), { ...spot, photos: [1, 2, 3, 4] }));
+  await assertFails(setDoc(doc(maya, 'spots/maya_empty'), { ...spot, name: '' }));
+  await assertSucceeds(deleteDoc(doc(maya, 'spots/maya_sunset')));
+});
+
 test('usernames can be checked and reserved, but never listed, taken over or deleted', async () => {
   await assertSucceeds(getDoc(doc(alex, 'usernames/maya')));
   await assertFails(getDocs(collection(alex, 'usernames')));

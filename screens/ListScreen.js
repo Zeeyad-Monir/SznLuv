@@ -8,7 +8,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
-import AddSpotSheet, { ownSpotsFrom } from '../components/AddSpotSheet';
+import AddSpotSheet from '../components/AddSpotSheet';
+import useMySpots from '../hooks/useMySpots';
 import EmptyCard from '../components/EmptyCard';
 import ListMap, { mappable } from '../components/ListMap';
 import SegmentPill from '../components/SegmentPill';
@@ -18,7 +19,6 @@ import SpotCard from '../components/SpotCard';
 import { colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
-import useMyLists from '../hooks/useMyLists';
 import usePublishedList, { rememberPublished } from '../hooks/usePublishedList';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
@@ -122,7 +122,7 @@ function OwnerList({ navigation, list, setList, deleting }) {
   const { user, username } = useContext(AuthContext);
   const snackbar = useSnackbar();
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
-  const { lists: myLists } = useMyLists();
+  const { spots: mySpots } = useMySpots();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -300,7 +300,7 @@ function OwnerList({ navigation, list, setList, deleting }) {
       {adding && (
         <AddSpotSheet
           addedKeys={new Set(list.items.map(item => spotKey(item.spot)))}
-          ownSpots={ownSpotsFrom(myLists.filter(other => other.id !== listId))}
+          mySpots={mySpots}
           full={full} fullHint={`This list is full. A list can hold up to ${LIMITS.spots} spots.`}
           onAdd={addToThisList}
           onAddOwn={name => navigation.navigate('OwnSpotScreen', { listId, name })}

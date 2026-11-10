@@ -6,7 +6,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { migrateLegacyCollections, subscribeMyLists } from '../services/lists';
 
 const IDLE = { lists: [], status: 'idle' };
-const MyListsContext = createContext({ ...IDLE, request() {}, retry() {} });
+// Exported for providers that need the lists without asking for them on every render (hooks/useMySpots.js).
+export const MyListsContext = createContext({ ...IDLE, request() {}, retry() {} });
 
 export function MyListsProvider({ children }) {
   const { user } = useContext(AuthContext);

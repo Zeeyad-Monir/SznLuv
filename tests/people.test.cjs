@@ -9,7 +9,7 @@ const { createList, addSpot, toPublicSnapshot } = require('../services/listsStat
 const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
 const rink = catalogueRef('Glacier Rink');
-const steps = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
 const draft = (title, refs = [], ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid, title, now: 1 }));
 const publicCopy = (title, refs, ownerUid, ownerUsername, now = 100) => toPublicSnapshot(draft(title, refs, ownerUid), { ownerUsername, now });
@@ -56,7 +56,10 @@ test('a list made public by one person is found by another in Explore search, an
 // ---------------------------------------------------------------- Own profile and Top 4
 
 test('profile: Top 4 starts as four open slots, fills from the search sheet, and stays private until shown', async () => {
-  const h = createHarness({ documents: { ...base, 'lists/a': { ...draft('Mine', [steps]), public: true, publishedAt: 5 } } });
+  const h = createHarness({ documents: {
+    ...base, 'lists/a': { ...draft('Mine', [steps]), public: true, publishedAt: 5 },
+    'spots/audit_steps1': { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [], createdAt: 1 },
+  } });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.equal(labels(screen).filter(label => label === 'Add a pick').length, 4);
   assert.ok(screen.texts().includes('Pick up to four favourite spots.'));

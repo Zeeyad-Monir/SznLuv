@@ -3,7 +3,8 @@ import React, { useCallback, useContext, useRef, useState } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import AddSpotSheet, { ownSpotsFrom } from '../components/AddSpotSheet';
+import AddSpotSheet from '../components/AddSpotSheet';
+import useMySpots from '../hooks/useMySpots';
 import Avatar from '../components/Avatar';
 import ListTile from '../components/ListTile';
 import { useSnackbar } from '../components/Snackbar';
@@ -34,6 +35,7 @@ export default function ProfileScreen({ navigation }) {
   useScrollToTop(scrollRef);
   const entrance = useEntrance(3);
   const { lists } = useMyLists();
+  const { spots: mySpots } = useMySpots();
 
   const [profile, setProfile] = useState(null);
   const [top4, setTop4] = useState({});
@@ -168,7 +170,7 @@ export default function ProfileScreen({ navigation }) {
         <AddSpotSheet
           title="Add a pick"
           addedKeys={new Set(city.picks.map(spotKey))}
-          ownSpots={ownSpotsFrom(lists)}
+          mySpots={mySpots}
           full={city.picks.length >= MAX_PICKS} fullHint="That’s four. Remove one to add another."
           onAdd={add}
           onDismiss={() => setAdding(false)}

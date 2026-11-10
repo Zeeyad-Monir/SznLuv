@@ -1,24 +1,30 @@
-// "Add a spot": search every season's spots and add them to a list or to Top 4 without leaving the sheet.
+// "Add a spot": search every season's spots, and the user's own, and add them to a list or to Top 4
+// without leaving the sheet. "My spots" narrows it to the places the user made.
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DiscoveryBottomSheet from './DiscoveryBottomSheet';
+import SegmentPill from './SegmentPill';
 import { SpotSearchBar } from './SpotDiscoveryControls';
 import { colors, text } from './theme';
-import { catalogueRef, catalogueSections, isOwnSpot, resolveSpot, spotKey } from '../services/catalogue';
+import { catalogueRef, catalogueSections, resolveSpot } from '../services/catalogue';
+import { matchesSpot, toRef } from '../services/customSpotsState';
 import { DEFAULT_FILTERS, createSpotIndex, findMatchingSpots } from '../services/spotDiscovery';
 
 const index = createSpotIndex(catalogueSections, { rankSearch: true });
+const SCOPES = [{ value: 'all', label: 'All' }, { value: 'mine', label: 'My spots' }];
 
-// title: sheet heading. addedKeys: spot keys already in the target. ownSpots: the user's own spots from elsewhere.
+// title: sheet heading. addedKeys: spot keys already in the target. mySpots: the user's own spot records
+// (hooks/useMySpots.js), added by reference so editing one later shows everywhere.
 // full: the target can't take more. onAdd(ref) adds one. onAddOwn(typedText) leaves for the own-spot screen.
-export default function AddSpotSheet({ title = 'Add a spot', addedKeys, ownSpots = [], full = false, fullHint, onAdd, onAddOwn, onDismiss }) {
+export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots = [], full = false, fullHint, onAdd, onAddOwn, onDismiss }) {
   const { bottom } = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState('all');
   const matches = useMemo(() => findMatchingSpots(index, query, DEFAULT_FILTERS), [query]);
-  const typed = query.trim().toLowerCase();
-  const mine = ownSpots.filter(ref => !typed || ref.name.toLowerCase().includes(typed));
+  const mine = mySpots.filter(spot => matchesSpot(spot, query)).map(spot => toRef(spot.id, spot));
+  const onlyMine = scope === 'mine';
 
   const row = ref => {
     const spot = resolveSpot(ref);
@@ -45,6 +51,7 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, ownSpots
       {dismiss => (
         <>
           <View style={styles.searchRow}><SpotSearchBar value={query} onChangeText={setQuery} /></View>
+          <SegmentPill options={SCOPES} value={scope} onChange={setScope} style={styles.scopes} />
           {full && <Text style={styles.full} accessibilityRole="alert">{fullHint}</Text>}
           <ScrollView style={styles.results} contentContainerStyle={styles.resultsContent}
             keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -54,13 +61,19 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, ownSpots
                 {mine.map(row)}
               </View>
             )}
-            {matches.sections.map(section => (
+            {!onlyMine && matches.sections.map(section => (
               <View key={section.title ?? 'results'}>
                 {!!section.title && <Text style={styles.group} accessibilityRole="header">{section.title}</Text>}
                 {section.spots.map(spot => row(catalogueRef(spot.name)))}
               </View>
             ))}
-            {matches.count === 0 && mine.length === 0 && (
+            {onlyMine && mySpots.length === 0 && (
+              <Text style={styles.none}>You haven’t made any spots yet.{onAddOwn ? ' Add one of your own below.' : ''}</Text>
+            )}
+            {onlyMine && mySpots.length > 0 && mine.length === 0 && (
+              <Text style={styles.none}>None of your spots match “{query.trim()}”.</Text>
+            )}
+            {!onlyMine && matches.count === 0 && mine.length === 0 && (
               <Text style={styles.none}>No spots match “{query.trim()}”.{onAddOwn ? ' You can add it yourself below.' : ''}</Text>
             )}
           </ScrollView>
@@ -81,17 +94,9 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, ownSpots
   );
 }
 
-// Own spots used in the user's other lists, once each, for the "Your spots" group.
-export function ownSpotsFrom(lists) {
-  const seen = new Map();
-  lists.forEach(list => list.items.forEach(item => {
-    if (isOwnSpot(item.spot) && !seen.has(spotKey(item.spot))) seen.set(spotKey(item.spot), item.spot);
-  }));
-  return [...seen.values()];
-}
-
 const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row' }, // The search bar is built to fill a row
+  scopes: { marginTop: 10 },
   results: { flex: 1, marginTop: 8 },
   resultsContent: { paddingBottom: 12 },
   group: { marginTop: 14, marginBottom: 2, fontSize: 16, fontWeight: '700', color: '#323232' },

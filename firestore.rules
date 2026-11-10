@@ -160,6 +160,36 @@ service cloud.firestore {
       allow delete: if signedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
     }
 
+    // ---------------------------------------------------------------- Spots people make
+
+    // A spot's ID starts with its owner's uid ("{uid}_{suffix}"), so ownership is checked from the path
+    // alone: no reads, however many spots one write touches.
+    function ownsSpotId(spotId) {
+      return signedIn() && spotId.matches(request.auth.uid + '_.+');
+    }
+
+    function validSpotFields(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 60
+        && (!('description' in data) || shortText(data.description, 500))
+        && (!('tips' in data) || shortText(data.tips, 300))
+        && (!('cost' in data) || shortText(data.cost, 60))
+        && (!('hours' in data) || shortText(data.hours, 120))
+        && (!('photos' in data) || (data.photos is list && data.photos.size() <= 3))
+        && (!('publicListIds' in data) || data.publicListIds is list);
+    }
+
+    // The owner's record of a spot they made. Nobody else can read it, whatever lists it is in.
+    match /spots/{spotId} {
+      // Asking for one of your own that isn't there is allowed, so "gone" and "not yours" differ.
+      allow get: if ownsSpotId(spotId) && (resource == null || resource.data.ownerUid == request.auth.uid);
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create, update: if ownsSpotId(spotId)
+        && request.resource.data.ownerUid == request.auth.uid
+        && (resource == null || resource.data.ownerUid == request.auth.uid)
+        && validSpotFields(request.resource.data);
+      allow delete: if ownsSpotId(spotId);
+    }
+
     // ---------------------------------------------------------------- Public profiles
 
     // Only what a user has chosen to show: username, avatar colour, bio, public Top 4.

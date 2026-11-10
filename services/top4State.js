@@ -55,6 +55,6 @@ function publicTop4(top4) {
 }
 
 // Own spots whose address or pin would become visible, for the confirm before showing them.
-const exposedLocations = picks => picks.filter(isOwnSpot).map(pick => ({ key: spotKey(pick), name: pick.name, text: describeWhere(pick) }));
+const exposedLocations = picks => picks.filter(pick => isOwnSpot(pick) && describeWhere(pick)).map(pick => ({ key: spotKey(pick), name: pick.name, text: describeWhere(pick) }));
 
 module.exports = { MAX_PICKS, cityTop4, addPick, removePick, movePick, replacePick, setPublic, publicTop4, exposedLocations };

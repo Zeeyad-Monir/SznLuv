@@ -9,6 +9,7 @@ import { SEASON_ART } from '../components/covers';
 import { colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
+import { storedRef } from '../services/customSpotsState';
 import { createNewList, mutateList } from '../services/lists';
 import { COLOURS, DEFAULT_COVER, LIMITS, SEASON_COVERS, editDetails } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
@@ -64,7 +65,7 @@ function DetailsForm({ navigation, listId, addSpot, editing, heading }) {
         navigation.goBack();
       } else {
         const created = await createNewList(user?.uid, {
-          title, description, cover, items: addSpot ? [{ spot: addSpot, note: '' }] : [],
+          title, description, cover, items: addSpot ? [{ spot: storedRef(addSpot, user?.uid), note: '' }] : [],
         });
         track(EVENTS.listStarted, { entry: addSpot ? 'save' : 'library' });
         if (addSpot) track(EVENTS.firstSpotAdded, { entry: 'save' });

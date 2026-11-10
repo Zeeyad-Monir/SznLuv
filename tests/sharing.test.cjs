@@ -8,7 +8,9 @@ const { createList, addSpot, setNote, toPublicSnapshot } = require('../services/
 
 const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
-const steps = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+// The same kind of place, made by Maya: visitors get it linked by ID and name, never copied.
+const mayaSteps = { k: 'x', id: 'maya-uid_steps1', owner: 'maya-uid', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const draft = (title, refs = [], extra = {}) => ({
   ...refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid: 'audit', title, now: 1 })), ...extra,
 });
@@ -146,7 +148,7 @@ test('owner page: the sharing pill opens the sheet; a plain change updates in on
 
 // ---------------------------------------------------------------- Visitor's list page
 
-const mayaList = () => someoneElse('Golden Hour', [farm, steps], 'maya-uid', 'maya');
+const mayaList = () => someoneElse('Golden Hour', [farm, mayaSteps], 'maya-uid', 'maya');
 const visit = async (extraDocuments = {}) => {
   const h = createHarness({ documents: { ...base, 'publicLists/m': { ...mayaList(), description: 'Last light.' }, ...extraDocuments } });
   const screen = await mount(h, 'screens/ListScreen.js', { params: { listId: 'm' } });
@@ -163,7 +165,7 @@ test('visitor page: shows who made it and its spots, with no way to edit', async
   assert.equal(screen.button('Done'), undefined, 'a long press does not start editing someone else\'s list');
 
   await screen.press('View details for Waterfront steps');
-  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: steps, addedBy: 'maya' }]);
+  assert.deepEqual(h.navigations.at(-1), ['CustomSpotScreen', { spot: mayaSteps, addedBy: 'maya' }]);
   await screen.press('Share link');
   assert.deepEqual(h.calls.at(-1), ['share', { message: '“Golden Hour”, a SznLuv list by maya\nsznluv://list/m' }]);
 });
@@ -197,12 +199,16 @@ test('visitor page: opening a followed list clears its Updated mark; a failed fo
   assert.deepEqual(broken.snackbar(), ['Couldn’t save. Check your connection.']);
 });
 
-test('visitor page: the heart saves to the visitor\'s own favourites or lists; the menu reports', async () => {
+test('visitor page: the heart saves to the visitor\'s own Saved, linking someone else\'s spot; the menu reports', async () => {
   const { h, screen } = await visit();
   await screen.press('Save Aldor Family Farm');
   assert.equal(h.documents.get('favourites/audit')['Aldor Family Farm'].season, 'Fall');
   await screen.press('Save Waterfront steps');
-  assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: steps, sourceListId: 'm' }]);
+  const saved = h.documents.get('favourites/audit')['x:maya-uid_steps1'];
+  assert.deepEqual([saved.isFavourite, saved.owner, saved.name, 'lat' in saved], [true, 'maya-uid', 'Waterfront steps', false],
+    'only the name and owner are kept: where it is stays Maya\'s to share');
+  await screen.press('Add to list');
+  assert.deepEqual(h.navigations.at(-1), ['AddToList', { spot: mayaSteps, sourceListId: 'm' }]);
 
   await screen.press('More options');
   assert.deepEqual(h.menus.at(-1).options, ['Report list', 'Block maya', 'Cancel']);

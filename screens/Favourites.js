@@ -10,11 +10,14 @@ import ListTile, { NewListTile } from '../components/ListTile';
 import SegmentPill from '../components/SegmentPill';
 import HeartButton from '../components/HeartButton';
 import SpotCard from '../components/SpotCard';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
+import useMySpots from '../hooks/useMySpots';
+import { isMine, savedCustomSpots, toRef } from '../services/customSpotsState';
 import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollections';
 import { catalogueRef, resolveSpot } from '../services/catalogue';
 import { collectionById, collectionCaption } from '../services/collections';
@@ -91,11 +94,25 @@ export default function Favourites({ route }) {
   );
 }
 
-// Single places the user hearted, grouped by season. Removing one offers Undo.
+// Single places: the spots the user made and saved, then the app's spots they hearted, by season.
+// Removing one from here offers Undo, and never deletes a spot the user made.
 function Saved({ onExplore }) {
   const navigation = useNavigation();
+  const { user } = useContext(AuthContext);
   const [favourites, setFavourites] = useFavouriteSpots();
-  const { toggleFavouriteSpot } = useSaveSpot(favourites, setFavourites);
+  const { toggleFavouriteSpot, toggleCustomSpot } = useSaveSpot(favourites, setFavourites);
+  const { byId } = useMySpots();
+
+  // Newest first, so a spot just made is at the top.
+  const custom = savedCustomSpots(favourites)
+    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)))
+    .map(entry => {
+      const record = byId[entry.id];
+      const ref = record ? toRef(entry.id, record) : { k: 'x', id: entry.id, ...(entry.owner ? { owner: entry.owner } : {}), name: entry.name };
+      const mine = isMine(ref, user?.uid);
+      const resolved = resolveSpot(ref);
+      return { ref, spot: { ...resolved, meta: mine ? (record?.category || resolved.meta) : 'Shared spot' } };
+    });
   const groups = SEASON_ORDER.map(season => ({
     season,
     entries: Object.entries(favourites)
@@ -103,32 +120,60 @@ function Saved({ onExplore }) {
       .map(([name, entry]) => ({ name, entry }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   })).filter(group => group.entries.length);
-  const keys = groups.flatMap(group => group.entries.map(({ name }) => name));
+  const keys = [...custom.map(({ ref }) => ref.id), ...groups.flatMap(group => group.entries.map(({ name }) => name))];
   const entrance = useItemEntrance(keys);
 
-  if (!groups.length) {
+  const addOwn = (
+    <TouchableOpacity style={styles.addOwn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Add Your Own Spot"
+      onPress={() => { if (canNavigate(navigation)) navigation.navigate('OwnSpotScreen', { from: 'saved' }); }}>
+      <Icon name="add-location-alt" size={22} color={colors.ink} />
+      <Text style={styles.addOwnText}>Add Your Own Spot</Text>
+    </TouchableOpacity>
+  );
+
+  if (!custom.length && !groups.length) {
     return (
-      <EmptyCard icon="favorite-border" title="Nothing saved yet"
-        text="Tap the heart on any spot to keep it here." actionLabel="Explore Vancouver" onAction={onExplore} />
+      <>
+        {addOwn}
+        <EmptyCard icon="favorite-border" title="Nothing saved yet" style={styles.afterAction}
+          text="Tap the heart on any spot to keep it here, or add a place of your own." actionLabel="Explore Vancouver" onAction={onExplore} />
+      </>
     );
   }
-  return groups.map(({ season, entries }, index) => (
-    <View key={season}>
-      <Text style={[styles.sectionLabel, index === 0 && styles.firstLabel]} accessibilityRole="header">{season}</Text>
-      {entries.map(({ name, entry }) => {
-        // A spot SznLuv no longer lists stays here, so it can still be removed.
-        const resolved = resolveSpot(catalogueRef(name));
-        const spot = { ...resolved, missing: false, meta: resolved.missing ? 'No longer listed' : resolved.locality };
-        return (
-          <Animated.View key={name} style={entrance.styleFor(name)}>
-            <SpotCard spot={spot} saved
-              onPress={() => openVenue(navigation, Alert.alert, name)}
-              onToggleSave={() => toggleFavouriteSpot({ name, season: entry.season, address: entry.location })} />
-          </Animated.View>
-        );
-      })}
-    </View>
-  ));
+  return (
+    <>
+      {addOwn}
+      {custom.length > 0 && (
+        <View>
+          <Text style={styles.sectionLabel} accessibilityRole="header">Your spots</Text>
+          {custom.map(({ ref, spot }) => (
+            <Animated.View key={ref.id} style={entrance.styleFor(ref.id)}>
+              <SpotCard spot={spot} saved
+                onPress={() => { if (canNavigate(navigation)) navigation.navigate('CustomSpotScreen', { spot: ref }); }}
+                onToggleSave={() => toggleCustomSpot(ref)} />
+            </Animated.View>
+          ))}
+        </View>
+      )}
+      {groups.map(({ season, entries }) => (
+        <View key={season}>
+          <Text style={styles.sectionLabel} accessibilityRole="header">{season}</Text>
+          {entries.map(({ name, entry }) => {
+            // A spot SznLuv no longer lists stays here, so it can still be removed.
+            const resolved = resolveSpot(catalogueRef(name));
+            const spot = { ...resolved, missing: false, meta: resolved.missing ? 'No longer listed' : resolved.locality };
+            return (
+              <Animated.View key={name} style={entrance.styleFor(name)}>
+                <SpotCard spot={spot} saved
+                  onPress={() => openVenue(navigation, Alert.alert, name)}
+                  onToggleSave={() => toggleFavouriteSpot({ name, season: entry.season, address: entry.location })} />
+              </Animated.View>
+            );
+          })}
+        </View>
+      ))}
+    </>
+  );
 }
 
 // Collections the user kept with a heart, then the lists they made.
@@ -293,5 +338,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   inlineRetry: { minHeight: 44, justifyContent: 'center' },
+  // An action, not a spot: the dashed outline of "New list", the full width of the cards below.
+  addOwn: {
+    minHeight: 52, marginBottom: 4, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 2, borderStyle: 'dashed', borderColor: '#B9A88F', backgroundColor: 'rgba(255, 249, 241, 0.6)',
+  },
+  addOwnText: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  afterAction: { marginTop: 16 },
   loading: { marginTop: 32 },
 });
