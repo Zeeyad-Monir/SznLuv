@@ -22,7 +22,8 @@ import {
 // Importing navigation hook to navigate between screens
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
+import { GUTTER, text } from '../components/theme';
 import useEntrance from '../hooks/useEntrance';
 
 // =========================
@@ -119,7 +120,7 @@ export default function HomeScreen() {
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         <Animated.View style={entrance[0]}>
-          <Text accessibilityRole="header" style={styles.locationsHeading}>Locations</Text>
+          <Text accessibilityRole="header" style={text.sectionLabel}>Locations</Text>
         </Animated.View>
 
         {/* Location Categories Container */}
@@ -178,16 +179,10 @@ const styles = StyleSheet.create({
 
   // Styling for the ScrollView content container
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: GUTTER,
+    paddingTop: SCREEN_CONTENT_TOP_GAP,
     paddingBottom: 20, // Padding at the bottom to prevent content cutoff
-  },
-
-  locationsHeading: {
-    fontSize: 18,
-    marginBottom: 12,
-    color: '#C2B697',
-    fontWeight: 'bold',
+    rowGap: 12,
   },
 
   // Touchable Area for Each Card

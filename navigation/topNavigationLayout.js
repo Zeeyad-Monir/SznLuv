@@ -2,6 +2,7 @@ import React, { createContext, useContext } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export const TopNavigationHeightContext = createContext(0);
+export const SCREEN_CONTENT_TOP_GAP = 20;
 
 // The surface fills the screen behind the header while its content starts below it.
 export function SignedInScreen({ style, ...props }) {

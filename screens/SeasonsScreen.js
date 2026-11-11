@@ -24,7 +24,8 @@ import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { fallSpotNames } from '../services/spots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
+import { GUTTER, text } from '../components/theme';
 import useEntrance from '../hooks/useEntrance';
 import { useCollectionHeart } from '../hooks/useSavedCollections';
 import CollectionCard from '../components/CollectionCard';
@@ -136,12 +137,10 @@ export default function SeasonsScreen() {
       {/* ScrollView to allow vertical scrolling of content */}
       <ScrollView contentContainerStyle={floatingScrollStyle}>
         {/* Heading for the seasonal categories */}
-        <View style={styles.headingContainer}>
-          <Text style={styles.subtext}>Seasons</Text>
-        </View>
+        <Text accessibilityRole="header" style={text.sectionLabel}>Seasons</Text>
 
         {/* Seasonal Categories Container: one card per collection SznLuv makes for this city */}
-        <View style={styles.seasonContainer}>
+        <View>
           {collections.map((collection, index) => (
             <Animated.View key={collection.id} style={entrance[index]}>
               <CollectionCard
@@ -177,28 +176,10 @@ const styles = StyleSheet.create({
 
   // Styling for the ScrollView content container
   scrollContent: {
+    paddingHorizontal: GUTTER,
+    paddingTop: SCREEN_CONTENT_TOP_GAP,
     paddingBottom: 20, // Padding at the bottom to prevent content cutoff
-  },
-
-  // Container for the heading above the cards
-  headingContainer: {
-    marginTop: 40, // Space above the heading
-    paddingHorizontal: 20, // Horizontal padding inside the container
-  },
-
-  // Heading text style (same look as the old Home "Seasons" label)
-  subtext: {
-    marginTop: 20, // Space above the heading
-    fontSize: 18, // Font size for the heading
-    marginBottom: -12, // Negative margin to adjust spacing
-    color: '#C2B697', // Medium brown color for subtlety
-    fontWeight: 'bold', // Bold font weight for emphasis
-  },
-
-  // Seasonal Categories Container
-  seasonContainer: {
-    paddingHorizontal: 20, // Horizontal padding inside the container
-    marginTop: 24, // Space above the seasonal categories
+    rowGap: 12,
   },
 
   // Loading Container for ActivityIndicator

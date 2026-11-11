@@ -23,7 +23,7 @@ import useSpotEntries from '../hooks/useSpotEntries';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
 import { cityName, spotKey } from '../services/catalogue';
 import { followList, isFollowingList, markListOpened, unfollowList } from '../services/follows';
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
   centred: { alignItems: 'center', justifyContent: 'center' },
   unavailable: { justifyContent: 'center', paddingHorizontal: 20 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
+  content: { paddingHorizontal: 20, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   byline: { marginTop: 4, minHeight: 36, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   avatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
   avatarText: { color: colors.white, fontSize: 12, fontWeight: '700' },

@@ -20,7 +20,7 @@ import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useSpotEntries from '../hooks/useSpotEntries';
 import useSpotReviews from '../hooks/useSpotReviews';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
 import { describeWhere, findCatalogueSpot, isCustomSpot, spotKey } from '../services/catalogue';
 import { SPOT_LIMITS, SPOT_SEASONS } from '../services/customSpotsState';
@@ -264,7 +264,7 @@ function SpotPage({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
+  content: { paddingHorizontal: 20, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   title: { flex: 1, fontSize: 32, fontWeight: '800', color: colors.spotInk, textAlign: 'center', letterSpacing: -0.4 },
   more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

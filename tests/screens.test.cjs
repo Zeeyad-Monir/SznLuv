@@ -39,6 +39,25 @@ test('home hierarchy: Home > Vancouver > Seasons > the four season screens', asy
     'Summer Season - View Active Date Ideas': ['SummerDatesScreen'],
   });
 });
+
+test('home hierarchy: the Locations, Vancouver and Seasons headings share the same content inset', async () => {
+  for (const [file, title] of [['HomeScreen', 'Locations'], ['VancouverScreen', 'Vancouver'], ['SeasonsScreen', 'Seasons']]) {
+    const h = createHarness();
+    const renderer = await h.render(`screens/${file}.js`);
+    const scroll = renderer.root.findByType('ScrollView');
+    const heading = renderer.root.findAllByType('Text').find(node => node.props.accessibilityRole === 'header');
+    assert.equal(heading.props.children, title);
+    assert.equal(scroll.props.contentContainerStyle.paddingTop, 20);
+    assert.equal(scroll.props.contentContainerStyle.paddingHorizontal, 20);
+    for (let node = heading; node !== scroll; node = node.parent) {
+      const style = Object.assign({}, ...[node.props.style].flat(Infinity));
+      assert.equal(style.marginTop ?? style.marginVertical ?? style.margin ?? 0, 0);
+      assert.equal(style.paddingTop ?? style.paddingVertical ?? style.padding ?? 0, 0);
+    }
+    await act(async () => renderer.unmount());
+  }
+});
+
 for (const { name } of legacyFallSpots) {
   test(`${name} handles denied location without starting tracking`, async () => {
     const h = createHarness({ getLocationPermissions: async () => ({ granted: false }) });

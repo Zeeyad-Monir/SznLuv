@@ -1,4 +1,4 @@
-// Profiles, Top 4, following people, blocking, people in Explore, the Vancouver teaser and the list map.
+// Profiles, Top 4, follows, blocking, people in Explore, the Vancouver page and the list map.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHarness, act } = require('./renderHarness.cjs');
@@ -280,41 +280,25 @@ test('following: people you follow are listed under the lists and open their pro
   assert.ok(empty.button('Find people'));
 });
 
-test('Vancouver page: shows up to three community lists and a way into Explore, or nothing at all', async () => {
-  const many = Object.fromEntries([1, 2, 3, 4].map(n => [`publicLists/l${n}`, publicCopy(`List ${n}`, [farm], 'maya-uid', 'maya', 100 + n)]));
-  const h = createHarness({ documents: { ...base, ...many, 'publicLists/mine': publicCopy('My own', [farm], 'audit', 'audit', 900) } });
+test('Vancouver page: shows Seasons without a community section even when public lists exist', async () => {
+  const h = createHarness({ documents: { ...base, ...maya } });
   const screen = await mount(h, 'screens/VancouverScreen.js');
-  assert.ok(screen.texts().includes('From the community'));
-  assert.deepEqual(labels(screen).filter(label => / by /.test(label)), ['List 4, by maya · 1 spot', 'List 3, by maya · 1 spot', 'List 2, by maya · 1 spot']);
-  await screen.press('See all in Explore');
-  assert.deepEqual(h.navigations.at(-1), ['ExploreTab', { screen: 'Explore' }]);
-
-  const none = await mount(createHarness({ documents: base }), 'screens/VancouverScreen.js');
-  assert.equal(none.texts().includes('From the community'), false);
+  assert.deepEqual(screen.texts(), ['Vancouver', 'Seasons']);
+  assert.deepEqual(labels(screen), ['Seasons - View Seasons']);
+  await act(async () => screen.renderer.unmount());
 });
 
-test('Vancouver page: community lists are the three most followed, and a list that gains followers moves in', async () => {
-  const counts = { l1: 5, l2: 0, l3: 2, l4: 1 };
-  const lists = Object.fromEntries(Object.entries(counts).map(([id, followerCount], n) =>
-    [`publicLists/${id}`, { ...publicCopy(`List ${id.slice(1)}`, [farm], 'maya-uid', 'maya', 100 + n), followerCount }]));
-  const legacy = publicCopy('No count yet', [farm], 'maya-uid', 'maya', 50); // Published before counts existed
-  const elsewhere = { ...publicCopy('Somewhere else', [farm], 'maya-uid', 'maya', 60), cityId: 'toronto', followerCount: 99 };
-  const h = createHarness({ documents: { ...base, ...lists, 'publicLists/legacy': legacy, 'publicLists/far': elsewhere } });
-  const screen = await mount(h, 'screens/VancouverScreen.js');
-  const shown = () => labels(screen).filter(label => / by /.test(label)).map(label => label.split(',')[0]);
-  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
-
-  // Two people follow List 2: it overtakes List 3 and List 4 without leaving the page.
+test('list follows: public follower count changes once per follower', async () => {
+  const list = { id: 'm1', ...maya['publicLists/m1'] };
+  const h = createHarness({ documents: { ...base, ...maya } });
   const follows = h.load('services/follows.js');
-  await act(async () => { await follows.followList('sam-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); });
-  await act(async () => { await follows.followList('alex-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); });
-  await act(async () => { await follows.followList('alex-uid', { id: 'l2', ...h.documents.get('publicLists/l2') }); }); // Already following: no change
-  assert.equal(h.documents.get('publicLists/l2').followerCount, 2);
-  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 2']); // Ties go to the newest
+  await follows.followList('sam-uid', list);
+  await follows.followList('alex-uid', list);
+  await follows.followList('alex-uid', list);
+  assert.equal(h.documents.get('publicLists/m1').followerCount, 2);
 
-  await act(async () => { await follows.unfollowList('sam-uid', 'l2'); });
-  assert.equal(h.documents.get('publicLists/l2').followerCount, 1);
-  assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
+  await follows.unfollowList('sam-uid', list.id);
+  assert.equal(h.documents.get('publicLists/m1').followerCount, 1);
 });
 
 test('explore: Following shows every list from people you follow, hearts mark the ones you follow, and the sort sheet can hide them', async () => {

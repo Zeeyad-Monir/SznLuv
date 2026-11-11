@@ -23,7 +23,7 @@ import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollec
 import { catalogueRef, resolveSpot } from '../services/catalogue';
 import { collectionById, collectionCaption } from '../services/collections';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import PersonRow from '../components/PersonRow';
 import { loadFollowedLists, loadFollowedPeople } from '../services/follows';
 import { getPublicList } from '../services/lists';
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   firstLabel: { marginTop: 0 },
   notice: { marginBottom: 12, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.muted, textAlign: 'center' },
   container: { flex: 1, backgroundColor: colors.library },
-  content: { paddingTop: 40, paddingHorizontal: GUTTER, paddingBottom: 24 },
+  content: { paddingTop: SCREEN_CONTENT_TOP_GAP, paddingHorizontal: GUTTER, paddingBottom: 24 },
   title: { fontSize: 48, fontWeight: '700', color: '#4A4A4A', textAlign: 'center', marginBottom: 12 },
   subtitle: { fontSize: 14, color: '#707070', textAlign: 'center', marginBottom: 24 },
   segments: { marginBottom: 24 },

@@ -21,9 +21,9 @@ import {
 // Importing navigation hook to navigate between screens
 import { useNavigation } from '@react-navigation/native';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
+import { GUTTER, text } from '../components/theme';
 import useEntrance from '../hooks/useEntrance';
-import CommunityTeaser from '../components/CommunityTeaser';
 
 // =========================
 // CONSTANTS SECTION
@@ -54,11 +54,9 @@ export default function VancouverScreen() {
     <SignedInScreen style={styles.container}>
       <ScrollView contentContainerStyle={floatingScrollStyle}>
         {/* Heading */}
-        <View style={styles.headingContainer}>
-          <Text style={styles.subtext}>Vancouver</Text>
-        </View>
+        <Text accessibilityRole="header" style={text.sectionLabel}>Vancouver</Text>
 
-        <View style={styles.cardContainer}>
+        <View>
           {/* =========================
               SEASONS CARD
               ========================= */}
@@ -85,8 +83,6 @@ export default function VancouverScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          <CommunityTeaser />
-
           {/* Spacer at the bottom of the cards */}
           <View style={{ height: 20 }} />
         </View>
@@ -106,26 +102,10 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
+    paddingHorizontal: GUTTER,
+    paddingTop: SCREEN_CONTENT_TOP_GAP,
     paddingBottom: 20,
-  },
-
-  headingContainer: {
-    marginTop: 40,
-    paddingHorizontal: 20,
-  },
-
-  // Heading text style (same look as the Home screen's label)
-  subtext: {
-    marginTop: 20,
-    fontSize: 18,
-    marginBottom: -12,
-    color: '#C2B697',
-    fontWeight: 'bold',
-  },
-
-  cardContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
+    rowGap: 12,
   },
 
   // Same size and shape as the season cards

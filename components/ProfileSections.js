@@ -8,7 +8,7 @@ import Top4Grid from './Top4Grid';
 import { GUTTER, colors, text, tileWidth } from './theme';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { DEFAULT_CITY } from '../services/catalogue';
 import { canNavigate } from '../services/venueNavigation';
 
@@ -82,7 +82,7 @@ export default function ProfileView({ identity, picks, lists, navigation, action
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.profile },
-  content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
+  content: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   words: { flex: 1 },

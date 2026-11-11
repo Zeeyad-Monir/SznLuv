@@ -25,7 +25,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useFloatingNavClearance, useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTextContainer: {
-    marginTop: 20,
+    marginTop: SCREEN_CONTENT_TOP_GAP,
     paddingHorizontal: 20,
   },
   title: {

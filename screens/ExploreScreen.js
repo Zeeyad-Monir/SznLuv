@@ -24,7 +24,7 @@ import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { cityName, DEFAULT_CITY } from '../services/catalogue';
 import { getCommunityCandidates, getNewestPublicLists, getPublicListsBy, searchPublicLists } from '../services/lists';
 import {
@@ -530,7 +530,7 @@ export default function ExploreScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
-  content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
+  content: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
   title: { fontSize: 48, fontWeight: '700', color: colors.ink },
   label: { marginTop: 4, fontSize: 18, fontWeight: '700', color: colors.label },

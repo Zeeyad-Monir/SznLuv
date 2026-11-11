@@ -7,7 +7,7 @@ import useEntrance from '../hooks/useEntrance';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useSpotDiscovery from '../hooks/useSpotDiscovery';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { catalogueRef, resolveSpot } from '../services/catalogue';
 import { fallCategories } from '../services/spots';
 import { springCategories, summerCategories, winterCategories } from '../services/seasonSpots';
@@ -80,6 +80,6 @@ export default function SeasonSpotsScreen({ navigation, season }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
-  title: { fontSize: 38, fontWeight: 'bold', textAlign: 'center', marginVertical: 20 },
+  title: { fontSize: 38, fontWeight: 'bold', textAlign: 'center', marginTop: SCREEN_CONTENT_TOP_GAP, marginBottom: 20 },
   sectionTitle: { fontSize: 20, fontWeight: '600', marginBottom: 15 },
 });

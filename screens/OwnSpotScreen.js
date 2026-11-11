@@ -17,7 +17,7 @@ import useAfterTransition from '../hooks/useAfterTransition';
 import useDeleteSpot from '../hooks/useDeleteSpot';
 import useMySpots from '../hooks/useMySpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { DEFAULT_CITY, catalogueRef } from '../services/catalogue';
 import { addExistingSpot, createSpot, newSpotId, updateSpot } from '../services/customSpots';
 import {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   centred: { alignItems: 'center', justifyContent: 'center' },
   gone: { color: colors.muted, textAlign: 'center', paddingHorizontal: 32 },
   fill: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
+  content: { paddingHorizontal: 20, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   title: { fontSize: 34, fontWeight: '700', color: colors.ink },
   intro: { marginTop: 8, color: colors.muted },
   label: { marginTop: 20, marginBottom: 8, fontSize: 18, fontWeight: '700', color: colors.label },

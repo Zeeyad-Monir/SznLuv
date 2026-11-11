@@ -33,7 +33,7 @@ import Svg, { Path, G, Text as SvgText, TSpan } from "react-native-svg";
 import LottieView from "lottie-react-native"; // Import LottieView
 import BackgroundLottie from "../components/BackgroundLottie";
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
-import { SignedInScreen } from '../navigation/topNavigationLayout';
+import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { getReduceMotion } from "../hooks/useReduceMotion";
 
 // Importing Lottie animations statically.
@@ -779,7 +779,8 @@ const styles = StyleSheet.create({
   // Container for scrollable content ensuring alignment and padding.
   scrollContainer: {
     alignItems: "center",
-    paddingVertical: 20,
+    paddingTop: SCREEN_CONTENT_TOP_GAP,
+    paddingBottom: 20,
     paddingHorizontal: 10,
     zIndex: 1, // Ensure content is above background animations.
   },
@@ -789,7 +790,6 @@ const styles = StyleSheet.create({
   helloText: {
     fontSize: 36,
     fontWeight: "bold",
-    marginTop: 30,
     color: "#000",
     textAlign: "center",
   },

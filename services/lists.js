@@ -171,25 +171,8 @@ export async function getNewestPublicLists({ count = 20, after } = {}) {
   return snapshot.docs.map(withId);
 }
 
-// Live candidates for "From the community": the most followed lists plus the newest ones, so lists
-// published before counts existed (no followerCount field, which orderBy skips) still have a chance.
-// services/listSearch.js mostFollowed picks and orders the final few.
-export function subscribeCommunityCandidates(count, onLists, onError) {
-  const results = { followed: [], newest: [] };
-  const emit = () => {
-    const byId = new Map();
-    [...results.followed, ...results.newest].forEach(list => byId.set(list.id, list));
-    onLists([...byId.values()]);
-  };
-  const listen = (key, ordering) => onSnapshot(query(published(), orderBy(ordering, 'desc'), limit(count)), snapshot => {
-    results[key] = snapshot.docs.map(withId);
-    emit();
-  }, onError);
-  const stops = [listen('followed', 'followerCount'), listen('newest', 'publishedAt')];
-  return () => stops.forEach(stop => stop());
-}
-
-// The same candidates read once, for Explore's featured list and its "Most followed" sort.
+// Explore's featured list and "Most followed" sort consider the most followed and newest lists.
+// The newest query includes lists published before follower counts existed.
 export async function getCommunityCandidates(count) {
   const read = ordering => getDocs(query(published(), orderBy(ordering, 'desc'), limit(count)))
     .then(snapshot => snapshot.docs.map(withId));
