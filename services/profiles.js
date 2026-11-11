@@ -1,6 +1,6 @@
 // Public profiles (`profiles/{uid}`) and the private Top 4 draft kept on `users/{uid}`.
 // A profile document only exists once its owner has made something public or edited their profile.
-import { collection, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, where } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { publicTop4 } from './top4State';
 import { usernamePrefix } from './listSearch';
@@ -8,6 +8,9 @@ import { usernamePrefix } from './listSearch';
 export const AVATAR_COLOURS = ['#D24B3A', '#FFC1E3', '#A7C8FF', '#A8E6CF', '#FFF9C4', '#FF8B94', '#D3BFFF', '#FF8657'];
 export const DEFAULT_AVATAR_COLOUR = AVATAR_COLOURS[0];
 export const BIO_LIMIT = 80;
+export const avatarPhotoPath = (uid, id) => uid && /^[a-zA-Z0-9]{20}$/.test(id ?? '')
+  ? `profilePhotos/${uid}/${id}.jpg`
+  : null;
 
 const profiles = () => collection(db, 'profiles');
 const withUid = snapshot => ({ uid: snapshot.id, ...snapshot.data() });
@@ -31,10 +34,17 @@ export async function searchProfiles(text, count = 10) {
   return snapshot.docs.map(withUid);
 }
 
-export async function saveProfileDetails(uid, username, { bio = '', avatarColor = DEFAULT_AVATAR_COLOUR }) {
+export async function saveProfileDetails(uid, username, { bio = '', avatarColor = DEFAULT_AVATAR_COLOUR, avatarPhotoId }) {
   const clean = bio.trim();
   if (clean.length > BIO_LIMIT) throw new Error(`Bios can be up to ${BIO_LIMIT} characters.`);
-  await setDoc(doc(profiles(), uid), { username, bio: clean, avatarColor }, { merge: true });
+  const profileRef = doc(profiles(), uid);
+  const details = { username, bio: clean, avatarColor };
+  if (avatarPhotoId === undefined) return setDoc(profileRef, details, { merge: true });
+  return runTransaction(db, async transaction => {
+    const before = await transaction.get(profileRef);
+    transaction.set(profileRef, { ...details, avatarPhotoId: avatarPhotoId ?? deleteField() }, { merge: true });
+    return before.data()?.avatarPhotoId;
+  });
 }
 
 // The owner's own picks, public or not.

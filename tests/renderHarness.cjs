@@ -35,7 +35,7 @@ function createHarness(options = {}) {
   const makeRef = (parent, segments, type) => {
     // Like Firestore, "a/b" as one argument is two segments.
     const parts = [...(parent?.path ? parent.path.split('/') : []), ...segments.flatMap(segment => String(segment).split('/'))];
-    if (type === 'doc' && parts.length % 2) parts.push('auto' + (++autoId));
+    if (type === 'doc' && parts.length % 2) parts.push('auto' + String(++autoId).padStart(16, '0'));
     const refPath = parts.join('/');
     return { path: refPath, id: parts.at(-1), type };
   };
@@ -90,6 +90,7 @@ function createHarness(options = {}) {
     doc: (parent, ...segments) => makeRef(parent, segments, 'doc'),
     collection: (parent, ...segments) => makeRef(parent, segments, 'collection'),
     getDoc: async ref => { if (options.beforeRead) await options.beforeRead(ref); if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return snapshot(ref); },
+    getDocFromServer: async ref => firestore.getDoc(ref),
     getDocs: async ref => { if (options.readError) throw Object.assign(new Error('Read failed'), { code: options.readError }); return querySnapshot(ref); },
     onSnapshot: (ref, settingsOrNext, nextOrError, onError) => {
       const next = typeof settingsOrNext === 'function' ? settingsOrNext : nextOrError;
@@ -192,7 +193,7 @@ function createHarness(options = {}) {
     View: 'View', Text: 'Text', TextInput: 'TextInput', TouchableOpacity: 'TouchableOpacity', ActivityIndicator: 'ActivityIndicator', Switch: 'Switch',
     StyleSheet: { create: styles => styles, flatten: styles => styles, absoluteFillObject: {}, hairlineWidth: 1 },
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
-    useWindowDimensions: () => ({ width: 390, height: 844 }),
+    useWindowDimensions: () => ({ width: 390, height: 844, ...options.window }),
     Keyboard: {
       dismiss() {},
       isVisible: () => false,
@@ -233,9 +234,11 @@ function createHarness(options = {}) {
     usePreventRemove: (prevent, callback) => { preventRemove.prevent = prevent; preventRemove.callback = callback; },
     useIsFocused: () => options.focused !== false, useScrollToTop: () => {},
     NavigationContainer: React.forwardRef(({ children }, ref) => React.createElement('NavigationContainer', null, children)),
-    createNavigationContainerRef: () => ({ current: null, isReady: () => false, canGoBack: () => false, goBack: () => {} }),
+    createNavigationContainerRef: () => ({ current: null, isReady: () => !!options.rootState, getRootState: () => options.rootState,
+      dispatch: navigation.dispatch, canGoBack: () => false, goBack: () => {} }),
     DefaultTheme: { dark: false, colors: {} },
-    StackActions: { pop: count => ({ type: 'POP', payload: { count } }), popToTop: () => ({ type: 'POP_TO_TOP' }) },
+    StackActions: { pop: count => ({ type: 'POP', payload: { count } }), popToTop: () => ({ type: 'POP_TO_TOP' }),
+      popTo: (name, params) => ({ type: 'POP_TO', payload: { name, params } }) },
     CommonActions: { navigate: (...args) => ({ type: 'NAVIGATE', payload: args }) },
   };
   const navigator = () => ({ Navigator: ({ children }) => React.createElement('Navigator', null, children), Screen });

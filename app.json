@@ -39,7 +39,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "SznLuv uses your photos so you can add pictures to spots you make.",
+          "photosPermission": "SznLuv uses your photos so you can add a profile picture or pictures to spots you make.",
           "cameraPermission": false,
           "microphonePermission": false
         }

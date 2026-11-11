@@ -3,10 +3,12 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { createHarness, act } = require('./renderHarness.cjs');
+const { flush, textOf: screenText } = require('./support.cjs');
+const { CommonActions, StackRouter } = require('@react-navigation/routers');
 const { detailedFallSpots, legacyFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 const spotProps = name => ({ route: { params: { spot: { k: 'c', name } } } });
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'ProfileSettings']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -181,15 +183,74 @@ test('top bar: back names the previous page, pops the current section only, and 
   assert.deepEqual(log.dispatched, [{ type: 'POP', payload: { count: 1 }, target: 'home-stack' }]);
   await act(async () => renderer.unmount());
 });
-test('top bar: Home and Profile use their existing tabs', async () => {
-  const { renderer, log, control } = await renderTopBar(tabState(1));
+test('top bar: Home selects its tab and the Settings gear opens a page from a nested screen', async () => {
+  const { renderer, log, control } = await renderTopBar(tabState(1, homeStack(['Explore', 'ListScreen'])));
   assert.equal(control('Favorites'), undefined);
   assert.equal(control('Explore'), undefined);
   await act(async () => control('SznLuv Home').props.onPress());
-  await act(async () => control('Profile').props.onPress());
-  assert.deepEqual(log.navigated, ['HomeTab', 'ProfileTab']);
-  assert.deepEqual(control('Profile').props.accessibilityState, { selected: false });
+  assert.equal(control('Profile'), undefined);
+  assert.equal(control('Settings').props.accessibilityRole, 'button');
+  await act(async () => control('Settings').props.onPress());
+  assert.deepEqual(log.navigated, ['HomeTab', 'Settings']);
+  assert.equal(log.emitted.length, 1, 'Settings is not a tab selection');
   await act(async () => renderer.unmount());
+});
+
+test('Settings is a signed-in root page: back preserves the active tab and link routing reuses it', async () => {
+  const router = StackRouter({ initialRouteName: 'Main' });
+  const config = { routeNames: ['Main', 'Settings'], routeParamList: {}, routeGetIdList: {} };
+  const main = router.getInitialState(config);
+  main.routes[0].state = tabState(2, homeStack(['Favourites', 'ListScreen']));
+  const root = router.getStateForAction(main, CommonActions.navigate('Settings'), config);
+  const h = createHarness({ rootState: root, initialUrl: 'sznluv://u/maya', reduceMotion: true });
+  const app = await h.render('App.js', { app: true });
+  assert.ok(!app.root.findAllByType(h.Screen).some(node => node.props.name === 'Settings'));
+  assert.deepEqual(h.dispatches, [], 'the link waits for sign-in');
+  await act(async () => h.setUser({ uid: 'audit' }));
+  await flush();
+  const settings = app.root.findAllByType(h.Screen).find(node => node.props.name === 'Settings');
+  assert.equal(settings.props.options.animation, 'none');
+  const [profileLink] = h.dispatches;
+  assert.equal(profileLink.target, root.key);
+  assert.deepEqual(profileLink.payload.params, { screen: 'ExploreTab', params: { screen: 'PersonScreen', params: { username: 'maya' }, initial: false } });
+  await act(async () => h.openUrl('sznluv://list/weekend'));
+  const listLink = h.dispatches.at(-1);
+  assert.deepEqual(listLink.payload.params.params, { screen: 'ListScreen', params: { listId: 'weekend', from: 'link' }, initial: false });
+  for (const action of [profileLink, listLink, CommonActions.goBack()]) {
+    const popped = router.getStateForAction(root, action, config);
+    assert.deepEqual(popped.routes.map(route => route.key), [main.routes[0].key]);
+    assert.equal(popped.routes[0].state, main.routes[0].state);
+  }
+  await act(async () => app.unmount());
+});
+
+test('Settings groups the existing preferences and keeps the back and sign-out actions', async () => {
+  const React = require('react');
+  const h = createHarness({ user: { uid: 'audit' }, locationPermissions: async () => ({ status: 'granted' }),
+    window: { width: 320, fontScale: 2 } });
+  const { SettingsProvider } = h.load('screens/SettingsContext.js');
+  const Settings = h.load('screens/SettingsScreen.js').default;
+  const page = await h.renderElement(React.createElement(SettingsProvider, null, React.createElement(Settings, { navigation: h.navigation })));
+  const labels = screenText(page.root);
+  for (const label of ['Settings', 'Account & Security', 'Privacy', 'Notifications']) assert.ok(labels.includes(label));
+  const controls = () => page.root.findAllByType('TouchableOpacity');
+  const press = label => act(async () => controls().find(node => node.props.accessibilityLabel === label || screenText(node)[0] === label).props.onPress());
+  const toggle = label => page.root.findAllByType('Switch').find(node => node.props.accessibilityLabel === label);
+  await press('Back');
+  assert.ok(h.calls.some(([name]) => name === 'goBack'));
+  await press('Change Password');
+  assert.match(h.alerts.at(-1)[1], /coming soon/);
+  await press('Account Settings');
+  assert.match(h.alerts.at(-1)[1], /coming soon/);
+  await act(async () => toggle('Allow Location Services').props.onValueChange(true));
+  assert.equal(h.storage.get('isLocationEnabled'), 'true');
+  await act(async () => toggle('Allow Notifications').props.onValueChange(true));
+  assert.equal(toggle('Allow Notifications').props.value, true);
+  await press('Sign Out');
+  assert.equal(h.auth.currentUser.uid, 'audit');
+  await act(async () => h.alerts.at(-1)[2].find(button => button.text === 'Sign Out').onPress());
+  assert.equal(h.auth.currentUser, null);
+  await act(async () => page.unmount());
 });
 test('top bar: has a 117pt minimum height and grows for a taller top inset', async () => {
   const height = async top => {
@@ -228,7 +289,7 @@ test('signed-in layout: seasonal background fills the screen while content clear
   await act(async () => renderer.unmount());
 });
 
-async function renderFloatingNav(h, index, { bottom = 34, includeHome = false, nestedHome } = {}) {
+async function renderFloatingNav(h, index, { bottom = 34, includeHome = false, nestedHome, nestedProfile } = {}) {
   const React = require('react');
   const main = await h.render('navigation/MainTabs.js');
   const { tabBar } = main.root.findAll(node => typeof node.props.tabBar === 'function')[0].props;
@@ -243,6 +304,7 @@ async function renderFloatingNav(h, index, { bottom = 34, includeHome = false, n
   };
   const state = tabState(index);
   state.routes[0].state = nestedHome;
+  state.routes[4].state = nestedProfile;
   const renderer = await h.renderElement(React.createElement(FloatingNavigationLayoutProvider, null,
     includeHome && React.createElement(Home),
     tabBar({ state, navigation, insets: { left: 0, right: 0, bottom } }),
@@ -261,16 +323,27 @@ test('floating bar: Home returns to the landing screen from an inactive, nested 
   await act(async () => renderer.unmount());
 });
 
-test('floating bar: four slots in order, each with its own name', async () => {
-  const h = createHarness();
-  const { renderer, control } = await renderFloatingNav(h, 1);
-  const tabs = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityRole === 'tab');
-  assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Spin the Wheel']);
-  assert.deepEqual(control('Explore').props.accessibilityState, { selected: true });
-  assert.equal(control('Explore').props.accessibilityHint, 'Search lists from other people');
-  assert.equal(control('Spin the Wheel').props.accessibilityHint, undefined);
-  // 84pt slots on a 390pt phone; they shrink to fit a narrow one and stay a full touch target.
-  assert.equal(Object.assign({}, ...tabs[0].props.style).width, 84);
+test('floating bar: five named slots fit narrow phones, and Profile comes last', async () => {
+  for (const width of [320, 390]) {
+    const h = createHarness({ window: { width } });
+    const { renderer, control } = await renderFloatingNav(h, 4);
+    const tabs = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityRole === 'tab');
+    assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Spin the Wheel', 'Profile']);
+    assert.deepEqual(control('Profile').props.accessibilityState, { selected: true });
+    assert.equal(control('Explore').props.accessibilityHint, 'Search lists from other people');
+    const widths = tabs.map(tab => Object.assign({}, ...tab.props.style).width);
+    assert.ok(widths.every(slot => slot === widths[0] && slot >= 44));
+    assert.ok(widths.reduce((sum, slot) => sum + slot, 0) <= width - 46 + Number.EPSILON * width);
+    await act(async () => renderer.unmount());
+  }
+});
+
+test('floating bar: Profile opens its root after leaving the tab on a detail', async () => {
+  const nestedProfile = { ...homeStack(['Profile', 'ListScreen']), key: 'profile-stack' };
+  const { renderer, log, control } = await renderFloatingNav(createHarness(), 1, { nestedProfile });
+  await act(async () => control('Profile').props.onPress());
+  assert.deepEqual(log.dispatched, [{ type: 'POP_TO_TOP', target: 'profile-stack' }]);
+  assert.deepEqual(log.navigated, ['ProfileTab']);
   await act(async () => renderer.unmount());
 });
 
@@ -440,11 +513,12 @@ test('main tabs: five sections with shared navigation; venue and list pages reac
   assert.equal(navigator.props.backBehavior, 'none', 'VoiceOver back cannot jump between sections');
   const tabs = renderer.root.findAllByType(h.Screen);
   assert.deepEqual(tabs.map(node => node.props.name), SECTIONS);
-  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites']]) {
+  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites'], [4, 'Profile']]) {
     let section;
     await act(async () => { section = Renderer.create(React.createElement(tabs[index].props.component)); });
     const names = section.root.findAllByType(h.Screen).map(node => node.props.name);
     assert.equal(names[0], root, 'the section starts on its own root screen');
+    assert.equal(names.includes('Settings'), false);
     for (const venue of ['SpotDetailScreen', 'ListScreen', 'OwnSpotScreen']) assert.ok(names.includes(venue), `${root} section opens ${venue}`);
     await act(async () => section.unmount());
   }

@@ -246,6 +246,17 @@ test('public profiles are readable when signed in and writable only by their own
   await assertSucceeds(deleteDoc(doc(maya, 'profiles/maya')));
 });
 
+test('an optional avatar ID is scoped to the owner’s profile and is a single generated ID', async () => {
+  const profile = doc(maya, 'profiles/maya');
+  const avatarPhotoId = 'a'.repeat(20);
+  for (const invalid of [null, 42, 'profilePhotos/alex/abc.jpg', 'short']) {
+    await assertFails(setDoc(profile, { username: 'maya', avatarPhotoId: invalid }));
+  }
+  await assertSucceeds(setDoc(profile, { username: 'maya', avatarPhotoId }));
+  await assertFails(updateDoc(doc(alex, 'profiles/maya'), { avatarPhotoId: 'b'.repeat(20) }));
+  await assertSucceeds(setDoc(profile, { username: 'maya' }));
+});
+
 test('a shared spot\'s public copy is written only by its owner, under their own username', async () => {
   const shown = { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint', lat: 49.3, lng: -123.1, photos: [], updatedAt: 1 };
   await assertSucceeds(setDoc(doc(maya, 'publicSpots/maya_sunset'), shown));

@@ -17,9 +17,10 @@ export function PhotoPlaceholder({ style, icon = 'photo', size = 28 }) {
   );
 }
 
-export default function StoragePhoto({ path, localUri, style, placeholderIcon, accessibilityLabel }) {
+export default function StoragePhoto({ path, localUri, style, placeholderIcon, accessibilityLabel, fallback }) {
   const [token, setToken] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const retried = useRef(false);
 
   useEffect(() => {
@@ -29,11 +30,13 @@ export default function StoragePhoto({ path, localUri, style, placeholderIcon, a
     return () => { live = false; };
   }, [path, localUri]);
 
-  if (localUri) return <Image source={{ uri: localUri }} style={style} accessibilityLabel={accessibilityLabel} />;
-  if (!path || failed) return <PhotoPlaceholder style={style} icon={placeholderIcon} />;
-  if (!token) return <View style={[styles.placeholder, style]} />;
+  if (localUri) return failed ? fallback : <Image source={{ uri: localUri }} style={style}
+    accessibilityLabel={accessibilityLabel} onError={fallback ? () => setFailed(true) : undefined} />;
+  if (!path || failed) return fallback ?? <PhotoPlaceholder style={style} icon={placeholderIcon} />;
+  if (!token) return fallback ?? <View style={[styles.placeholder, style]} />;
   return (
     <Image
+      key={attempt}
       source={{ uri: photoUrl(path), headers: { Authorization: `Firebase ${token}` } }}
       style={style}
       accessibilityLabel={accessibilityLabel}
@@ -42,7 +45,7 @@ export default function StoragePhoto({ path, localUri, style, placeholderIcon, a
       onError={() => {
         if (retried.current) { setFailed(true); return; }
         retried.current = true;
-        signInToken(true).then(setToken).catch(() => setFailed(true));
+        signInToken(true).then(value => { setToken(value); setAttempt(1); }).catch(() => setFailed(true));
       }}
     />
   );

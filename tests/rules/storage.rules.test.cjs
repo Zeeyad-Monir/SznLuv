@@ -77,3 +77,39 @@ test('only the owner deletes a photo, shared or not', async () => {
   await assertFails(deleteObject(ref(alex, photo)));
   await assertSucceeds(deleteObject(ref(maya, photo)));
 });
+
+const firstId = 'a'.repeat(20), secondId = 'b'.repeat(20);
+const avatar = id => `profilePhotos/maya/${id}.jpg`;
+const selectAvatar = id => env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'profiles/maya'), {
+  username: 'maya', ...(id ? { avatarPhotoId: id } : {}),
+}));
+
+test('profile photos are immutable owner uploads, JPEG only, capped at 1 MiB', async () => {
+  const path = avatar(firstId);
+  await assertFails(uploadBytes(ref(alex, path), jpeg, asJpeg));
+  await assertFails(uploadBytes(ref(guest, path), jpeg, asJpeg));
+  await assertFails(uploadBytes(ref(maya, avatar('too-short')), jpeg, asJpeg));
+  await assertFails(uploadBytes(ref(maya, path), jpeg, { contentType: 'image/png' }));
+  await assertFails(uploadBytes(ref(maya, path), new Uint8Array(1024 * 1024 + 1), asJpeg));
+  await assertSucceeds(uploadBytes(ref(maya, path), new Uint8Array(1024 * 1024), asJpeg));
+  await assertFails(uploadBytes(ref(maya, path), jpeg, asJpeg));
+  await assertFails(deleteObject(ref(alex, path)));
+  await assertSucceeds(deleteObject(ref(maya, path)));
+});
+
+test('profile photos: signed-in visitors may fetch only the currently referenced photo', async () => {
+  const a = avatar(firstId), b = avatar(secondId);
+  for (const path of [a, b]) await assertSucceeds(uploadBytes(ref(maya, path), jpeg, asJpeg));
+  await assertSucceeds(getMetadata(ref(maya, a)));
+  await assertFails(getMetadata(ref(alex, a)), 'no public profile yet');
+  await selectAvatar(firstId);
+  await assertSucceeds(getMetadata(ref(alex, a)));
+  await assertFails(getMetadata(ref(guest, a)));
+  await assertFails(getMetadata(ref(alex, b)), 'replacement still staged');
+  await assertFails(listAll(ref(alex, 'profilePhotos/maya')));
+  await selectAvatar(secondId);
+  await assertFails(getMetadata(ref(alex, a)), 'old object still exists but is no longer referenced');
+  await assertSucceeds(getMetadata(ref(alex, b)));
+  await selectAvatar(null);
+  await assertFails(getMetadata(ref(alex, b)), 'removed photo is private even before cleanup');
+});

@@ -2,19 +2,16 @@
 // Opened with { uid } or, from a link, { username }.
 import React, { useCallback, useContext, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions,
+  ActivityIndicator, Alert, Platform, StyleSheet, Text, TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
 import EmptyCard from '../components/EmptyCard';
-import { ProfileHeading, ProfileIdentity, PublicListTiles } from '../components/ProfileSections';
+import ProfileView from '../components/ProfileSections';
 import { useSnackbar } from '../components/Snackbar';
-import Top4Grid from '../components/Top4Grid';
-import { GUTTER, colors, controls, tileWidth } from '../components/theme';
+import { GUTTER, colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
-import useEntrance from '../hooks/useEntrance';
-import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
 import { DEFAULT_CITY } from '../services/catalogue';
@@ -27,7 +24,7 @@ import { openSpot } from '../services/venueNavigation';
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 
 export default function PersonScreen({ navigation, route }) {
-  const { uid: targetUid, username: targetUsername } = route.params;
+  const { uid: targetUid, username: targetUsername } = route?.params ?? {};
   const { user } = useContext(AuthContext);
   return <PublicProfile key={JSON.stringify([user?.uid, targetUid, targetUsername])}
     navigation={navigation} uid={user?.uid} targetUid={targetUid} targetUsername={targetUsername} />;
@@ -35,9 +32,6 @@ export default function PersonScreen({ navigation, route }) {
 
 function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
   const snackbar = useSnackbar();
-  const { width } = useWindowDimensions();
-  const size = tileWidth(width);
-  const floatingScrollStyle = useFloatingScrollStyle(styles.content);
 
   // undefined: loading. null: not available (no public profile, or blocked).
   const [person, setPerson] = useState(undefined);
@@ -48,17 +42,18 @@ function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
   const followingNow = useRef(false);
   const setFollowing = value => { followingNow.current = value; setFollowingState(value); };
   const working = useRef(false);
-  const entrance = useEntrance(3, { ready: !!person });
 
   useFocusEffect(useCallback(() => {
     let active = true;
     const load = async () => {
-      const profile = targetUid ? await getProfile(targetUid) : await findProfileByUsername(targetUsername);
+      const profile = targetUid ? await getProfile(targetUid) : targetUsername ? await findProfileByUsername(targetUsername) : null;
       if (!profile || (await getBlocked(uid)).includes(profile.uid)) {
         if (active) { setFailed(false); setPerson(null); }
         return;
       }
-      const [theirLists, isFollowing] = await Promise.all([getPublicListsBy(profile.uid), isFollowingPerson(uid, profile.uid)]);
+      const [theirLists, isFollowing] = await Promise.all([
+        getPublicListsBy(profile.uid), profile.uid === uid ? false : isFollowingPerson(uid, profile.uid),
+      ]);
       if (!active) return;
       setLists(theirLists);
       setFollowing(isFollowing);
@@ -147,45 +142,29 @@ function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
   const picks = person.top4?.[DEFAULT_CITY.id] ?? [];
 
   return (
-    <SignedInScreen style={styles.container}>
-      <ScrollView contentContainerStyle={floatingScrollStyle}>
-        <ProfileIdentity username={person.username} avatarColor={person.avatarColor} bio={person.bio} style={entrance[0]} />
-
-        {!isMe && (
-          <Animated.View style={[styles.actions, entrance[1]]}>
-            <TouchableOpacity style={[following ? controls.secondary : controls.primary, styles.grow, styles.withIcon]}
-              accessibilityRole="button" accessibilityState={{ selected: following }}
-              accessibilityLabel={following ? `Following ${person.username}. Unfollow` : `Follow ${person.username}`} onPress={toggleFollow}>
-              <Ionicons name={following ? 'checkmark' : 'add'} size={20} color={following ? colors.ink : colors.white} />
-              <Text style={following ? controls.secondaryText : controls.primaryText}>{following ? 'Following' : `Follow ${person.username}`}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[controls.secondary, styles.square]} accessibilityRole="button"
-              accessibilityLabel="More options" onPress={openMenu}>
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.ink} />
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        <Animated.View style={entrance[2]}>
-          {picks.length > 0 && (
-            <>
-              <ProfileHeading title="Top 4" caption={DEFAULT_CITY.name} />
-              <Top4Grid picks={picks} size={size} onPressPick={ref => openSpot(navigation, ref)} />
-            </>
-          )}
-          <PublicListTiles lists={lists} size={size} navigation={navigation} empty="No public lists yet." />
-        </Animated.View>
-      </ScrollView>
-    </SignedInScreen>
+    <ProfileView identity={person} navigation={navigation} picks={picks} lists={lists}
+      onPressPick={ref => openSpot(navigation, ref)}
+      actions={!isMe && (
+        <>
+          <TouchableOpacity style={[following ? controls.secondary : controls.primary, styles.grow, styles.withIcon]}
+            accessibilityRole="button" accessibilityState={{ selected: following }}
+            accessibilityLabel={following ? `Following ${person.username}. Unfollow` : `Follow ${person.username}`} onPress={toggleFollow}>
+            <Ionicons name={following ? 'checkmark' : 'add'} size={20} color={following ? colors.ink : colors.white} />
+            <Text style={following ? controls.secondaryText : controls.primaryText}>{following ? 'Following' : `Follow ${person.username}`}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[controls.secondary, styles.square]} accessibilityRole="button"
+            accessibilityLabel="More options" onPress={openMenu}>
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.ink} />
+          </TouchableOpacity>
+        </>
+      )} />
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.profile },
   centred: { alignItems: 'center', justifyContent: 'center' },
-  unavailable: { justifyContent: 'center', paddingHorizontal: 20 },
-  content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 20 },
+  unavailable: { justifyContent: 'center', paddingHorizontal: GUTTER },
   grow: { flex: 1 },
   withIcon: { flexDirection: 'row', gap: 6 },
   square: { width: 48, paddingHorizontal: 0 },

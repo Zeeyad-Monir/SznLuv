@@ -64,6 +64,7 @@ test('profile: Top 4 starts as four open slots, fills from the search sheet, and
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.equal(labels(screen).filter(label => label === 'Add a pick').length, 4);
   assert.ok(screen.texts().includes('Pick up to four favourite spots.'));
+  assert.equal(screen.button('Share profile'), undefined, 'an unpublished profile cannot be shared');
   assert.ok(screen.button('Mine, 1 spot, by audit'), 'public lists are shown');
 
   await screen.press('Add a pick');
@@ -94,6 +95,7 @@ test('profile: showing Top 4 confirms any place you added yourself, then mirrors
   await flush();
   assert.deepEqual(h.documents.get('profiles/audit'), { username: 'audit', top4: { vancouver: [farm, steps] } });
   assert.ok(screen.texts().includes('Anyone on SznLuv can see these.'));
+  assert.ok(screen.button('Share profile'), 'publishing makes the existing username link shareable immediately');
 
   // Reorder and remove from the pick's menu; removing the last pick hides Top 4 again.
   await screen.press('Number 2: Waterfront steps, Dropped pin');
@@ -109,8 +111,31 @@ test('profile: showing Top 4 confirms any place you added yourself, then mirrors
   assert.deepEqual(h.documents.get('users/audit').top4.vancouver, { picks: [], public: false });
   assert.deepEqual(h.documents.get('profiles/audit').top4, {});
 
-  await screen.press('Settings');
-  assert.deepEqual(h.navigations.at(-1), ['Settings']);
+  assert.equal(screen.button('Settings'), undefined);
+});
+
+test('profile: sharing sends the public username link and leaves private picks unchanged', async () => {
+  const h = createHarness({ documents: { ...base,
+    'users/audit': { username: 'audit', top4: { vancouver: { picks: [steps], public: false } } },
+    'profiles/audit': { username: 'audit', bio: 'Long evenings.' },
+  } });
+  const owner = await mount(h, 'screens/ProfileScreen.js');
+  const before = [...h.documents.entries()];
+  await owner.press('Share profile');
+  assert.deepEqual(h.calls.find(([name]) => name === 'share'), ['share', { message: '@audit on SznLuv\nsznluv://u/audit' }]);
+  assert.deepEqual([...h.documents.entries()], before);
+  const self = await mount(h, 'screens/PersonScreen.js', { params: { username: 'audit' } });
+  const visitor = await mount(h, 'screens/PersonScreen.js', { params: { username: 'audit' }, user: { uid: 'viewer' } });
+  for (const page of [self, visitor]) {
+    assert.ok(page.texts().includes('Long evenings.') && page.texts().includes('Public lists'));
+    assert.equal(page.texts().includes('Top 4'), false);
+    assert.equal(page.button('Edit profile'), undefined);
+    assert.equal(page.button('Share profile'), undefined);
+    assert.equal(page.button('Add a pick'), undefined);
+    assert.equal(page.all('Switch').length, 0);
+  }
+  assert.equal(self.button('Follow audit'), undefined);
+  assert.ok(visitor.button('Follow audit'));
 });
 
 test('profile: a failed Top 4 change is put back; edit profile saves colour and bio', async () => {

@@ -2,16 +2,14 @@
 // spotPhotos/{ownerUid}/{spotId}/{photoId}.jpg. A spot's record keeps only each photo's path; pages load
 // them through photoUrl (firebaseConfig.js) with the viewer's sign-in, so storage.rules decides every time.
 import { launchImageLibraryAsync } from 'expo-image-picker';
-import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
-import { deleteObject, listAll, ref, uploadBytesResumable } from 'firebase/storage';
+import { deleteObject, listAll, ref } from 'firebase/storage';
 import { storage } from '../firebaseConfig';
 import { SPOT_LIMITS } from './customSpotsState';
+import { uploadJpeg } from './imageUpload';
 
 const LONG_EDGE = 1600; // Sharp on any phone, a few hundred KB as JPEG
-const QUALITY = 0.8;
 const MAX_BYTES = 5 * 1024 * 1024; // Also enforced by storage.rules
 
-const photoError = (code, message) => Object.assign(new Error(message), { code });
 const newPhotoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const folder = (uid, spotId) => `spotPhotos/${uid}/${spotId}`;
 
@@ -29,47 +27,12 @@ export async function pickPhotos(room) {
   return (result.assets ?? []).slice(0, room);
 }
 
-// A JPEG no longer than LONG_EDGE on its long side. Small photos are only re-encoded.
-async function shrink({ uri, width = 0, height = 0 }) {
-  const long = Math.max(width, height);
-  const actions = long > LONG_EDGE ? [{ resize: width >= height ? { width: LONG_EDGE } : { height: LONG_EDGE } }] : [];
-  const result = await manipulateAsync(uri, actions, { compress: QUALITY, format: SaveFormat.JPEG });
-  return result.uri;
-}
-
-// React Native's fetch can't always turn a local file into a Blob; XMLHttpRequest can.
-function readBlob(uri) {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.onload = () => resolve(request.response);
-    request.onerror = () => reject(photoError('photo/unreadable', 'Couldn’t read that photo.'));
-    request.responseType = 'blob';
-    request.open('GET', uri, true);
-    request.send(null);
-  });
-}
-
 // Shrinks and uploads one picked photo. `onProgress(fraction)` follows the upload.
 // Resolves to { id, path }, what a spot record keeps.
 export async function uploadPhoto(uid, spotId, asset, { onProgress } = {}) {
   const id = newPhotoId();
   const path = `${folder(uid, spotId)}/${id}.jpg`;
-  const blob = await readBlob(await shrink(asset));
-  if (blob.size > MAX_BYTES) {
-    blob.close?.();
-    throw photoError('photo/too-large', 'That photo is too large, even after shrinking it.');
-  }
-  try {
-    await new Promise((resolve, reject) => {
-      const task = uploadBytesResumable(ref(storage, path), blob, { contentType: 'image/jpeg' });
-      task.on('state_changed',
-        snapshot => onProgress?.(snapshot.totalBytes ? snapshot.bytesTransferred / snapshot.totalBytes : 0),
-        reject,
-        resolve);
-    });
-  } finally {
-    blob.close?.();
-  }
+  await uploadJpeg(path, asset, { longEdge: LONG_EDGE, maxBytes: MAX_BYTES, onProgress });
   return { id, path };
 }
 

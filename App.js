@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet, AppState } from 'react-native';
-import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, StackActions, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
@@ -29,9 +29,11 @@ import NoteSheet from './screens/NoteSheet';
 import SharingSheet from './screens/SharingSheet';
 import ReportSheet from './screens/ReportSheet';
 import EditProfileSheet from './screens/EditProfileSheet';
+import SettingsScreen from './screens/SettingsScreen';
 import { MyListsProvider } from './hooks/useMyLists';
 import { SavedCollectionsProvider } from './hooks/useSavedCollections';
 import { MySpotsProvider } from './hooks/useMySpots';
+import useReduceMotion from './hooks/useReduceMotion';
 import * as Linking from 'expo-linking';
 import { parseLink } from './services/links';
 import { onPendingLink, setPendingLink, takePendingLink } from './services/pendingLink';
@@ -50,16 +52,20 @@ const escapeBack = () => {
   if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
 };
 
-// Opens a shared link (sznluv://list/{id} or sznluv://u/{username}) once the signed-in app is on screen. The list opens
-// on top of Explore, so going back lands somewhere sensible.
+// Shared lists and profiles open in Explore, reusing the tabs even if Settings or a sheet is open.
 function openPendingLink() {
   if (!navigationRef.isReady()) return;
+  const root = navigationRef.getRootState();
+  if (!root?.routes.some(route => route.name === 'Main')) return;
   const target = takePendingLink();
   if (!target) return;
   const page = target.type === 'list'
     ? { screen: 'ListScreen', params: { listId: target.listId, from: 'link' } }
     : { screen: 'PersonScreen', params: { username: target.username } };
-  navigationRef.navigate('Main', { screen: 'ExploreTab', params: { ...page, initial: false } });
+  navigationRef.dispatch({
+    ...StackActions.popTo('Main', { screen: 'ExploreTab', params: { ...page, initial: false } }),
+    target: root.key,
+  });
 }
 
 // The colour behind screens during a transition, so a push never flashes grey.
@@ -78,6 +84,7 @@ const bottomSheet = {
 };
 
 export default function App() {
+  const reduceMotion = useReduceMotion();
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
@@ -165,6 +172,7 @@ export default function App() {
             {shown === 'home' ? (
               <>
                 <Stack.Screen name="Main" component={MainTabs} options={crossDissolve} />
+                <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: reduceMotion ? 'none' : 'default' }} />
                 <Stack.Screen name="ListDetails" component={ListDetailsSheet} options={bottomSheet} />
                 <Stack.Screen name="AddToList" component={AddToListSheet} options={bottomSheet} />
                 <Stack.Screen name="Note" component={NoteSheet} options={bottomSheet} />

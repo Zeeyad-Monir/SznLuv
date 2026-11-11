@@ -1,9 +1,9 @@
 rules_version = '2';
 
-// SznLuv Storage rules: photos of spots people make.
+// SznLuv Storage rules: spot and profile photos.
 //
 // Not deployed automatically, like firestore.rules. Deploy both together: these rules ask Firestore
-// whether a spot is shared (the first deploy asks to let Storage read Firestore; allow it).
+// which photos are shared (the first deploy asks to let Storage read Firestore; allow it).
 //
 // Tested by tests/rules/storage.rules.test.cjs against the emulator (npm run test:rules).
 service firebase.storage {
@@ -21,6 +21,26 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /profilePhotos/{uid}/{fileName} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function isCurrentPhoto() {
+        let path = /databases/(default)/documents/profiles/$(uid);
+        return firestore.exists(path) && fileName == firestore.get(path).data.get('avatarPhotoId', '') + '.jpg';
+      }
+
+      // Uploads are immutable. Publishing points the profile at a new ID; old IDs lose visitor access.
+      allow get: if request.auth != null && (isOwner() || isCurrentPhoto());
+      allow create: if isOwner()
+        && resource == null
+        && fileName.matches('^[a-zA-Z0-9]{20}[.]jpg$')
+        && request.resource.size > 0 && request.resource.size <= 1024 * 1024
+        && request.resource.contentType == 'image/jpeg';
+      allow delete: if isOwner();
     }
   }
 }

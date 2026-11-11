@@ -1,6 +1,7 @@
 // One stationary header above the signed-in sections and their nested pages.
 import React, { useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Text, StatusBar, Animated } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, StatusBar, Animated, Keyboard } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StackActions } from '@react-navigation/native';
 import BackButton from './BackButton';
 import useReduceMotion from '../hooks/useReduceMotion';
@@ -99,14 +100,13 @@ export default function NavBar({ state, navigation, insets, onLayout }) {
         </Animated.View>
 
         <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => pressTab(state, navigation, 'ProfileTab')}
-          accessibilityRole="tab"
-          accessibilityLabel="Profile"
-          accessibilityState={{ selected: activeRoute === 'ProfileTab' }}
+          style={styles.settingsButton}
+          onPress={() => { Keyboard.dismiss(); navigation.navigate('Settings'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
         >
-          <View style={[styles.profileBadge, activeRoute === 'ProfileTab' && styles.profileSelected]}>
-            <Image source={require('../assets/PROFILE.png')} style={styles.profileIcon} />
+          <View style={styles.settingsBadge}>
+            <Ionicons name="settings-outline" size={24} color={CHARCOAL} />
           </View>
         </TouchableOpacity>
       </View>
@@ -144,13 +144,13 @@ const styles = StyleSheet.create({
     fontSize: 29,
     fontWeight: 'bold',
   },
-  profileButton: {
+  settingsButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileBadge: {
+  settingsBadge: {
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -159,13 +159,5 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileSelected: {
-    borderColor: '#B59B75',
-  },
-  profileIcon: {
-    width: 36,
-    height: 36,
-    resizeMode: 'contain',
   },
 });

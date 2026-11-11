@@ -1,21 +1,19 @@
-// Your own profile: who you are, your Top 4, the lists you have made public, and the way into Settings.
+// Your own profile: who you are, your Top 4, and the lists you have made public.
 import React, { useCallback, useContext, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { ActivityIndicator, Alert, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 import AddSpotSheet from '../components/AddSpotSheet';
 import useMySpots from '../hooks/useMySpots';
 import EmptyCard from '../components/EmptyCard';
-import { ProfileHeading, ProfileIdentity, PublicListTiles } from '../components/ProfileSections';
+import ProfileView from '../components/ProfileSections';
 import { useSnackbar } from '../components/Snackbar';
-import Top4Grid from '../components/Top4Grid';
-import { GUTTER, colors, text, tileWidth } from '../components/theme';
+import { GUTTER, colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
-import useEntrance from '../hooks/useEntrance';
-import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
 import { DEFAULT_CITY, isOwnSpot, spotKey } from '../services/catalogue';
+import { linkPath } from '../services/links';
 import { getPublicListsBy } from '../services/lists';
 import { getMyTop4, getProfile, mutateTop4 } from '../services/profiles';
 import { MAX_PICKS, addPick, cityTop4, exposedLocations, movePick, removePick, setPublic } from '../services/top4State';
@@ -31,12 +29,6 @@ export default function ProfileScreen({ navigation }) {
 
 function OwnProfile({ navigation, uid, username }) {
   const snackbar = useSnackbar();
-  const { width } = useWindowDimensions();
-  const size = tileWidth(width);
-  const floatingScrollStyle = useFloatingScrollStyle(styles.content);
-  const scrollRef = useRef(null);
-  useScrollToTop(scrollRef);
-  const entrance = useEntrance(3);
   const { spots: mySpots } = useMySpots();
 
   const [profile, setProfile] = useState(null);
@@ -46,6 +38,7 @@ function OwnProfile({ navigation, uid, username }) {
   const [attempt, setAttempt] = useState(0);
   const [adding, setAdding] = useState(false);
   const latest = useRef(top4);
+  const sharing = useRef(false);
   latest.current = top4;
 
   // Refreshed on every visit, so an edit made in a sheet shows when it closes.
@@ -68,7 +61,9 @@ function OwnProfile({ navigation, uid, username }) {
     const before = latest.current;
     setTop4(update(before));
     try {
-      setTop4(await mutateTop4(uid, username, update));
+      const saved = await mutateTop4(uid, username, update);
+      setTop4(saved);
+      if (cityTop4(saved, CITY.id).public) setProfile(current => current ?? { uid, username });
     } catch (error) {
       console.error('Error updating Top 4:', { code: error?.code });
       setTop4(before);
@@ -109,6 +104,19 @@ function OwnProfile({ navigation, uid, username }) {
     ].filter(Boolean),
   });
 
+  const shareProfile = async () => {
+    if (!profile || sharing.current) return;
+    sharing.current = true;
+    try {
+      const url = Linking.createURL(linkPath({ type: 'person', username: profile.username }));
+      await Share.share({ message: `@${profile.username} on SznLuv\n${url}` });
+    } catch {
+      snackbar.show({ message: 'Couldn’t share your profile. Try again.' });
+    } finally {
+      sharing.current = false;
+    }
+  };
+
   if (status !== 'ready') {
     return (
       <SignedInScreen style={[styles.container, styles.status]}>
@@ -121,18 +129,28 @@ function OwnProfile({ navigation, uid, username }) {
   }
 
   return (
-    <SignedInScreen style={styles.container}>
-      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
-        <ProfileIdentity username={username} avatarColor={profile?.avatarColor} bio={profile?.bio} style={entrance[0]}>
-          <TouchableOpacity style={styles.edit} accessibilityRole="button"
-            onPress={() => navigation.navigate('EditProfile', { bio: profile?.bio ?? '', avatarColor: profile?.avatarColor ?? null })}>
-            <Text style={styles.editText}>Edit profile</Text>
+    <ProfileView identity={{ uid, username, avatarColor: profile?.avatarColor, bio: profile?.bio, avatarPhotoId: profile?.avatarPhotoId }}
+      navigation={navigation} lists={publicLists} picks={city.picks} onPressPick={pickMenu} onAdd={() => setAdding(true)}
+      actions={(
+        <>
+          <TouchableOpacity style={controls.secondary} accessibilityRole="button"
+            onPress={() => {
+              if (canNavigate(navigation)) navigation.navigate('EditProfile', {
+                bio: profile?.bio ?? '', avatarColor: profile?.avatarColor ?? null,
+                ...(profile?.avatarPhotoId ? { avatarPhotoId: profile.avatarPhotoId } : {}),
+              });
+            }}>
+            <Text style={controls.secondaryText}>Edit profile</Text>
           </TouchableOpacity>
-        </ProfileIdentity>
-
-        <Animated.View style={entrance[1]}>
-          <ProfileHeading title="Top 4" caption={CITY.name} />
-          <Top4Grid picks={city.picks} size={size} editable onPressPick={pickMenu} onAdd={() => setAdding(true)} />
+          {!!profile && (
+            <TouchableOpacity style={controls.secondary} accessibilityRole="button" onPress={shareProfile}>
+              <Text style={controls.secondaryText}>Share profile</Text>
+            </TouchableOpacity>
+          )}
+        </>
+      )}
+      top4Controls={(
+        <>
           <View style={styles.row}>
             <Text style={[styles.rowText, styles.rowLabel]}>Show Top 4 on my profile</Text>
             <Switch
@@ -144,18 +162,8 @@ function OwnProfile({ navigation, uid, username }) {
           <Text style={[text.meta, styles.hint]}>
             {!city.picks.length ? 'Pick up to four favourite spots.' : city.public ? 'Anyone on SznLuv can see these.' : 'Only you can see these.'}
           </Text>
-        </Animated.View>
-
-        <Animated.View style={entrance[2]}>
-          <PublicListTiles lists={publicLists} size={size} navigation={navigation} empty="Lists you make public appear here." />
-
-          <TouchableOpacity style={[styles.row, styles.settings]} accessibilityRole="button"
-            onPress={() => { if (canNavigate(navigation)) navigation.navigate('Settings'); }}>
-            <Text style={styles.rowText}>Settings</Text>
-            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
+        </>
+      )}>
 
       {adding && (
         <AddSpotSheet
@@ -167,16 +175,13 @@ function OwnProfile({ navigation, uid, username }) {
           onDismiss={() => setAdding(false)}
         />
       )}
-    </SignedInScreen>
+    </ProfileView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.profile },
-  content: { paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 24 },
   status: { justifyContent: 'center', paddingHorizontal: GUTTER },
-  edit: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  editText: { fontSize: 14, fontWeight: '600', color: '#8E8576', textDecorationLine: 'underline' },
   row: {
     minHeight: 50, paddingHorizontal: 15, borderRadius: 8, backgroundColor: colors.darkRow,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -184,5 +189,4 @@ const styles = StyleSheet.create({
   rowText: { fontSize: 16, fontWeight: '500', color: colors.white },
   rowLabel: { flex: 1, paddingVertical: 8, paddingRight: 8 },
   hint: { marginTop: 8 },
-  settings: { marginTop: 28 },
 });

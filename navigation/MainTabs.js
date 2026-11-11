@@ -1,4 +1,4 @@
-// The signed-in app: four sections, each remembering its own place.
+// The signed-in tabs and the pages each one can open.
 import React, { useContext, useState } from 'react';
 import { Image, Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,6 @@ import ExploreScreen from '../screens/ExploreScreen';
 import ListScreen from '../screens/ListScreen';
 import OwnSpotScreen from '../screens/OwnSpotScreen';
 import SpinTheWheel from '../screens/SpinTheWheel';
-import ProfileSettings from '../screens/ProfileSettings';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonScreen from '../screens/PersonScreen';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
@@ -100,7 +99,6 @@ function ProfileSection() {
   return (
     <ProfileStack.Navigator screenOptions={stackOptions}>
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />
-      <ProfileStack.Screen name="Settings" component={ProfileSettings} />
       {renderVenues(ProfileStack)}
     </ProfileStack.Navigator>
   );
@@ -134,6 +132,12 @@ const bottomItems = [
     route: 'SpinTab',
     label: 'Spin the Wheel',
     renderIcon: () => <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.discoveryIcon} />,
+  },
+  {
+    route: 'ProfileTab',
+    label: 'Profile',
+    returnToRoot: true,
+    renderIcon: () => <Image source={require('../assets/PROFILE.png')} style={styles.discoveryIcon} />,
   },
 ];
 
