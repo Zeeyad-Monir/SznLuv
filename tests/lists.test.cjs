@@ -271,6 +271,26 @@ test('results must match every word, rank title over creator over spot, and hide
   assert.deepEqual(search.visibleLists(candidates, { viewerUid: 'me', blocked: ['troll'] }).length, 3);
 });
 
+test('explore seasons: the current season by month, a list’s season from its spots, and sorting by followers', () => {
+  assert.deepEqual([8, 10, 11, 1, 2, 4, 5, 7].map(month => search.currentSeason(new Date(2026, month, 15))),
+    ['Fall', 'Fall', 'Winter', 'Winter', 'Spring', 'Spring', 'Summer', 'Summer']);
+  const rink = catalogueRef('Glacier Rink');
+  const items = refs => refs.map(spot => ({ spot, note: '' }));
+  assert.equal(search.listSeason({ items: items([rink, farm, farm]) }), 'Fall', 'most spots win');
+  assert.equal(search.listSeason({ items: items([rink, farm]) }), 'Winter', 'a tie goes to the first spot');
+  assert.equal(search.listSeason({ items: [], cover: { type: 'season', value: 'spring' } }), 'Spring', 'no catalogue spots: the cover');
+  assert.equal(search.listSeason({ items: [], cover: { type: 'colour', value: '#A7C8FF' } }), null);
+  const lists = [
+    { id: 'a', items: items([farm]), publishedAt: 1, followerCount: 3 },
+    { id: 'b', items: items([rink]), publishedAt: 3 },
+    { id: 'c', items: items([farm]), publishedAt: 2, followerCount: 3 },
+  ];
+  assert.deepEqual(search.filterBySeason(lists, 'Fall').map(list => list.id), ['a', 'c']);
+  assert.deepEqual(search.sortLists(lists, 'newest').map(list => list.id), ['b', 'c', 'a']);
+  assert.deepEqual(search.sortLists(lists, 'followed').map(list => list.id), ['c', 'a', 'b'], 'ties go to the newest');
+  assert.deepEqual(lists.map(list => list.id), ['a', 'b', 'c'], 'the input is left alone');
+});
+
 test('a username search accepts only text that could be the start of a username', () => {
   assert.equal(search.usernamePrefix(' @Maya.B '), 'maya.b');
   assert.equal(search.usernamePrefix('m'), null);

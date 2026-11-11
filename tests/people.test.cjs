@@ -221,11 +221,13 @@ test('explore: search finds people by the start of their username; followed peop
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   const headings = () => screen.texts().filter(line => ['From people you follow', 'New in Vancouver', 'People'].includes(line));
-  assert.deepEqual(headings(), ['From people you follow', 'New in Vancouver']);
-  assert.deepEqual(labels(screen).filter(label => / by /.test(label)).slice(0, 2), ['Slow Sundays, 1 spot, by maya', 'Golden Hour, 2 spots, by maya']);
-  // Lists are square tiles, two to a row, the same size as the Favourites grid.
-  const tile = screen.all('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Golden Hour, 2 spots, by maya');
-  assert.deepEqual([tile.props.style[1].width, tile.props.style[1].minHeight], [167, 167]);
+  assert.deepEqual(headings(), ['New in Vancouver']);
+  await screen.press('Following');
+  assert.deepEqual(headings(), ['From people you follow']);
+  assert.deepEqual(labels(screen).filter(label => / by /.test(label)), ['Slow Sundays, 1 spot, by maya', 'Golden Hour, 2 spots, by maya']);
+  // Lists are tiles two to a row, as wide as the Favourites grid and a little shorter than they are wide.
+  const tile = screen.renderer.root.findAll(node => node.props.list?.id === 'm1' && node.props.width)[0];
+  assert.deepEqual([tile.props.width, tile.props.height], [167, 134]);
 
   t.mock.timers.enable({ apis: ['setTimeout'] });
   await act(async () => screen.all('TextInput')[0].props.onChangeText('ma'));
@@ -290,7 +292,7 @@ test('Vancouver page: community lists are the three most followed, and a list th
   assert.deepEqual(shown(), ['List 1', 'List 3', 'List 4']);
 });
 
-test('explore: lists you already follow are left out of "From people you follow"', async () => {
+test('explore: Following shows every list from people you follow, hearts mark the ones you follow, and the sort sheet can hide them', async () => {
   const h = createHarness({
     documents: {
       ...base, ...maya,
@@ -299,12 +301,18 @@ test('explore: lists you already follow are left out of "From people you follow"
     },
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  const texts = screen.texts();
-  const section = texts.slice(texts.indexOf('From people you follow'), texts.indexOf('New in Vancouver'));
-  assert.ok(section.includes('Golden Hour'));
-  assert.equal(section.includes('Slow Sundays'), false);
+  await screen.press('Following');
+  assert.deepEqual(labels(screen).filter(label => / by /.test(label)), ['Slow Sundays, 1 spot, by maya', 'Golden Hour, 2 spots, by maya']);
+  assert.deepEqual(screen.button('Unfollow Slow Sundays').props.accessibilityState, { selected: true });
+  assert.deepEqual(screen.button('Follow Golden Hour').props.accessibilityState, { selected: false });
 
-  // Following everything they've made hides the section altogether.
+  await screen.press('Sort lists');
+  await act(async () => screen.all('Switch')[0].props.onValueChange(true));
+  await screen.press('Apply');
+  assert.deepEqual(labels(screen).filter(label => / by /.test(label)), ['Golden Hour, 2 spots, by maya']);
+  assert.ok(screen.button('Sort lists, changed'), 'the sort button shows a change is applied');
+
+  // Following everything they've made leaves a way to show them again.
   const all = createHarness({
     documents: {
       ...base, ...maya,
@@ -313,7 +321,22 @@ test('explore: lists you already follow are left out of "From people you follow"
       'users/audit/followedLists/m2': { ownerUid: 'maya-uid', title: 'Slow Sundays', publishedAt: 200, followedAt: 1 },
     },
   });
-  assert.equal((await mount(all, 'screens/ExploreScreen.js')).texts().includes('From people you follow'), false);
+  const everything = await mount(all, 'screens/ExploreScreen.js');
+  await everything.press('Following');
+  await everything.press('Sort lists');
+  await act(async () => everything.all('Switch')[0].props.onValueChange(true));
+  await everything.press('Apply');
+  assert.ok(everything.texts().includes('You follow every list here'));
+  await everything.press('Show them');
+  assert.equal(labels(everything).filter(label => / by /.test(label)).length, 2);
+});
+
+test('explore: Following with nobody followed points to search', async () => {
+  const h = createHarness({ documents: { ...base, ...maya } });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  await screen.press('Following');
+  assert.ok(screen.texts().includes('Not following anyone yet'));
+  assert.ok(screen.button('Find people'));
 });
 
 // ---------------------------------------------------------------- Map

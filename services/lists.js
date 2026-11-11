@@ -189,6 +189,16 @@ export function subscribeCommunityCandidates(count, onLists, onError) {
   return () => stops.forEach(stop => stop());
 }
 
+// The same candidates read once, for Explore's featured list and its "Most followed" sort.
+export async function getCommunityCandidates(count) {
+  const read = ordering => getDocs(query(published(), orderBy(ordering, 'desc'), limit(count)))
+    .then(snapshot => snapshot.docs.map(withId));
+  const [followed, newest] = await Promise.all([read('followerCount'), read('publishedAt')]);
+  const byId = new Map();
+  [...followed, ...newest].forEach(list => byId.set(list.id, list));
+  return [...byId.values()];
+}
+
 // Candidates for a search; services/listSearch.js rankLists does the real matching.
 export async function searchPublicLists(text) {
   const parsed = parseQuery(text);

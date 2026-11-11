@@ -258,9 +258,11 @@ const cards = screen => screen.all('TouchableOpacity').map(node => node.props.ac
 test('explore: shows the newest lists from other people, never your own or a blocked person\'s', async () => {
   const h = createHarness({ documents: exploreDocuments() });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'Lists and people', 'New in Vancouver']);
-  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
-  await screen.press('Golden Hour, 1 spot, by maya');
+  assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'For you', 'Following']);
+  assert.ok(screen.texts().includes('New in Vancouver'));
+  // With no follows yet, the featured list is simply the newest; it isn't repeated in the grid.
+  assert.deepEqual(cards(screen), ['Featured: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
+  await screen.press('Featured: Golden Hour, 1 spot, by maya');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'new' }]);
 });
 
@@ -275,7 +277,7 @@ test('explore: search waits for a pause, matches title, creator, spot and town, 
   };
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('gold'));
-  assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'], 'nothing changes mid-typing');
+  assert.deepEqual(cards(screen), ['Featured: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'], 'nothing changes mid-typing');
   await act(async () => { t.mock.timers.tick(300); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya']);
@@ -314,10 +316,95 @@ test('explore: loads twenty at a time', async () => {
   const h = createHarness({ documents: { ...base, ...many } });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.equal(cards(screen).length, 20);
-  assert.equal(cards(screen)[0], 'List 24, 1 spot, by maya');
+  assert.deepEqual(cards(screen).slice(0, 2), ['Featured: List 24, 1 spot, by maya', 'List 23, 1 spot, by maya']);
   await screen.press('Load more');
   assert.equal(cards(screen).length, 25);
   assert.equal(screen.button('Load more'), undefined);
+});
+
+test('explore: the most followed list is featured; season chips filter the rest; the sort sheet orders by followers', async () => {
+  const rink = catalogueRef('Glacier Rink');
+  const h = createHarness({
+    documents: {
+      ...base,
+      'publicLists/fall1': { ...someoneElse('Pumpkin picks', [farm, maan], 'alex-uid', 'alex', 10), followerCount: 9 },
+      'publicLists/fall2': { ...someoneElse('Orchard day', [maan], 'maya-uid', 'maya', 20), followerCount: 1 },
+      'publicLists/winter': { ...someoneElse('Skate night', [rink], 'maya-uid', 'maya', 30), followerCount: 4 },
+    },
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(cards(screen), ['Featured: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
+
+  await screen.press('Winter');
+  assert.deepEqual(screen.button('Winter').props.accessibilityState, { selected: true });
+  assert.deepEqual(cards(screen), ['Skate night, 1 spot, by maya'], 'no featured card outside For you');
+  await screen.press('Spring');
+  assert.ok(screen.texts().includes('No spring lists yet'));
+  await screen.press('Fall');
+  assert.deepEqual(cards(screen), ['Orchard day, 1 spot, by maya', 'Pumpkin picks, 2 spots, by alex']);
+
+  await screen.press('For you');
+  await screen.press('Sort lists');
+  await screen.press('Most followed');
+  await screen.press('Apply');
+  assert.ok(screen.texts().includes('Most followed'));
+  assert.deepEqual(cards(screen), ['Featured: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
+  assert.equal(screen.button('Load more'), undefined);
+});
+
+test('explore: the heart on a card follows and unfollows the list, and puts itself back if saving fails', async () => {
+  const h = createHarness({ documents: exploreDocuments() });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  await screen.press('Follow Farm days');
+  assert.equal(h.documents.get('users/audit/followedLists/old').title, 'Farm days');
+  assert.equal(h.documents.get('publicLists/old').followerCount, 1);
+  assert.deepEqual(screen.button('Unfollow Farm days').props.accessibilityState, { selected: true });
+  assert.deepEqual(screen.snackbar(), ['Following. It’s in Favourites › Following.']);
+
+  await screen.press('Unfollow Farm days');
+  assert.equal(h.documents.has('users/audit/followedLists/old'), false);
+  assert.equal(h.documents.get('publicLists/old').followerCount, 0);
+  assert.ok(screen.button('Follow Farm days'));
+
+  const options = { documents: exploreDocuments() };
+  const failing = createHarness(options);
+  const broken = await mount(failing, 'screens/ExploreScreen.js');
+  options.writeError = 'unavailable';
+  await quiet(() => broken.press('Follow Golden Hour'));
+  assert.ok(broken.button('Follow Golden Hour'), 'the heart goes back to empty');
+  assert.equal(failing.documents.has('users/audit/followedLists/new'), false);
+  assert.deepEqual(broken.snackbar(), ['Couldn’t save. Check your connection.']);
+});
+
+test('explore: pulling down reloads the page, keeps what it showed if that fails, and re-runs a search', async t => {
+  const options = { documents: exploreDocuments() };
+  const h = createHarness(options);
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  // The page's ScrollView carries it as a prop, the way pull to refresh is attached in React Native.
+  const refresh = () => screen.all('ScrollView')[0].props.refreshControl;
+  const pull = async () => { await act(async () => { await refresh().props.onRefresh(); }); await flush(); };
+  assert.equal(refresh().props.refreshing, false);
+
+  h.documents.set('publicLists/fresh', someoneElse('Fresh picks', [farm], 'alex-uid', 'alex', 60));
+  await pull();
+  assert.deepEqual(cards(screen), ['Featured: Fresh picks, 1 spot, by alex', 'Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
+  assert.equal(refresh().props.refreshing, false);
+
+  options.readError = 'unavailable';
+  await quiet(pull);
+  assert.equal(cards(screen).length, 3, 'the lists already shown stay');
+  assert.deepEqual(screen.snackbar(), ['Couldn’t refresh. Check your connection.']);
+  delete options.readError;
+
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  await act(async () => screen.all('TextInput')[0].props.onChangeText('fresh'));
+  await act(async () => { t.mock.timers.tick(300); });
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+  t.mock.timers.reset();
+  assert.deepEqual(cards(screen), ['Fresh picks, 1 spot, by alex']);
+  h.documents.set('publicLists/fresher', someoneElse('Fresh air', [farm], 'maya-uid', 'maya', 70));
+  await pull();
+  assert.deepEqual(cards(screen).sort(), ['Fresh air, 1 spot, by maya', 'Fresh picks, 1 spot, by alex']);
 });
 
 // ---------------------------------------------------------------- Library: Following

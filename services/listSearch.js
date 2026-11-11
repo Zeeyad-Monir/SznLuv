@@ -83,14 +83,50 @@ function visibleLists(lists, { viewerUid, blocked = [] } = {}) {
   return lists.filter(list => list.ownerUid !== viewerUid && !blocked.includes(list.ownerUid));
 }
 
+const followers = list => Math.max(0, Number(list.followerCount) || 0);
+const byNewest = (a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0);
+const byMostFollowed = (a, b) => followers(b) - followers(a) || byNewest(a, b);
+
 // "From the community" for one city: most followed first, newest first among equals.
 function mostFollowed(lists, { cityId, viewerUid, blocked = [], count = 3 } = {}) {
-  const followers = list => Math.max(0, Number(list.followerCount) || 0);
   return visibleLists(lists, { viewerUid, blocked })
     .filter(list => !cityId || list.cityId === cityId)
-    .sort((a, b) => followers(b) - followers(a) || (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
+    .sort(byMostFollowed)
     .slice(0, count);
 }
+
+// Explore's sort: 'newest' or 'followed'. Returns a new array.
+const sortLists = (lists, sort) => [...lists].sort(sort === 'followed' ? byMostFollowed : byNewest);
+
+// ---------------------------------------------------------------- Seasons
+
+const SEASON_NAMES = ['Fall', 'Winter', 'Spring', 'Summer'];
+
+// Sep–Nov Fall, Dec–Feb Winter, Mar–May Spring, Jun–Aug Summer.
+function currentSeason(date = new Date()) {
+  const month = date.getMonth();
+  if (month >= 8 && month <= 10) return 'Fall';
+  if (month === 11 || month <= 1) return 'Winter';
+  if (month <= 4) return 'Spring';
+  return 'Summer';
+}
+
+// The season most of a list's catalogue spots belong to; ties go to the earlier spot.
+// A list with no catalogue spots falls back to its season cover, if it has one.
+function listSeason(list) {
+  const counts = new Map();
+  for (const item of list.items ?? []) {
+    const season = item?.spot ? resolveSpot(item.spot).season : undefined;
+    if (season) counts.set(season, (counts.get(season) ?? 0) + 1);
+  }
+  let best = null;
+  counts.forEach((count, season) => { if (!best || count > counts.get(best)) best = season; });
+  if (best) return best;
+  const cover = list.cover?.type === 'season' ? String(list.cover.value ?? '') : '';
+  return SEASON_NAMES.find(season => season.toLowerCase() === cover) ?? null;
+}
+
+const filterBySeason = (lists, season) => lists.filter(list => listSeason(list) === season);
 
 // Usernames are lowercase letters, digits, dot, dash and underscore. Returns null if the text can't be one.
 function usernamePrefix(text) {
@@ -98,4 +134,7 @@ function usernamePrefix(text) {
   return prefix.length >= MIN_QUERY && /^[a-z0-9_.-]+$/.test(prefix) ? prefix : null;
 }
 
-module.exports = { MAX_TERMS, buildSearchTerms, parseQuery, rankLists, visibleLists, mostFollowed, usernamePrefix };
+module.exports = {
+  MAX_TERMS, buildSearchTerms, parseQuery, rankLists, visibleLists, mostFollowed, sortLists, usernamePrefix,
+  SEASON_NAMES, currentSeason, listSeason, filterBySeason,
+};
