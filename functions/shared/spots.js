@@ -1,0 +1,937 @@
+// Fall spot data for the season list, venue pages, favourites and the wheel.
+// Plain CommonJS (no React, no assets) so it can be unit-tested directly.
+//
+// Source of truth: docs/FALL_SPOTS_CATALOGUE.md (researched 2026-11-03; twenty more added 2026-11-09).
+// Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
+//
+// Search tags describe the spot itself and include its locality. They are used only by discovery.
+//
+// `name` is the list-card name AND the favourites key AND the wheel label, so it must be unique across all
+// seasons and must not contain "." or "/" or equal "collections".
+
+const PATCHES = 'Pumpkin Patches & Harvest Farms';
+const FESTIVALS = 'Festivals & Gardens';
+const HALLOWEEN = 'Halloween & After Dark';
+const WILDLIFE = 'Salmon & Wildlife';
+const COLOUR = 'Fall Colour Walks';
+
+// Order of sections on the Fall screen.
+const fallCategoryTitles = [PATCHES, FESTIVALS, HALLOWEEN, WILDLIFE, COLOUR];
+
+// The three original farms. Aldor retains the ID used by its existing reviews.
+const legacyFallSpots = [
+  {
+    placeID: 'aldor_farm',
+    category: PATCHES,
+    name: 'Aldor Family Farm',
+    title: 'Aldor Acres Family Farm',
+    address: '24990 84 Ave, Langley',
+    detailAddress: '24990 84 Ave, Langley, BC',
+    tagline: 'Petting zoo, pumpkins, and more!',
+    about: [
+      'Aldor Acres Family Farm offers an authentic farm experience with a petting zoo, pumpkin patch, and more! Enjoy a day filled with family-friendly activities in the heart of Langley.',
+      'Take a scenic hayride through the beautiful countryside, explore the rustic barn filled with friendly animals, or browse the farm stand for fresh local produce and handmade goods. Whether you’re visiting to pick the perfect pumpkin, enjoy a picnic surrounded by nature, or simply soak in the peaceful farm atmosphere, Aldor Acres promises a day of fun, laughter, and cherished memories in the heart of Langley.',
+      'For those who love shopping local, the farm stand is a treasure trove of fresh produce, homemade jams, baked goods, and artisanal products. It’s the perfect place to take home a little piece of the farm with you. Beyond the activities, the farm exudes a warm and welcoming atmosphere that makes it feel like a home away from home.',
+    ],
+    latitude: 49.15313,
+    longitude: -122.53021,
+    searchDescription: 'A working farm in Glen Valley with a pumpkin patch, hayrides, farm animals, forest walks and a seasonal market.',
+    searchTags: [
+      'Aldor Acres', 'pumpkin picking', 'tractor hayrides', 'petting zoo', 'u pick sunflowers',
+      'seasonal farm market', 'farm animals', 'hay jumping pile', 'Glen Valley', 'Langley',
+    ],
+  },
+  {
+    category: PATCHES,
+    name: 'Eagle Acres Dairy',
+    title: 'Eagle Acres Dairy & Pumpkin Patch',
+    address: '8796 240 St, Langley',
+    detailAddress: '8796 240 St, Langley, BC',
+    tagline: 'Farm animals, a corn maze, and hayrides!',
+    about: [
+      'Join the cows, horse, sheep, goats, chickens, pigs, rabbits, cats & dogs for some relaxing time in the country. Look for R2D2 the Milking Robot and other cool machines working on our dairy farm. Relax on a scenic hayride that circles past the corn maze and pumpkin fields!',
+    ],
+    latitude: 49.15948,
+    longitude: -122.55347,
+    searchDescription: 'Visit a working dairy farm with an R2D2 milking robot, farm animals, a corn maze and hayrides to the pumpkin patch.',
+    searchTags: [
+      'dairy farm tour', 'robot milking', 'pumpkin picking', 'covered hayride', 'corn maze',
+      'farm animals', 'pumpkin varieties', 'dairy cows', 'Fort Langley', 'Langley',
+    ],
+  },
+  {
+    category: PATCHES,
+    name: 'Laity Pumpkin Patch',
+    address: '12725 Laity St, Maple Ridge',
+    detailAddress: '12725 Laity St, Maple Ridge, BC',
+    tagline: 'Two pumpkin patches, corn mazes, and a pumpkin cannon!',
+    about: [
+      'We opened a brand new location across the street to our original location. The original Laity Pumpkin Patch is referred to as the North location and is designed for the younger members of your family. Our newest location is referred to as the South location and is designed to entertain your children as they get older. Both locations have attractions that the whole family can enjoy together!',
+    ],
+    latitude: 49.23465,
+    longitude: -122.63515,
+    searchDescription: 'The South location of a family-run pumpkin farm, with a corn maze, farm animals and seasonal displays.',
+    searchTags: [
+      'pumpkin picking', 'corn maze', 'farm animals', 'family fall outing', 'autumn farm displays',
+      'October pumpkin patch', 'weekend concessions', 'farm photo spots', 'Laity South', 'Maple Ridge',
+    ],
+  },
+];
+
+// Spots rendered by the shared SpotDetailScreen.
+//  title/detailAddress: venue page heading and address line
+//  tagline:             one-line "activity box"
+//  about:               paragraphs for the expandable About text; the last one is the practical "Good to know"
+const detailedFallSpots = [
+  // ---------------------------------------------------------------- Pumpkin Patches & Harvest Farms
+  {
+    placeID: 'richmond_country_farms',
+    searchTags: [
+      'pumpkin picking', 'tractor wagon ride', 'farm market', 'live music', 'food trucks',
+      'farm animals', 'harvest farm', 'family outing', 'pumpkin field', 'Richmond',
+    ],
+    category: PATCHES,
+    name: 'Richmond Country Farms',
+    address: '12900 Steveston Hwy, Richmond',
+    title: 'Richmond Country Farms',
+    detailAddress: '12900 Steveston Hwy, Richmond, BC',
+    latitude: 49.13301,
+    longitude: -123.08376,
+    tagline: 'Pumpkin patch, wagon rides, and a farm market!',
+    about: [
+      'Richmond Country Farms turns its fields into a pumpkin patch every fall, with wagon rides, live music, and food trucks on busy days. Grab a bag, pick your pumpkins, and visit the animal viewing area.',
+      'Finish at the farm market, which stays open later than the patch. It is an easy fall outing without leaving the city.',
+      'Good to know: In 2026 the patch ran from late September to October 31. Admission was $15 on weekdays and $20 on weekends and holidays (plus tax), and kids 2 and under were free. Tickets were sold at the farm only, not online. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'westham_island_herb_farm',
+    searchTags: [
+      'pumpkin picking', 'scarecrow displays', 'sunflower lane', 'free fall outing', 'produce stand',
+      'Pumpkintown', 'fall photo spots', 'farm grown vegetables', 'Ladner', 'Delta',
+    ],
+    category: PATCHES,
+    name: 'Westham Island Herb Farm',
+    address: '4690 Kirkland Rd, Delta',
+    title: 'Westham Island Herb Farm',
+    detailAddress: '4690 Kirkland Rd, Westham Island, Delta, BC',
+    latitude: 49.08735,
+    longitude: -123.14133,
+    tagline: 'Free pumpkin patch, scarecrows, and sunflower lanes!',
+    about: [
+      'Cross the single-lane wooden bridge from Ladner and you are on Westham Island, where the herb farm sets up a free fall display: Pumpkintown, Sunflower Lane, and a crowd of scarecrows.',
+      'You only pay for the pumpkins and produce you take home. The Reifel Bird Sanctuary is nearby, so the two make a natural pairing for a day on the island.',
+      'Good to know: In 2026 the farm was open daily through October 31, from 10 am to 5 pm, with free entry. Cash, credit, and debit were accepted. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'hazelmere_pumpkin_patch',
+    searchTags: [
+      'pumpkin picking', 'tractor wagon ride', 'mini corn maze', 'farm animals', 'vintage firetruck',
+      'kids play area', 'pumpkin varieties', 'family farm outing', 'harvest farm', 'South Surrey',
+    ],
+    category: PATCHES,
+    name: 'Hazelmere Pumpkin Patch',
+    address: '18507 20 Ave, Surrey',
+    title: 'Hazelmere Pumpkin Patch',
+    detailAddress: '18507 20 Ave, South Surrey, BC',
+    latitude: 49.03861,
+    longitude: -122.71005,
+    tagline: 'Wagon rides, a mini corn maze, and a vintage firetruck!',
+    about: [
+      'A ten-acre South Surrey field with more than 20 pumpkin varieties, farm animals to visit, a wagon ride, a mini corn maze, and a play area. A vintage 1971 firetruck is a favourite photo stop.',
+      'Pumpkins are priced by type and size and are not included in admission.',
+      'Good to know: In 2026 the patch was open weekends through October 31 (10 am to 5 pm) and weekday afternoons from October 1 to 30 (2 to 5 pm). Admission was $12.50 on weekends and $10 on weekday afternoons, and kids 2 and under were free. Dates and prices change each year.',
+    ],
+  },
+  {
+    placeID: 'bog_riverside_cranberry',
+    searchTags: [
+      'cranberry plunge', 'flooded cranberry bog', 'berry harvest', 'self guided audio tour', 'wading in cranberries',
+      'floating berries', 'wet harvest', 'farm photography', 'Riverside Cranberry Farm', 'Langley',
+    ],
+    category: PATCHES,
+    name: 'The Bog Cranberry Farm',
+    address: '26885 88 Ave, Langley',
+    title: 'The Bog - Riverside Cranberry Farm',
+    detailAddress: '26885 88 Ave, Langley, BC',
+    latitude: 49.16282,
+    longitude: -122.48278,
+    tagline: 'Wade into a sea of floating cranberries!',
+    about: [
+      'At harvest time the cranberry fields are flooded so the berries float to the surface in red sheets. Walk the self-guided audio tour, and add the optional Cranberry Plunge to wade right in. Tours run rain or shine.',
+      'The harvest stage changes with the crop, so no two visits look the same. Tours are booked online in timed slots.',
+      "Good to know: In 2026 tours were listed for October 9, 10, and 12 (Thanksgiving Monday). 2026 prices were not confirmed; in 2025 the Cranberry Plunge was $15 and the self-guided tour was $7.50 to $12.50, plus fees and tax. Check the farm's booking page for this year's dates and prices.",
+    ],
+  },
+  {
+    placeID: 'hopcott_farms',
+    searchTags: [
+      'cranberry plunge', 'cranberry bog', 'wader photos', 'berry harvest', 'agritourism',
+      'guided farm tour', 'farm bistro', 'wet harvest', 'fall farm outing', 'Pitt Meadows',
+    ],
+    category: PATCHES,
+    name: 'Hopcott Farms Cranberry Tours',
+    address: '18385 Old Dewdney Trunk Rd, Pitt Meadows',
+    title: 'Hopcott Farms Cranberry Tours',
+    detailAddress: '18385 Old Dewdney Trunk Rd, Pitt Meadows, BC',
+    latitude: 49.24477,
+    longitude: -122.71239,
+    tagline: 'Cranberry harvest tours, waders and all!',
+    about: [
+      'Hopcott is a family farm in Pitt Meadows that has harvested cranberries every fall since 1932. In mid to late October it opens its bogs to visitors, with waders available for the in-the-bog photo.',
+      'Take the plunge, or just come out for the cranberry facts. The farm also has a bistro on site.',
+      "Good to know: In 2026 tours ran from October 16 to 25 and were booked online through the farm's website. Times and prices were not listed, and an earlier listing noted that some tours were for guests 19 and older, so check age limits and pricing before you book.",
+    ],
+  },
+  {
+    placeID: 'maan_farms',
+    searchDescription: 'A fall fair with a forest pumpkin patch, two corn mazes, live entertainment and a zip line. The Halloween Fright Festival adds haunted attractions after dark.',
+    searchTags: [
+      'pumpkin picking', 'haunted houses', 'scary attractions', 'haunted corn maze', 'forest pumpkin patch',
+      'Halloween Fright Festival', 'zip line', 'illuminated pumpkins', 'midway rides', 'Abbotsford',
+    ],
+    category: PATCHES,
+    name: 'Maan Farms',
+    address: '790 McKenzie Rd, Abbotsford',
+    title: 'Maan Farms',
+    detailAddress: '790 McKenzie Rd, Abbotsford, BC',
+    latitude: 49.01627,
+    longitude: -122.28187,
+    tagline: 'Pumpkin forest, corn mazes, and a haunted fright festival!',
+    about: [
+      'Maan Farms packs a lot into one fall visit: a five-acre forest pumpkin patch, two corn mazes, and a fall fair with live entertainment and a zip line. It is in Abbotsford, roughly an hour from Vancouver.',
+      'After dark in October the farm becomes the Halloween Fright Festival, with four haunted attractions, a midway, and an illuminated pumpkin forest. It is for ages 14 and up, and a waiver is required.',
+      'Good to know: In 2026 the daytime Fall at the Farm ran daily through November 1 (9 am to 6 pm), with advance tickets from $17 on Tuesdays to $31 on holiday weekends. The Fright Festival ran on evenings from October 2 to 31 on a separate ticket, roughly $69 to $99. Dates and prices change each year.',
+    ],
+  },
+
+  {
+    placeID: 'taves_family_farms',
+    searchTags: [
+      'apple picking', 'pumpkin patch', 'pumpkin picking', 'corn mazes', 'apple cider tasting',
+      'petting barn', 'jumping pillows', 'giant slide', 'Magic of Fall', 'Abbotsford',
+    ],
+    category: PATCHES,
+    name: 'Taves Family Farms',
+    address: '333 Gladwin Rd, Abbotsford',
+    title: 'Taves Family Farms Applebarn',
+    detailAddress: '333 Gladwin Rd, Abbotsford, BC',
+    latitude: 49.00867,
+    longitude: -122.31852,
+    tagline: 'Giant pumpkin garden, corn mazes, and u-pick apples!',
+    about: [
+      "Every fall, Taves turns its Abbotsford farm into the Magic of Fall, with more than 30 acres to wander. Stroll Autumn's Avenue, take on three corn mazes, and choose a pumpkin from the huge pumpkin garden.",
+      'The u-pick orchards sell apples by the bag, and there is a petting barn, jumping pillows, and a 150-foot slide. Taves Estate Cidery pours fall-themed ciders with and without alcohol, which makes a good last stop for two.',
+      'Good to know: In 2026 the Magic of Fall ran from September 12 to October 31, 10 am to 5:30 pm on weekdays and 9:30 am to 6 pm on weekends and holidays. Passes were sold online and cost $3 more at the gate, and weekend pumpkin picking needed a Picking Pass booked ahead. The farm is about an hour from downtown Vancouver and is closed until spring 2027. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'krause_berry_farms',
+    searchDescription: 'Explore the pumpkin patch and barley maze, take a tractor ride, and browse squash and gourds at the market.',
+    searchTags: [
+      'pumpkin picking', 'barley maze', 'tractor rides', 'fresh baked pies', 'waffle bar',
+      'estate winery', 'farm bakery', 'squash and gourds', 'produce market', 'Langley',
+    ],
+    category: PATCHES,
+    name: 'Krause Berry Farms',
+    address: '6179 248 St, Langley',
+    title: 'Krause Berry Farms & Estate Winery',
+    detailAddress: '6179 248 St, Langley, BC',
+    latitude: 49.11302,
+    longitude: -122.54028,
+    tagline: 'Pumpkin patch, barley maze, and fresh fall pies!',
+    about: [
+      'In fall, this Langley farm is all about apples and pumpkins. Explore the pumpkin patch and barley maze, take a tractor ride, and browse the squash and gourds at the market.',
+      'The bakery fills up with fresh pies for the season, and the Waffle Bar and estate winery make it easy to turn the visit into a slow afternoon date.',
+      "Good to know: The farm is open year-round. In 2026 it was open Wednesday to Sunday from 9:30 am to 5 pm, with the Waffle Bar closing at 3:30 pm. Pets and outside food are not allowed. Pumpkin patch dates and any activity fees weren't published, so check with the farm before you go.",
+    ],
+  },
+  {
+    placeID: 'willow_view_farms',
+    searchTags: [
+      'apple picking', 'u pick orchard', 'giant pumpkin patch', 'apple cider slushies', 'farm animals',
+      'country store', 'Honeycrisp apples', 'pumpkin varieties', 'Big Red Barn', 'Abbotsford',
+    ],
+    category: PATCHES,
+    name: 'Willow View Farms',
+    address: '288 McCallum Rd, Abbotsford',
+    title: 'Willow View Farms',
+    detailAddress: '288 McCallum Rd, Abbotsford, BC',
+    latitude: 49.00739,
+    longitude: -122.29286,
+    tagline: 'U-pick apples, giant pumpkins, and fresh-pressed cider!',
+    about: [
+      'Willow View is a family-owned u-pick apple orchard in Abbotsford that has sold directly from the farm for 33 years. It grows more than 15 apple varieties, including Honeycrisp and Jonagold.',
+      'October brings more than 50 varieties of pumpkins, some weighing over 100 pounds, and a Big Red Barn with farm animals. Stop at the country store for fresh-pressed apple cider or a cider slushie.',
+      'Good to know: In 2026 the farm was listed as open Tuesday to Sunday plus Thanksgiving Monday, from 10 am to 5:30 pm during pumpkin season. Pets are not allowed. Apples can sell out, and the farm is now closed until August 2027. Dates change each year, so check before you go.',
+    ],
+  },
+  // ---------------------------------------------------------------- Festivals & Gardens
+  {
+    placeID: 'fort_langley_cranberry_festival',
+    searchTags: [
+      'Thanksgiving weekend', 'cranberry preserves', 'street festival', 'pancake breakfast', 'artisan vendors',
+      'live performances', 'face painting', 'cranberry stomping', 'scarecrow competition', 'Fort Langley',
+    ],
+    category: FESTIVALS,
+    name: 'Fort Langley Cranberry Festival',
+    address: '9167 Glover Rd, Fort Langley',
+    title: 'Fort Langley Cranberry Festival',
+    detailAddress: 'Community Hall, 9167 Glover Rd, Fort Langley, BC',
+    latitude: 49.16912,
+    longitude: -122.5799,
+    tagline: '100+ vendors, a pancake breakfast, and everything cranberry!',
+    about: [
+      'For one Saturday every Thanksgiving weekend, Fort Langley becomes a street festival: more than 100 vendors, live performances on the stage in front of the Community Hall, crafts, face painting, and a pancake breakfast. Cranberries show up in everything from preserves to baking.',
+      'Fort Langley National Historic Site joins in with its own programming, which has included a scarecrow competition and cranberry stomping. The festival started in 1995 and has drawn roughly 35,000 people.',
+      'Good to know: The festival is held on the Saturday before Thanksgiving (October 10 in 2026) and has been listed as a free event. Expect big crowds, and check the festival website for this year\'s date and schedule.',
+    ],
+  },
+  {
+    placeID: 'ubc_botanical_garden',
+    searchTags: [
+      'apple tasting', 'apple varieties', 'warm apple cider', 'forest canopy walkway', 'GreenHeart TreeWalk',
+      'botanical garden', 'live entertainment', 'orchard fruit', 'University of British Columbia', 'Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'UBC Apple Festival',
+    address: '6804 SW Marine Dr, Vancouver',
+    title: 'UBC Botanical Garden Apple Festival',
+    detailAddress: '6804 SW Marine Dr, Vancouver, BC',
+    latitude: 49.25388,
+    longitude: -123.25111,
+    tagline: 'Taste 50+ apple varieties and walk the treetops!',
+    about: [
+      "Every October, UBC Botanical Garden hosts a big apple festival: tastings of more than 50 apple varieties, apple vendors, warm cider, and live entertainment. Proceeds support the garden's education, research, and conservation work.",
+      "In September and October the garden's GreenHeart TreeWalk, a 310 m canopy walkway of suspended walkways and tree platforms, adds a walk high above the forest floor to the visit.",
+      'Good to know: In 2026 the festival ran October 17 and 18 from 11 am to 4 pm, with general admission from $15 (early bird $12). It typically sells out and runs rain or shine, so buy tickets ahead. The garden and TreeWalk were open Tuesday to Sunday, 10 am to 4:30 pm, through October 31.',
+    ],
+  },
+  {
+    placeID: 'vandusen_harvest_days',
+    searchTags: [
+      'pumpkin displays', 'corn maze', 'hay bales', 'live bluegrass', 'lawn games',
+      'face painting', 'food trucks', 'sculpture stroll', 'autumn foliage', 'Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'VanDusen Harvest Days',
+    address: '5251 Oak St, Vancouver',
+    title: 'VanDusen Harvest Days',
+    detailAddress: '5251 Oak St, Vancouver, BC',
+    latitude: 49.23931,
+    longitude: -123.1288,
+    tagline: 'Hay bales, a corn maze, and live bluegrass!',
+    about: [
+      'Harvest Days turns VanDusen Botanical Garden into a small fall fair: hay bales, cornstalks, and pumpkins, a corn maze, lawn games, face painting, live bluegrass and folk music, food trucks, and a Sculpture Stroll of biodegradable pieces.',
+      "The garden's own fall colour is the backdrop, with sugar maples, ginkgo trees, and golden larches. Everything is included with regular garden admission.",
+      'Good to know: In 2026 Harvest Days ran on weekends from September 26 to October 18, plus Thanksgiving Monday, from 10:30 am to 4:30 pm. Adult admission was about $13 to $16 depending on whether you bought online or at the gate. Pets are not permitted except service animals. Parking is free in the lot off West 37th Avenue, but spaces are limited.',
+    ],
+  },
+  {
+    placeID: 'nitobe_memorial_garden',
+    searchTags: [
+      'Japanese garden', 'maple leaves', 'fall foliage', 'tea house', 'reflecting ponds',
+      'garden stroll', 'moss garden', 'leaf peeping', 'University of British Columbia', 'Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'Nitobe Memorial Garden',
+    address: '1895 Lower Mall, Vancouver',
+    title: 'Nitobe Memorial Garden',
+    detailAddress: '1895 Lower Mall, UBC, Vancouver, BC',
+    latitude: 49.26621,
+    longitude: -123.25956,
+    tagline: 'Crimson Japanese maples around a tea house and still ponds!',
+    about: [
+      'Nitobe is a traditional Japanese stroll garden at UBC with a tea house and reflecting ponds, designed around the changing seasons. In autumn the Japanese maples turn crimson against the green moss.',
+      'Autumn is described as one of the best times to visit. UBC Botanical Garden is nearby, so the two pair well for a day at UBC.',
+      "Good to know: In 2026 the garden was open Tuesday to Sunday, 10 am to 4:30 pm, from September 8 to October 31, and closed for the season after that. Check the UBC Botanical Garden website for this year's dates and admission.",
+    ],
+  },
+  {
+    placeID: 'sun_yat_sen_garden',
+    searchTags: [
+      'Mid Autumn Festival', 'Chinese garden', 'floating lanterns', 'lion dance', 'mooncakes',
+      'lantern riddles', 'traditional music', 'Jade Pond', 'Chinatown', 'Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'Sun Yat-Sen Garden Moon Palace',
+    address: '578 Carrall St, Vancouver',
+    title: 'Dr. Sun Yat-Sen Garden Moon Palace',
+    detailAddress: '578 Carrall St, Chinatown, Vancouver, BC',
+    latitude: 49.27956,
+    longitude: -123.10394,
+    tagline: 'Lanterns, lion dances, and mooncakes in a classical garden!',
+    about: [
+      'The Dr. Sun Yat-Sen Classical Chinese Garden celebrates the Mid-Autumn Festival with its Moon Palace weekend: traditional music, dance, lion performances, lantern riddles, crafts, and Suzhou-style mooncakes, plus the chance to write a wish for a floating lantern on the Jade Pond.',
+      'Outside the festival the garden is a calm retreat in the middle of Chinatown, and the park next to it is free to enter.',
+      "Good to know: The 40th annual Mid-Autumn Festival was held on September 26 and 27, 2026, from 2 pm to 9 pm, with tickets sold online. Regular garden admission was about $16 for adults in 2026. Check the garden's website for this year's festival dates and prices.",
+    ],
+  },
+
+  {
+    placeID: 'darts_hill_garden',
+    searchTags: [
+      'scarecrow stroll', 'heritage garden', 'fall open house', 'ikebana', 'flower arranging',
+      'garden paths', 'pasture walk', 'live music', 'early autumn outing', 'South Surrey',
+    ],
+    category: FESTIVALS,
+    name: 'Darts Hill Garden Park',
+    address: '1633 170 St, Surrey',
+    title: 'Darts Hill Garden Park',
+    detailAddress: '1633 170 St, Surrey, BC',
+    latitude: 49.03185,
+    longitude: -122.75431,
+    tagline: 'A scarecrow stroll through a heritage garden!',
+    about: [
+      'Darts Hill is a 7.5-acre garden in South Surrey that Edwin and Francisca Darts donated to the city in 1994. Each September it welcomes fall with a Scarecrow Stroll through the pasture.',
+      "The garden's fall open house adds live music, an ikebana display, and garden activities, which makes it a relaxed way to start the season together.",
+      'Good to know: In 2026 the garden was open Friday to Sunday from 10 am to 4 pm until September 27, so go early in the season. The Scarecrow Stroll ran September 4 to 27 and the free fall open house was on September 19. General admission has been by donation, so bring cash because there is no nearby ATM. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'vandusen_mushroom_show',
+    searchTags: [
+      'fungi exhibit', 'wild mushrooms', 'mushroom identification', 'mycology', 'expert talks',
+      'local art', 'autumn exhibition', 'Floral Hall', 'botanical garden event', 'Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'VanDusen Mushroom Show',
+    address: '5151 Oak St, Vancouver',
+    title: 'Fall Mushroom Show at VanDusen',
+    detailAddress: '5151 Oak St, Vancouver, BC',
+    latitude: 49.23907,
+    longitude: -123.13460,
+    tagline: 'Wild mushroom displays, expert IDs, and vendors!',
+    about: [
+      "Every fall, the Vancouver Mycological Society holds its annual mushroom show in VanDusen's Floral Hall and Cedar Room. Past shows have featured mushroom identification, presentations, local art, and vendors.",
+      'It lasts just one day and makes an unusual autumn date. Pair it with a walk through the garden while the leaves are turning.',
+      'Good to know: In 2026 the show ran on October 25 from 10 am to 5 pm, by donation. VanDusen garden admission is separate. In 2024 show admission was $5 and kids under 12 were free. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'stewart_farm_harvest_fair',
+    searchTags: [
+      'heritage farm', 'harvest celebration', 'historical reenactors', 'storytelling', 'live music',
+      'artisan market', 'hands on activities', 'food trucks', 'Indigenous Learning House', 'South Surrey',
+    ],
+    category: FESTIVALS,
+    name: 'Stewart Farm Harvest Fair',
+    address: '13723 Crescent Rd, Surrey',
+    title: 'Harvest Fair at Historic Stewart Farm',
+    detailAddress: '13723 Crescent Rd, Surrey, BC',
+    latitude: 49.06507,
+    longitude: -122.84202,
+    tagline: 'A free harvest celebration at a heritage farm!',
+    about: [
+      'Historic Stewart Farm celebrates the harvest each September with a free fair, co-hosted in 2026 with Totest Aleng: Indigenous Learning House. Expect live music, storytelling, heritage re-enactors, and hands-on activities.',
+      'More than 24 market vendors and a few food trucks make it an easy afternoon out at the farm in South Surrey.',
+      'Good to know: In 2026 the fair ran on September 19 from noon to 4 pm, with free admission. Dates change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'renfrew_ravine_moon_festival',
+    searchTags: [
+      'harvest moon', 'lantern procession', 'illuminated art', 'vegetable contest', 'community festival',
+      'artisan booths', 'live music', 'Streamside Lanterns', 'Slocan Park', 'East Vancouver',
+    ],
+    category: FESTIVALS,
+    name: 'Renfrew Ravine Moon Festival',
+    address: '2750 E 29th Ave, Vancouver',
+    title: 'Renfrew Ravine Moon Festival',
+    detailAddress: '2750 E 29th Ave, Vancouver, BC',
+    latitude: 49.24378,
+    longitude: -123.04752,
+    tagline: 'Giant lanterns and a twilight harvest procession!',
+    about: [
+      'This East Vancouver community festival honours the harvest moon with live music, giant lanterns, and illuminated art in and around Renfrew Ravine.',
+      'The main day starts with a Harvest Fair at Slocan Park, with artisan booths and a Harvest Veggie Contest. In the evening, a lantern procession leads from the fair to Streamside Lanterns at Renfrew Community Park.',
+      'Good to know: In 2026 the festival ran September 7 to 26. The Harvest Fair was on September 26 from 4 to 7 pm, followed by the 7 pm procession, and both were free with an RSVP appreciated. Some workshops cost extra and sold out early. Dates change each year, so check before you go.',
+    ],
+  },
+  // ---------------------------------------------------------------- Halloween & After Dark
+  {
+    placeID: 'burnaby_haunted_village',
+    searchDescription: 'The open-air heritage museum dresses up after dark for a family Halloween outing with a haunted graveyard, spooky circus, dramatic lighting and shadow puppets.',
+    searchTags: [
+      'family friendly Halloween', 'spooky village', 'haunted graveyard', 'shadow puppets', 'heritage museum',
+      'costume outing', 'spooky circus', 'Halloween treats', 'trick or treating', 'Burnaby',
+    ],
+    category: HALLOWEEN,
+    name: 'Burnaby Haunted Village',
+    address: '6501 Deer Lake Ave, Burnaby',
+    title: 'Burnaby Village Museum Haunted Village',
+    detailAddress: '6501 Deer Lake Ave, Burnaby, BC',
+    latitude: 49.23992,
+    longitude: -122.96688,
+    tagline: 'A spooky-not-scary heritage village after dark!',
+    about: [
+      'For a handful of October evenings, the museum\'s 10-acre open-air village becomes a Haunted Village: dramatic lighting, a haunted graveyard, a spooky circus, and bewitching stores. There is Halloween food and warm drinks at Mai\'s Cafe, DJ Drac and his dancers, and a shadow puppet show. Costumes are encouraged.',
+      'It is described as spooky, not scary, with no blood, gore, or strobe lighting. Trick-or-treating runs on October 31 only. Pets are not permitted, and nearly all facilities are wheelchair and stroller accessible on a paved path.',
+      'Good to know: In 2026 the Haunted Village ran on five evenings (October 23, 24, 25, 30, and 31) from 4 to 9 pm, rain or shine. Advance tickets were $12 for adults and $7 for children 2 to 12; day-of tickets were $15 and $10. Parking is limited, so transit or a ride share is recommended.',
+    ],
+  },
+  {
+    placeID: 'playland_fright_nights',
+    searchTags: [
+      'haunted houses', 'scary attractions', 'scream park', 'amusement park rides', 'live scare actors',
+      'haunted mansion', 'Halloween night', 'jump scares', 'PNE', 'Vancouver',
+    ],
+    category: HALLOWEEN,
+    name: 'Fright Nights at Playland',
+    address: '2901 E Hastings St, Vancouver',
+    title: 'Fright Nights at Playland',
+    detailAddress: '2901 E Hastings St, Vancouver, BC',
+    latitude: 49.28275,
+    longitude: -123.0364,
+    tagline: 'Seven haunted houses and 19 rides, after dark!',
+    about: [
+      'Playland becomes a scream park for most of October: seven haunted houses (The Void, The Bloodshed, Carn-Evil, Darkness, Haunted Mansion, Keepers Doll Factory, and Materia Medica), 19 rides included, and roaming scare actors. It is recommended for ages 13 and up.',
+      'Lines grow through the night and Wednesdays are the calmest. A Rapid Pass add-on gives express entry to all seven houses and five rides on the night printed on it, and peak nights can sell out, so buy ahead.',
+      'Good to know: In 2026 Fright Nights ran October 7 to 31, Wednesday to Sunday, with gates opening at 6 pm. Advance tickets were $39, $49, or $59 depending on the night. The park is cashless, bags must be no larger than 8.5 x 11 inches, and there is no re-entry. Parking in the PNE lots was $20.',
+    ],
+  },
+  {
+    placeID: 'capilano_canyon_frights',
+    searchTags: [
+      'family friendly Halloween', 'suspension bridge', 'illuminated forest', 'spooky scavenger hunt', 'glowing mushrooms',
+      'giant spiders', 'treetop walk', 'skeleton displays', 'live music', 'North Vancouver',
+    ],
+    category: HALLOWEEN,
+    name: 'Canyon Frights at Capilano',
+    address: '3735 Capilano Rd, North Vancouver',
+    title: 'Canyon Frights at Capilano',
+    detailAddress: '3735 Capilano Rd, North Vancouver, BC',
+    latitude: 49.3427,
+    longitude: -123.11605,
+    tagline: 'A glowing orange bridge and a Frightful Forest scavenger hunt!',
+    about: [
+      'At Halloween the suspension bridge, river, and surrounding forest light up in orange for Canyon Frights. Follow the Frightful Forest scavenger hunt along the trails, spot skeletal scenes, owls at Treetops Adventure, glowing mushrooms, and giant spiders, and catch live music at Loggers\' Grill Plaza.',
+      'It is family-friendly and included with park admission. Costumes must be child-friendly, masks are not permitted, and anything that looks like a weapon or has sharp points is not allowed.',
+      'Good to know: In 2026 Canyon Frights ran from about October 9 to November 1 (sources differ slightly), with park hours of 10 am to 8 pm and later on the last two weekends. Adult park admission was about $80, and annual-pass holders needed to reserve a time slot. Parking is limited; the park runs a free shuttle from downtown Vancouver.',
+    ],
+  },
+
+  {
+    placeID: 'lost_souls_gastown',
+    searchTags: [
+      'spooky walking tour', 'ghost stories', 'outdoor theatre', 'historical reenactment', 'lantern lit walk',
+      'dark history', 'Great Fire of 1886', 'Maple Tree Square', 'Gastown', 'Vancouver',
+    ],
+    category: HALLOWEEN,
+    name: 'Lost Souls of Gastown',
+    address: '356 Water St, Vancouver',
+    title: 'Lost Souls of Gastown Tour',
+    detailAddress: '356 Water St, Vancouver, BC',
+    latitude: 49.28452,
+    longitude: -123.11044,
+    tagline: "Lamplit theatre through Gastown's darkest history!",
+    about: [
+      "This Halloween-season walk is live theatre more than a ghost tour. A professional actor leads you by lamplight through Gastown and turns documented stories from the city's early days into drama, including the Great Fire of 1886 and an 1898 murder.",
+      'The route covers about 1.5 km in 90 minutes to two hours, starting outside Monaco Cafe and ending at Maple Tree Square. It is a moody pick for a dark October night.',
+      'Good to know: In 2026 the tour ran nightly through Halloween, starting at 7 pm with extra times added. Tickets were about $33 to $35 for adults and $30 to $32 for youth and seniors, booked online. It is not recommended for children under 12, and minors need an adult with them. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'haunted_halloween_trolley',
+    searchTags: [
+      'spooky trolley ride', 'ghost stories', 'after dark sightseeing', 'haunted history tour', 'cemetery stories',
+      'Lady in Red', 'Halloween storytelling', 'Shaughnessy mansions', 'Canada Place', 'Vancouver',
+    ],
+    category: HALLOWEEN,
+    name: 'Haunted Halloween Trolley',
+    address: '999 Canada Place, Vancouver',
+    title: 'Haunted Halloween Trolley Tour',
+    detailAddress: '999 Canada Place, Vancouver, BC',
+    latitude: 49.28790,
+    longitude: -123.11305,
+    tagline: 'Spooky local stories on a trolley after dark!',
+    about: [
+      'The Great Canadian Trolley Company runs this after-dark tour each Halloween season. An onboard storyteller shares eerie local tales on a route that visits Stanley Park, Gastown, and Mountain View Cemetery.',
+      'Stories include the Lady in Red at the Hotel Vancouver and the old mansions of Shaughnessy. The tour runs rain or shine, so it is an easy pick for a wet October night.',
+      'Good to know: In 2026 the tour ran on select dates from October 8 to November 1, with a 6 pm departure from 999 Canada Place, and lasted 2 to 2.5 hours. It is designed for ages 13 and up and uses flashing lights. Book ahead, because all sales are final. In 2025 tickets were from $37 for youth and $67 for adults. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'bear_creek_halloween_train',
+    searchTags: [
+      'pumpkin train', 'scream train', 'scary attractions', 'jump scares', 'miniature railway',
+      'costumed scare actors', 'decorated forest', 'family Halloween train', 'Halloween night ride', 'Surrey',
+    ],
+    category: HALLOWEEN,
+    name: 'Bear Creek Halloween Train',
+    address: '13750 88 Ave, Surrey',
+    title: 'Bear Creek Halloween Train',
+    detailAddress: '13750 88 Ave, Surrey, BC',
+    latitude: 49.16235,
+    longitude: -122.84205,
+    tagline: 'A decorated forest by day, screams after dark!',
+    about: [
+      'Every October the train at Bear Creek Park goes Halloween. By day, the Pumpkin Train rolls through a decorated forest, and the ride includes a treat and a pumpkin.',
+      'After dark it becomes the Scream Train, with costumed actors and jump scares that are best for ages 12 and up. Pick the version that suits your date.',
+      'Good to know: In 2026 the Pumpkin Train ran October 1 to 31 from 10 am to 5 pm, and the Scream Train ran from mid-October through Halloween from 6 to 10 pm. Tickets were $12 for day trains and $18 for night trains, and children two and under were free. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'cougar_creek_house_of_horrors',
+    searchTags: [
+      'haunted houses', 'scary attractions', 'jump scares', 'live scare actors', 'animatronics',
+      'Halloween night', 'Abomination haunt', 'Sinneraria haunt', 'Horrors Jr', 'Surrey',
+    ],
+    category: HALLOWEEN,
+    name: 'Cougar Creek House of Horrors',
+    address: '12530 72 Ave, Surrey',
+    title: "Cougar Creek's House of Horrors",
+    detailAddress: '12530 72 Ave, Surrey, BC',
+    latitude: 49.13400,
+    longitude: -122.87560,
+    tagline: 'Five haunted houses packed with live scares!',
+    about: [
+      "Cougar Creek's House of Horrors is a long-running Surrey Halloween tradition with five haunted houses, including Abomination, Sinneraria, and Astroparasitix. Expect live actors, animatronics, and plenty of jump scares.",
+      'It also collects food for the Surrey Food Bank. A gentler Horrors Jr. show with no actors runs on weekends for younger guests.',
+      'Good to know: In 2026 it ran on select nights in October through Halloween. Tickets were listed at $19.99 to $69.99 plus fees and sold online, and on-site parking was free. The main show is not recommended for children under 14, and anyone 13 and under needs an adult with them. Dates and prices change each year, so check before you go.',
+    ],
+  },
+  {
+    placeID: 'grave_tales_fort_langley',
+    searchDescription: 'Spooky guided Halloween walks through the historic fort after dark range from a family youth tour to Descent into Darkness.',
+    searchTags: [
+      'ghost stories', 'scary tours', 'haunted history', 'guided night walk', 'historical storytelling',
+      'historic fort', 'Descent into Darkness', 'October ghost tour', 'youth Halloween tour', 'Fort Langley',
+    ],
+    category: HALLOWEEN,
+    name: 'Grave Tales at Fort Langley',
+    address: '23433 Mavis Ave, Fort Langley',
+    title: 'Grave Tales at Fort Langley',
+    detailAddress: '23433 Mavis Ave, Fort Langley, BC',
+    latitude: 49.16763,
+    longitude: -122.57232,
+    tagline: 'Spooky after-dark tours of a historic fort!',
+    about: [
+      'Each October, Fort Langley National Historic Site opens after dark for Grave Tales, a set of Halloween tours. There are four to choose from, ranging from a youth tour for families to the intense Descent into Darkness.',
+      'It is a different kind of scare from a haunted house, set on real historic grounds. Choose the tour that matches how much of a fright you want.',
+      'Good to know: In 2026 Grave Tales ran October 16 to 31, mostly in the evenings, at about $25 to $45 per person depending on the tour. Pre-booking is required. Youth tours were for ages 8 and up, and adults had to register too. Dates and prices change each year, so check with Parks Canada before you go.',
+    ],
+  },
+  // ---------------------------------------------------------------- Salmon & Wildlife
+  {
+    placeID: 'tynehead_hatchery',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'chinook salmon', 'coho salmon',
+      'chum salmon', 'Serpentine River', 'Salmon Habitat Loop', 'creekside nature walk', 'Surrey',
+    ],
+    category: WILDLIFE,
+    name: 'Tynehead Hatchery',
+    address: '16585 96 Ave, Surrey',
+    title: 'Tynehead Hatchery & Salmon Habitat Loop',
+    detailAddress: '16585 96 Ave, Surrey, BC',
+    latitude: 49.17790,
+    longitude: -122.76266,
+    tagline: 'Watch coho, chum, and chinook return upriver!',
+    about: [
+      "In Tynehead Regional Park, a volunteer-run hatchery raises and releases Pacific salmon to help restore the Serpentine River's run. In fall, spawning coho, chum, and chinook can be spotted along the easy, flat Salmon Habitat Loop, which crosses the river on bridges.",
+      'The hatchery was built in 1988 and is run by the Serpentine Enhancement Society. The park is free, and the Hatchery Trail, the Salmon Habitat Loop, and the washrooms by the hatchery parking lot are wheelchair accessible.',
+      "Good to know: Salmon are usually seen from October into December. The hatchery's own opening hours are informal, so the trail is the dependable way to see fish. Bus 337 serves the park.",
+    ],
+  },
+  {
+    placeID: 'hoy_creek_hatchery',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'coho salmon', 'chum salmon',
+      'Salmon Come Home', 'creekside trail', 'Hoy Creek Linear Park', 'Lafarge Lake SkyTrain', 'Coquitlam',
+    ],
+    category: WILDLIFE,
+    name: 'Hoy Creek Hatchery',
+    address: '2985 Princess Cres, Coquitlam',
+    title: 'Hoy Creek Hatchery',
+    detailAddress: '2985 Princess Cres, Coquitlam, BC',
+    latitude: 49.28672,
+    longitude: -122.79594,
+    tagline: 'Spawning chum and coho in a creekside city park!',
+    about: [
+      'A volunteer-run hatchery on Hoy Creek in Coquitlam. Chum return from mid-October and coho in November, and the Hoy Trail in Hoy Creek Linear Park runs along the creek, open day or night.',
+      'The hatchery is not reachable by road. It is an 8 to 10 minute walk from Lafarge Lake-Douglas SkyTrain Station, with free parking at Coquitlam City Hall, Pinetree Community Centre, and Douglas College. Please keep feet and dogs out of the stream.',
+      'Good to know: Chum return from mid-October (tapering in December) and coho in November (tapering into January). The hatchery holds a public open house on the first Saturday of most months, 9:30 to 11:30 am (not July or August), and the annual Salmon Come Home celebration is usually on a Sunday in late October.',
+    ],
+  },
+  {
+    placeID: 'reifel_bird_sanctuary',
+    searchDescription: 'Coastal trails and a lookout tower overlooking ocean marshes. Migratory waterfowl gather here in fall, including snow geese.',
+    searchTags: [
+      'birdwatching', 'snow geese', 'migratory birds', 'waterfowl', 'coastal marsh',
+      'lookout tower', 'wetland trails', 'wildlife photography', 'Westham Island', 'Delta',
+    ],
+    category: WILDLIFE,
+    name: 'Reifel Bird Sanctuary',
+    address: '5191 Robertson Rd, Delta',
+    title: 'George C. Reifel Migratory Bird Sanctuary',
+    detailAddress: '5191 Robertson Rd, Delta, BC',
+    latitude: 49.1029,
+    longitude: -123.18981,
+    tagline: 'Fall waterfowl flocks and an ocean-marsh lookout tower!',
+    about: [
+      'Reifel has several kilometres of trails through coastal habitats and a tower overlooking the ocean marshes, with views toward Vancouver and Vancouver Island. It is known as the winter home of the snow geese, and bird diversity and numbers are usually highest from fall to spring.',
+      'Allow about an hour to an hour and a half. Dogs, bikes, and drones are not allowed, and bird seed must be bought on site.',
+      'Good to know: Reservations are required for all visitors and open three days ahead. In 2026 the sanctuary was open 9 am to 4 pm and closed Mondays (except some statutory holidays), with admission of $10 for adults, $8 for seniors 65+, and $7 for children 2 to 14.',
+    ],
+  },
+
+  {
+    placeID: 'kanaka_creek_fish_fence',
+    searchTags: [
+      'salmon run', 'fish watching', 'spawning salmon', 'coho salmon', 'chum salmon',
+      'Bell Irving Hatchery', 'creekside wildlife', 'Canyon Trail', 'Cliff Falls', 'Maple Ridge',
+    ],
+    category: WILDLIFE,
+    name: 'Kanaka Creek Fish Fence',
+    address: '11450 256 St, Maple Ridge',
+    title: 'Kanaka Creek Hatchery & Fish Fence',
+    detailAddress: '11450 256 St, Maple Ridge, BC',
+    latitude: 49.21080,
+    longitude: -122.50690,
+    tagline: 'Returning salmon at the fence and a canyon walk!',
+    about: [
+      'Each fall, chum and coho salmon return up Kanaka Creek to the fish fence beside the Bell-Irving Hatchery, where they are counted and most are released to spawn. Mid-October to mid-November is usually the best time to see them.',
+      'From the hatchery, the Canyon Trail runs 1.2 km one way to Cliff Falls, with some challenging hills. Stay back from the cliff edges and keep out of the creek and canyon.',
+      "Good to know: The fish fence usually operates from the end of September to early December. In 2026 the park was open 7 am to 6 pm from November 3 to December 31. Dogs must be on a leash, and please don't disturb the fish at the fence. Salmon timing changes each year, so check with the hatchery before you go.",
+    ],
+  },
+  {
+    placeID: 'wings_over_iona',
+    searchDescription: 'A fall migration festival at Iona Beach with bird banding, live raptors and trails around the ponds.',
+    searchTags: [
+      'birdwatching', 'bird banding', 'live raptors', 'fall migration', 'shorebirds',
+      'songbirds', 'waterfowl', 'pondside trails', 'Iona Beach', 'Richmond',
+    ],
+    category: WILDLIFE,
+    name: 'Wings Over Iona',
+    address: 'Ferguson Rd, Richmond',
+    title: 'Wings Over Iona at Iona Beach',
+    detailAddress: 'Iona Beach, Ferguson Rd, Richmond, BC',
+    latitude: 49.21416,
+    longitude: -123.18733,
+    tagline: 'Bird banding and live raptors for fall migration!',
+    about: [
+      'Each September, Metro Vancouver celebrates the fall migration of shorebirds, songbirds, and waterfowl with a free day at Iona Beach. Expect bird banding demonstrations, live raptors, and hands-on activities.',
+      'The paths around the north and south ponds are great for birdwatching, so it is worth coming back as the migration continues through fall.',
+      'Good to know: In 2026 Wings Over Iona ran on September 12 from 11 am to 2 pm. It was free, with limited parking and a free shuttle from Templeton SkyTrain Station. The park has no regular transit. Dogs are not allowed around the ponds, and the viewing structure at the end of Iona Jetty was closed because of storm damage. Dates change each year, so check before you go.',
+    ],
+  },
+  // ---------------------------------------------------------------- Fall Colour Walks
+  {
+    placeID: 'buntzen_lake',
+    searchDescription: 'A BC Hydro recreation area in Anmore with a beach, picnic tables and lake trails past evergreens and shoreline maples that turn colour in fall.',
+    searchTags: [
+      'lakeside hike', 'fall foliage', 'shoreline maples', 'leaf peeping', 'lake loop trail',
+      'lakeside picnic', 'South Beach', 'forest viewpoints', 'off leash dog area', 'Anmore',
+    ],
+    category: COLOUR,
+    name: 'Buntzen Lake',
+    address: 'South Beach, Anmore',
+    title: 'Buntzen Lake',
+    detailAddress: 'South Beach, Buntzen Lake, Anmore, BC',
+    latitude: 49.34033,
+    longitude: -122.85703,
+    tagline: 'Shoreline maples glowing against the evergreens!',
+    about: [
+      'Buntzen Lake is a BC Hydro recreation area north of Port Moody with picnic tables, a shelter, viewpoints, and a beach. In fall, patches of maples along the shoreline stand out against the evergreens. The classic lake loop is about 10 km and takes around three and a half hours.',
+      'There is no parking in Anmore. The parking lots are about 2 km past the entrance gate and fill early on weekends. Dogs must be on a leash except in the two off-leash areas.',
+      "Good to know: Gates open at 8 am, and closing time moves earlier through fall, from 6 pm in mid-October to 4:30 pm from early November. A rockslide closure affects Powerhouse Road between North Beach and Buntzen Dam, so check BC Hydro's trail updates before planning the full loop.",
+    ],
+  },
+  {
+    placeID: 'queen_elizabeth_park',
+    searchDescription: 'Walk through the red foliage in Quarry Garden, then take in the city skyline and mountain views from Vancouver’s highest viewpoint.',
+    searchTags: [
+      'fall foliage', 'Quarry Garden', 'city skyline viewpoint', 'mountain views', 'leaf peeping',
+      'Bloedel Conservatory', 'rainy day outing', 'garden stroll', 'autumn photography', 'Vancouver',
+    ],
+    category: COLOUR,
+    name: 'Queen Elizabeth Park',
+    address: '4600 Cambie St, Vancouver',
+    title: 'Queen Elizabeth Park',
+    detailAddress: '4600 Cambie St, Vancouver, BC',
+    latitude: 49.24103,
+    longitude: -123.11196,
+    tagline: "Red Quarry Garden colour and Vancouver's highest viewpoint!",
+    about: [
+      "Queen Elizabeth Park is Vancouver's highest point, with a view over the city as it turns gold. Walk the Quarry Garden first, which fills with red in fall, then continue to the viewpoint near Seasons in the Park for city and North Shore mountain views.",
+      'The Bloedel Conservatory dome in the park is a warm, dry backup for a rainy day.',
+      'Good to know: The park is free to enter. In 2026 Bloedel Conservatory was open 10 am to 5 pm through October 27 and 10 am to 4 pm in November and December, with a separate admission fee. Urban parks and gardens in Vancouver typically peak for fall colour in late October.',
+    ],
+  },
+  {
+    placeID: 'pacific_spirit_park',
+    searchTags: [
+      'fall foliage', 'bigleaf maples', 'forest hike', 'Admiralty Trail', 'Spanish Banks',
+      'forest to beach walk', 'dog walking trails', 'leaf peeping', 'evergreen forest', 'Vancouver',
+    ],
+    category: COLOUR,
+    name: 'Pacific Spirit Park',
+    address: 'Park Centre, W 16th Ave, Vancouver',
+    title: 'Pacific Spirit Regional Park',
+    detailAddress: 'Park Centre, W 16th Ave, Vancouver, BC',
+    latitude: 49.25806,
+    longitude: -123.18844,
+    tagline: 'Golden bigleaf maples on a forest walk to the beach!',
+    about: [
+      'Pacific Spirit is mostly evergreen forest, but the bigleaf maples along the Admiralty Trail near Spanish Banks turn golden each fall. The park has more than 55 km of trails, which makes it one of the area\'s best autumn foliage walks.',
+      'The park is free to enter. Dogs are allowed on some trails and must be leashed on others, so check the trail signs.',
+      'Good to know: The park is open 7 am to 7 pm until early November, then 7 am to 6 pm, with beaches closing at sunset. In late 2026 the Admiralty Trail between Salish Trail and West Canyon Trail was closed for about four weeks from November 2, so use an alternate trail to reach Spanish Banks until it reopens.',
+    ],
+  },
+  {
+    placeID: 'stanley_park_fall_walk',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'seawall stroll', 'waterfront walking', 'Lost Lagoon',
+      'Brockton Point', 'totem poles', 'autumn photography', 'West End', 'Vancouver',
+    ],
+    category: COLOUR,
+    name: 'Stanley Park',
+    address: 'Lost Lagoon, Vancouver',
+    title: 'Stanley Park Fall Colour Walk',
+    detailAddress: 'Lost Lagoon, Stanley Park, Vancouver, BC',
+    latitude: 49.29560,
+    longitude: -123.14074,
+    tagline: 'Lost Lagoon and golden trees along the seawall!',
+    about: [
+      "Start at Lost Lagoon at the foot of Georgia Street, then walk to the Vancouver Rowing Club, where the trees along the seawall put on some of the park's best colour.",
+      'The full seawall is about 9 km, but the prettiest autumn stretch takes only around half an hour on foot. Keep going to the totem poles at Brockton Point if you want a longer walk.',
+      'Good to know: The park is free to enter, but parking inside it is paid. Colour usually peaks in mid to late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'deer_lake_park',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'lakeside boardwalk', 'lake loop walk', 'autumn reflections',
+      'Japanese maples', 'Eagles Estate Heritage Garden', 'waterfront photography', 'morning stroll', 'Burnaby',
+    ],
+    category: COLOUR,
+    name: 'Deer Lake Park',
+    address: '6450 Deer Lake Ave, Burnaby',
+    title: 'Deer Lake Park',
+    detailAddress: '6450 Deer Lake Ave, Burnaby, BC',
+    latitude: 49.24054,
+    longitude: -122.96880,
+    tagline: 'Fall colour reflected on a calm lakeside loop!',
+    about: [
+      'Trails of gravel, packed dirt, and boardwalk circle Deer Lake in about 5 km, or an hour at an easy pace. Go on a calm morning, when the fall colour reflects off the water.',
+      'The Eagles Estate Heritage Garden has Japanese maples, and the Burnaby Art Gallery and Burnaby Village Museum are right beside the park if you want to make an afternoon of it.',
+      'Good to know: The park is open from dawn to dusk year-round and parking is free. Dogs must be on a leash and are not allowed on the beach or in the picnic area. A boardwalk section by the boat launch closed on September 21 for replacement, with a detour via Sperling Avenue and Deer Lake Drive, and the work is scheduled to finish by winter 2027. Colour usually peaks in mid to late October.',
+    ],
+  },
+  {
+    placeID: 'campbell_valley_park',
+    searchTags: [
+      'fall foliage', 'leaf peeping', 'Little River Loop', 'wooden boardwalks', 'fall picnic',
+      'horse trails', 'Shaggy Mane Trail', 'Little Campbell River', 'Perimeter Trail', 'Langley',
+    ],
+    category: COLOUR,
+    name: 'Campbell Valley Park',
+    address: 'South Valley Entrance, 8 Ave, Langley',
+    title: 'Campbell Valley Regional Park',
+    detailAddress: 'South Valley Entrance, 8 Ave, Langley, BC',
+    latitude: 49.02094,
+    longitude: -122.65805,
+    tagline: 'Golden and crimson trails in rural Langley!',
+    about: [
+      "Campbell Valley is one of Langley's top spots for fall foliage, with trails lined in golden and crimson leaves. The flat Little River Loop is about 2.3 km return and crosses the Little Campbell River twice on raised boardwalks.",
+      'For a longer outing, the Perimeter Trail runs nearly 9 km and the Shaggy Mane Trail is an 11 km loop shared with horses. It is also a peaceful place for a fall picnic.',
+      "Good to know: From November 3 to December 31 the park is open 7 am to 6 pm. Dogs must be on a leash except in the leash-optional area next to 4 Avenue. Part of the eastern McLean Pond area and its trails is closed for trail and parking lot construction, so check Metro Vancouver's park alerts before you go.",
+    ],
+  },
+  {
+    placeID: 'ubc_main_mall',
+    searchTags: [
+      'fall foliage', 'red oak avenue', 'campus stroll', 'leaf peeping', 'golden leaves',
+      'crimson trees', 'autumn photography', 'tree lined boulevard', 'University of British Columbia', 'Vancouver',
+    ],
+    category: COLOUR,
+    name: 'UBC Main Mall',
+    address: 'Main Mall, UBC, Vancouver',
+    title: 'UBC Main Mall Red Oaks',
+    detailAddress: 'Main Mall, UBC, Vancouver, BC',
+    latitude: 49.26761,
+    longitude: -123.25511,
+    tagline: 'An avenue of red oaks turning gold and crimson!',
+    about: [
+      'In autumn, the red oaks lining Main Mall turn gold and crimson and give the UBC campus an East Coast feel. The wide boulevard runs through the middle of campus and makes for an easy, scenic walk.',
+      'It pairs well with the Carolinian Forest at UBC Botanical Garden or a visit to Nitobe Memorial Garden, both on the same campus.',
+      'Good to know: Main Mall is free and open all the time. Colour usually peaks in late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'trout_lake',
+    searchTags: [
+      'fall foliage', 'lakeside loop', 'mountain reflections', 'farmers market', 'John Hendry Park',
+      'European beech', 'leaf peeping', 'autumn photography', 'Commercial Drive area', 'East Vancouver',
+    ],
+    category: COLOUR,
+    name: 'Trout Lake',
+    address: '3300 Victoria Dr, Vancouver',
+    title: 'Trout Lake at John Hendry Park',
+    detailAddress: '3300 Victoria Dr, Vancouver, BC',
+    latitude: 49.25572,
+    longitude: -123.06252,
+    tagline: 'Lakeside colour and mountain views in East Van!',
+    about: [
+      'Trout Lake, officially John Hendry Park, is a 27-acre escape in East Vancouver. An easy path circles the lake past maples, willows, oaks, and birches, with mountain views across the water.',
+      'Make a morning of it when the Saturday farmers market is on, then look for the European beech trees along East 19th Avenue.',
+      'Good to know: The park is free to enter. In 2026 the Saturday farmers market ran until October 31. Colour usually peaks in late October, and the weather can shift that by a week or more.',
+    ],
+  },
+  {
+    placeID: 'burnaby_mountain_park',
+    searchTags: [
+      'fall foliage', 'early autumn colour', 'Panorama Trail', 'Burrard Inlet viewpoint', 'Kamui Mintara',
+      'Playground of the Gods', 'leaf peeping', 'hilltop lookout', 'scenic drive', 'Burnaby',
+    ],
+    category: COLOUR,
+    name: 'Burnaby Mountain Park',
+    address: '100 Centennial Way, Burnaby',
+    title: 'Burnaby Mountain Park',
+    detailAddress: '100 Centennial Way, Burnaby, BC',
+    latitude: 49.28287,
+    longitude: -122.93466,
+    tagline: 'Early fall colour and big Burrard Inlet views!',
+    about: [
+      'Burnaby Mountain sits higher than the city, so its colour usually arrives earlier, which makes it a great first fall walk of the season. The Panorama Trail passes the Kamui Mintara sculptures, known as the Playground of the Gods, with views over Burrard Inlet.',
+      'Colourful trees are scattered throughout the park, and the lookout at the top is worth the walk or the drive.',
+      'Good to know: The park is free and open from dawn to dusk, and colour usually peaks in early to mid October. View the Kamui Mintara poles from outside the fence while they are assessed for age-related damage. Centennial Way and the parking lot were closed November 9 to 13, 2026 for upgrades, weather permitting, and part of the Velodrome trail is closed indefinitely.',
+    ],
+  },
+];
+
+const fallSpots = [...legacyFallSpots, ...detailedFallSpots];
+
+// Fall screen sections: legacy farms first, then the detailed spots, grouped in category order.
+const fallCategories = fallCategoryTitles.map(title => ({
+  title,
+  spots: fallSpots
+    .filter(spot => spot.category === title)
+    .map(({ name, title, address, detailAddress, latitude, longitude, tagline, about, searchDescription, searchTags }) => ({
+      name, title, address, detailAddress, latitude, longitude, tagline, searchTags,
+      // The lead description covers the venue itself. The About section also includes logistics and nearby venues.
+      description: searchDescription ?? [tagline, about?.[0]].filter(Boolean).join(' '),
+    })),
+}));
+
+const fallSpotNames = fallCategories.flatMap(category => category.spots.map(spot => spot.name));
+
+function getSpotByPlaceID(placeID) {
+  return placeID ? fallSpots.find(spot => spot.placeID === placeID) : undefined;
+}
+
+function findSpotByName(name) {
+  return fallSpots.find(spot => spot.name === name);
+}
+
+module.exports = {
+  fallCategoryTitles,
+  legacyFallSpots,
+  detailedFallSpots,
+  fallCategories,
+  fallSpotNames,
+  getSpotByPlaceID,
+  findSpotByName,
+};
