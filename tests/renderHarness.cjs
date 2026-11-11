@@ -270,6 +270,15 @@ function createHarness(options = {}) {
     '@react-native-picker/picker': { Picker: Object.assign(({ children }) => React.createElement('Picker', null, children), { Item: 'PickerItem' }) },
     'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker' },
     'firebase/storage': storageStub,
+    // The Explore recommendations. Without `exploreFeed` the function is unreachable, as it is before it is deployed.
+    'firebase/functions': {
+      getFunctions: () => ({}), connectFunctionsEmulator: () => {},
+      httpsCallable: (_, name) => async data => {
+        calls.push(['callFunction', name, data]);
+        if (!options.exploreFeed) throw Object.assign(new Error('Function unavailable'), { code: 'functions/unavailable' });
+        return { data: await options.exploreFeed(data) };
+      },
+    },
     'expo-image-picker': {
       launchImageLibraryAsync: async config => { calls.push(['pickPhotos', config]); return options.pickPhotos ? options.pickPhotos(config) : { canceled: true }; },
     },

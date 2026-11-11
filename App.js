@@ -1,7 +1,7 @@
 // App.js
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -15,6 +15,9 @@ import { AuthContext } from './contexts/AuthContext';
 import AccountAccessScreen from './screens/AccountAccessScreen';
 import { sessionAccess } from './services/sessionAccess';
 import { firebaseErrorMessage } from './services/firebaseErrors';
+import { setMetricsSink } from './services/metrics';
+import { recordEvent, flushEvents, setEventsUser } from './services/events';
+import { forgetExploreFeed } from './services/explore';
 
 // Import screens
 import LoginScreen from './screens/LoginScreen';
@@ -102,6 +105,17 @@ export default function App() {
     });
     return () => { cancelled = true; };
   }, [user, registering, retry]);
+
+  // Explore's events are written in batches: whoever is signed in owns the batch, and leaving the app sends it.
+  useEffect(() => {
+    setEventsUser(user?.uid);
+    forgetExploreFeed();
+  }, [user?.uid]);
+  useEffect(() => {
+    setMetricsSink(recordEvent);
+    const subscription = AppState.addEventListener('change', state => { if (state !== 'active') flushEvents(); });
+    return () => subscription.remove();
+  }, []);
 
   const access = sessionAccess({ initializing, user, registering, registrationError, profile });
 

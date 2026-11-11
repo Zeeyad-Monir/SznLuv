@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 // Your Firebase configuration object
 const firebaseConfig = {
@@ -52,12 +53,16 @@ function initializeAuthentication() {
 export const auth = initializeAuthentication();
 export const db = getFirestore(app);
 export const storage = getStorage(app); // Photos of spots people make (storage.rules)
+// Explore recommendations (functions/). The region must match REGION in functions/index.js.
+const FUNCTIONS_REGION = 'us-central1';
+export const functions = getFunctions(app, FUNCTIONS_REGION);
 
 if (useEmulator && !globalThis.__sznluvEmulatorConnected) {
   globalThis.__sznluvEmulatorConnected = true; // Fast Refresh re-runs this file; connecting twice throws
   connectAuthEmulator(auth, `http://${emulatorHost}:9099`, { disableWarnings: true });
   connectFirestoreEmulator(db, emulatorHost, 8080);
   connectStorageEmulator(storage, emulatorHost, 9199);
+  connectFunctionsEmulator(functions, emulatorHost, 5001);
 }
 
 // Where a stored photo is downloaded from. Loading it this way, with the viewer's sign-in token, means

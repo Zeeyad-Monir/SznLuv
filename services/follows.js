@@ -69,6 +69,11 @@ export async function loadFollowedListIds(uid) {
   return (await getDocs(followedLists(uid))).docs.map(snapshot => snapshot.id);
 }
 
+// The ids with when each was followed, for Explore: its hearts, and what the recommendations learn from.
+export async function loadFollowedListPointers(uid) {
+  return (await getDocs(followedLists(uid))).docs.map(snapshot => ({ id: snapshot.id, followedAt: snapshot.data().followedAt }));
+}
+
 // Followed lists that are still shared, newest follow first, plus the titles that were just dropped
 // because their list was made private or deleted. A read that fails keeps the pointer: only a
 // definite "not there" removes a follow.

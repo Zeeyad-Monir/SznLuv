@@ -19,7 +19,7 @@ export const exploreCardLabel = list => {
   return `${list.title}, ${spotCount(count)}, by ${list.ownerUsername}`;
 };
 
-export default function ExploreCard({ list, variant = 'tile', width, height, followed, onPress, onToggleFollow }) {
+export default function ExploreCard({ list, variant = 'tile', width, height, followed, onPress, onToggleFollow, onLayout }) {
   const hero = variant === 'hero';
   const art = seasonArt(list.cover);
   const count = list.spotCount ?? list.items?.length ?? 0;
@@ -42,7 +42,7 @@ export default function ExploreCard({ list, variant = 'tile', width, height, fol
     </>
   );
   return (
-    <View style={[styles.card, { width, minHeight: height }, hero && styles.heroCard]}>
+    <View style={[styles.card, { width, minHeight: height }, hero && styles.heroCard]} onLayout={onLayout}>
       <TouchableOpacity style={[styles.touchable, { backgroundColor: coverBackground(list.cover) }]} activeOpacity={0.85}
         onPress={onPress} accessibilityRole="button" accessibilityLabel={hero ? `Featured: ${label}` : label}>
         {art ? (

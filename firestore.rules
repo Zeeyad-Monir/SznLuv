@@ -253,6 +253,32 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // ---------------------------------------------------------------- Explore recommendations
+
+    // What one app session saw and did on Explore, written once and never read back by anyone. The daily
+    // function (functions/handlers.js) counts these and deletes them. `at` is the server's clock, and the
+    // writer can only speak for themselves.
+    match /events/{eventId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'at', 'session', 'algo', 'items'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 60
+        && shortText(request.resource.data.session, 40)
+        && shortText(request.resource.data.algo, 20);
+      allow read, update, delete: if false;
+    }
+
+    // Written and read by Cloud Functions only; the app gets its feed from the getExploreFeed function.
+    match /exploreIndex/{shardId} {
+      allow read, write: if false;
+    }
+
+    match /exploreMetrics/{day} {
+      allow read, write: if false;
+    }
+
     // ---------------------------------------------------------------- Existing shared data
 
     match /reviews/{reviewId} {

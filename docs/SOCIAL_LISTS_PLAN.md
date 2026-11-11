@@ -21,7 +21,7 @@ Decisions you already made: **in-app links only** (no web guest page), **you dep
 | Separate "Edit list" form + "Visitor preview" screen | The owner's list page *is* the visitor layout, with an in-place Edit mode | What you see is what goes public; removes a screen and the preview step |
 | Edits to a public list stay in draft until "review and publish again" | Kept (two documents), but lighter: an "Update" bar; the review sheet appears only when the update exposes a **new note or custom location** | Nothing goes public without a tap, but adding a catalogue spot is one tap, not a ceremony |
 | Guest browsing before sign-in | Dropped for v1 (your choice). Links open for signed-in users; a signed-out tap is remembered and opened after login | The app has no guest mode or website |
-| Making a list private "clears follows" | Follows are private pointers owned by the follower; a pointer whose list is gone or was re-published later is pruned by the follower's own client | No Cloud Functions; an owner cannot (and should not) write to another user's data |
+| Making a list private "clears follows" | Follows are private pointers owned by the follower; a pointer whose list is gone or was re-published later is pruned by the follower's own client | No Cloud Functions for lists and follows (the Explore recommendations added some later, see `EXPLORE_RECS.md`); an owner cannot (and should not) write to another user's data |
 | Up/down arrows to reorder | Kept, inside Edit mode, with VoiceOver actions | No drag library installed; lists are short |
 | Not in research | **Report** and **Block** | Public user content needs both for App Store review (guideline 1.2) |
 | Not in research | Fixes found on the way: Favourites grid renders one column on current iPhones; white text on pale collection colours is unreadable; blocking `Alert` on every heart tap; blue `#4A90E2`/`#8DA9F2` buttons that match nothing else | These screens are being rebuilt anyway |
@@ -136,7 +136,7 @@ Under the Seasons card: tan label **From the community** + the 3 most followed p
 - **Errors**: every write is optimistic with rollback and a snackbar "Couldn't save. Check your connection."; `Alert` is kept only for destructive confirms (delete list, block). Double-submits are guarded with the existing `submitting` ref pattern; navigation taps use `canNavigate`.
 - **Limits**: 50 spots per list (Add disabled with a hint), 4 picks, text limits enforced in UI and rules.
 - **Block**: adds to `users.blocked`, unfollows that person and their lists, hides their content locally.
-- **Metrics**: `services/metrics.js` `track(name, props)` no-op wrapper (dev console) called at: list started, first spot added (with entry point), list followed, spot saved from a list, followed list reopened. Lets the research's four launch metrics be switched on later without touching screens.
+- **Metrics**: `services/metrics.js` `track(name, props)` no-op wrapper (dev console) called at: list started, first spot added (with entry point), list followed, spot saved from a list, followed list reopened. Lets the research's four launch metrics be switched on later without touching screens. Since the Explore recommendations, `services/events.js` is connected as the sink: it keeps the Explore events (seen, opened, followed) and ignores the rest.
 
 ## 8. Motion and feedback
 

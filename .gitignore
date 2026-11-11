@@ -39,3 +39,7 @@ yarn-error.*
 
 # Firebase emulator logs
 *-debug.log
+
+# Cloud Functions
+functions/node_modules/
+functions/shared/

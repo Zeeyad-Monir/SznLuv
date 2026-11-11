@@ -6,7 +6,7 @@ const path = require('path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, where, orderBy, limit,
-  writeBatch, runTransaction, deleteField,
+  writeBatch, runTransaction, deleteField, serverTimestamp,
 } = require('firebase/firestore');
 
 const cover = { type: 'colour', value: '#A7C8FF' };
@@ -328,6 +328,29 @@ test('reviews: anyone signed in can post and upvote by one; only the author can 
   await assertFails(updateDoc(doc(alex, 'reviews/r1'), { comment: 'Edited by someone else' }));
   await assertFails(deleteDoc(doc(alex, 'reviews/r1')));
   await assertSucceeds(deleteDoc(doc(maya, 'reviews/r1')));
+});
+
+test('explore events are write-once, in your own name, and the index is closed to the app', async () => {
+  const event = (uid, extra = {}) => ({
+    uid, at: serverTimestamp(), session: 's1', algo: 'recs-1', items: [{ t: 'imp', l: 'mayaList', p: 0, ms: 1 }], ...extra,
+  });
+  const created = await assertSucceeds(addDoc(collection(maya, 'events'), event('maya')));
+  await assertFails(getDoc(created));
+  await assertFails(getDocs(collection(maya, 'events')));
+  await assertFails(updateDoc(created, { session: 's2' }));
+  await assertFails(deleteDoc(created));
+  await assertFails(addDoc(collection(maya, 'events'), event('alex')));
+  await assertFails(addDoc(collection(guest, 'events'), event('maya')));
+  await assertFails(addDoc(collection(maya, 'events'), event('maya', { at: new Date(0) })));
+  await assertFails(addDoc(collection(maya, 'events'), event('maya', { items: [] })));
+  await assertFails(addDoc(collection(maya, 'events'), event('maya', { items: Array.from({ length: 61 }, () => ({ t: 'imp', l: 'x' })) })));
+  await assertFails(addDoc(collection(maya, 'events'), event('maya', { extra: true })));
+
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'exploreIndex/s0'), { lists: {} }));
+  await assertFails(getDoc(doc(maya, 'exploreIndex/s0')));
+  await assertFails(setDoc(doc(maya, 'exploreIndex/s0'), { lists: {} }));
+  await assertFails(getDoc(doc(maya, 'exploreMetrics/2026-11-10')));
+  await assertFails(setDoc(doc(maya, 'exploreMetrics/2026-11-10'), { impressions: 1 }));
 });
 
 test('date counts are read-only', async () => {

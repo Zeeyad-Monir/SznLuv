@@ -25,6 +25,7 @@ import { showMenu } from '../services/actionMenu';
 import { describeWhere, findCatalogueSpot, isCustomSpot, spotKey } from '../services/catalogue';
 import { SPOT_LIMITS, SPOT_SEASONS } from '../services/customSpotsState';
 import { directionsUrl } from '../services/directions';
+import { EVENTS, track } from '../services/metrics';
 import { getBlocked } from '../services/moderation';
 import { deleteReview, reviewSource } from '../services/reviews';
 import { hasCoordinates } from '../services/spotDiscovery';
@@ -37,6 +38,10 @@ export default function SpotDetailScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
   const { spot, sourceListId } = route?.params ?? {};
   const key = JSON.stringify([user?.uid, spot && spotKey(spot), spot?.owner]);
+  // Looking inside a public list is a stronger sign of interest than opening it.
+  useEffect(() => {
+    if (sourceListId) track(EVENTS.spotOpened, { listId: sourceListId });
+  }, [sourceListId, key]);
   if (spot && isCustomSpot(spot)) {
     return <CustomSpotDetails key={key} given={spot} navigation={navigation} sourceListId={sourceListId} />;
   }

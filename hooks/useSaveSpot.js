@@ -53,7 +53,8 @@ export default function useSaveSpot(favourites, setFavourites, { sourceListId } 
 
   // `spot` is { name, address, season }. The heart fills at once and is put back if the save fails.
   const toggleFavouriteSpot = useCallback(async spot => {
-    const entry = { isFavourite: true, season: spot.season, location: spot.address ?? '' };
+    // `savedAt` lets the Explore recommendations tell a recent interest from an old one.
+    const entry = { isFavourite: true, season: spot.season, location: spot.address ?? '', savedAt: Date.now() };
     const before = latest.current;
     setFavourites(toggleFavourite(before, spot.name, entry));
     try {

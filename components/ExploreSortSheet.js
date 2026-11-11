@@ -1,4 +1,6 @@
-// Explore's sort and filter sheet: newest or most followed, and whether to leave out lists you already follow.
+// Explore's sort and filter sheet: recommended, newest or most followed, and whether to leave out lists you
+// already follow. "Recommended" is only offered while the recommendations can be reached; without them the
+// page is the newest lists, so "Newest" shows as the choice.
 // Changes apply only when Apply is pressed, like the spot filter sheet.
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -6,10 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DiscoveryBottomSheet from './DiscoveryBottomSheet';
 import { colors } from './theme';
 
-export const DEFAULT_EXPLORE_SORT = { sort: 'newest', hideFollowed: false };
+export const RECOMMENDED = 'recommended';
+export const DEFAULT_EXPLORE_SORT = { sort: RECOMMENDED, hideFollowed: false };
 export const isDefaultSort = value => value.sort === DEFAULT_EXPLORE_SORT.sort && value.hideFollowed === DEFAULT_EXPLORE_SORT.hideFollowed;
 
-const SORTS = [{ value: 'newest', label: 'Newest' }, { value: 'followed', label: 'Most followed' }];
+const SORTS = [
+  { value: RECOMMENDED, label: 'Recommended' }, { value: 'newest', label: 'Newest' }, { value: 'followed', label: 'Most followed' },
+];
 
 function Option({ label, selected, onPress }) {
   return (
@@ -20,10 +25,12 @@ function Option({ label, selected, onPress }) {
   );
 }
 
-export default function ExploreSortSheet({ value, onApply, onDismiss }) {
+export default function ExploreSortSheet({ value, recommended = true, onApply, onDismiss }) {
   const { bottom } = useSafeAreaInsets();
   const [draft, setDraft] = useState(value);
   const update = change => setDraft(previous => ({ ...previous, ...change }));
+  const sorts = recommended ? SORTS : SORTS.filter(option => option.value !== RECOMMENDED);
+  const chosen = !recommended && draft.sort === RECOMMENDED ? 'newest' : draft.sort;
 
   return (
     <DiscoveryBottomSheet title="Sort lists" closeLabel="Close sort" testID="explore-sort" onDismiss={onDismiss}>
@@ -33,8 +40,8 @@ export default function ExploreSortSheet({ value, onApply, onDismiss }) {
             <View style={styles.section}>
               <Text accessibilityRole="header" style={styles.label}>Sort by</Text>
               <View style={styles.options}>
-                {SORTS.map(({ value: sort, label }) => (
-                  <Option key={sort} label={label} selected={draft.sort === sort} onPress={() => update({ sort })} />
+                {sorts.map(({ value: sort, label }) => (
+                  <Option key={sort} label={label} selected={chosen === sort} onPress={() => update({ sort })} />
                 ))}
               </View>
             </View>
