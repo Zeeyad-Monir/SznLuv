@@ -6,7 +6,7 @@ const { act } = require('./renderHarness.cjs');
 const flush = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
 
 // Screens are rendered the way the app wraps them: lists provider outside, snackbar inside.
-async function mount(h, relative, { params, props, user = { uid: 'audit', email: 'audit@example.com' }, username = 'audit' } = {}) {
+async function mount(h, relative, { params, props, user = { uid: 'audit', email: 'audit@example.com' }, username = 'audit', location = false } = {}) {
   const { SnackbarProvider } = h.load('components/Snackbar.js');
   const { MyListsProvider } = h.load('hooks/useMyLists.js');
   const { SavedCollectionsProvider } = h.load('hooks/useSavedCollections.js');
@@ -18,7 +18,7 @@ async function mount(h, relative, { params, props, user = { uid: 'audit', email:
       React.createElement(MySpotsProvider, null,
         React.createElement(SavedCollectionsProvider, null,
           React.createElement(SnackbarProvider, null,
-            React.createElement(Component, { navigation: h.navigation, route: { params: params ?? {} }, ...props })))))));
+            React.createElement(Component, { navigation: h.navigation, route: { params: params ?? {} }, ...props })))))), { location });
   await flush();
   const all = type => renderer.root.findAllByType(type);
   const button = label => all('TouchableOpacity').find(node => node.props.accessibilityLabel === label)

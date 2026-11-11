@@ -168,7 +168,8 @@ function textOf(node) {
 }
 
 // ---- top bar and sections
-const SECTIONS = ['HomeTab', 'ExploreTab', 'FavouritesTab', 'SpinTab', 'ProfileTab'];
+// The Map tab sits where Spin the Wheel was; the wheel's own screen is still tested below.
+const SECTIONS = ['HomeTab', 'ExploreTab', 'FavouritesTab', 'MapTab', 'ProfileTab'];
 const tabState = (index, nested) => ({ index, routes: SECTIONS.map((name, i) => ({ key: `${name}-key`, name, state: i === index ? nested : undefined })) });
 const homeStack = names => ({ key: 'home-stack', index: names.length - 1, routes: names.map(name => ({ key: name, name })) });
 async function renderTopBar(state, top = 62) {
@@ -347,9 +348,11 @@ test('floating bar: five named slots fit narrow phones, and Profile comes last',
     const h = createHarness({ window: { width } });
     const { renderer, control } = await renderFloatingNav(h, 4);
     const tabs = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityRole === 'tab');
-    assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Spin the Wheel', 'Profile']);
+    assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Map', 'Profile']);
     assert.deepEqual(control('Profile').props.accessibilityState, { selected: true });
     assert.equal(control('Explore').props.accessibilityHint, 'Search lists from other people');
+    assert.equal(control('Map').props.accessibilityHint, 'Shows your saved spots on a map');
+    assert.equal(control('Spin the Wheel'), undefined, 'the wheel is parked, not in the bar');
     const widths = tabs.map(tab => Object.assign({}, ...tab.props.style).width);
     assert.ok(widths.every(slot => slot === widths[0] && slot >= 44));
     assert.ok(widths.reduce((sum, slot) => sum + slot, 0) <= width - 46 + Number.EPSILON * width);
@@ -366,21 +369,21 @@ test('floating bar: Profile opens its root after leaving the tab on a detail', a
   await act(async () => renderer.unmount());
 });
 
-test('floating bar: Favorites and Spin keep their route keys and only a real switch triggers a haptic', async () => {
+test('floating bar: Favorites and Map keep their route keys and only a real switch triggers a haptic', async () => {
   const h = createHarness();
   const { renderer, log, control } = await renderFloatingNav(h, 2);
   assert.deepEqual(control('Favorites').props.accessibilityState, { selected: true });
-  assert.deepEqual(control('Spin the Wheel').props.accessibilityState, { selected: false });
+  assert.deepEqual(control('Map').props.accessibilityState, { selected: false });
   await act(async () => control('Favorites').props.onPress());
   assert.deepEqual(log.emitted.at(-1), { type: 'tabPress', target: 'FavouritesTab-key', canPreventDefault: true });
   log.blocked = true;
-  await act(async () => control('Spin the Wheel').props.onPress());
+  await act(async () => control('Map').props.onPress());
   assert.deepEqual(log.navigated, []);
   assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
   log.blocked = false;
-  await act(async () => control('Spin the Wheel').props.onPress());
-  assert.deepEqual(log.navigated, ['SpinTab']);
-  assert.equal(log.emitted.at(-1).target, 'SpinTab-key');
+  await act(async () => control('Map').props.onPress());
+  assert.deepEqual(log.navigated, ['MapTab']);
+  assert.equal(log.emitted.at(-1).target, 'MapTab-key');
   assert.equal(h.calls.filter(([name]) => name === 'selectionHaptic').length, 1);
   await act(async () => renderer.unmount());
 });
@@ -420,7 +423,7 @@ test('floating bar: respects Reduce Transparency and uses the opaque treatment o
   const android = createHarness({ platform: 'android' });
   const androidNav = await renderFloatingNav(android, 3);
   assert.equal(androidNav.renderer.root.findAllByType('BlurView').length, 0);
-  assert.deepEqual(androidNav.control('Spin the Wheel').props.accessibilityState, { selected: true });
+  assert.deepEqual(androidNav.control('Map').props.accessibilityState, { selected: true });
   await act(async () => androidNav.control('Favorites').props.onPress());
   assert.equal(android.calls.filter(([name]) => name === 'selectionHaptic').length, 0);
   await act(async () => androidNav.renderer.unmount());
@@ -521,7 +524,7 @@ test('venue pages hold the map back until the push has finished', async () => {
   assert.equal(renderer.root.findAllByType('MapView').length, 0);
   await act(async () => renderer.unmount());
 });
-test('main tabs: five sections with shared navigation; venue and list pages reachable from Home, Explore and Favourites', async () => {
+test('main tabs: five sections with shared navigation; venue and list pages reachable from every section, the Map included', async () => {
   const React = require('react'), Renderer = require('react-test-renderer');
   const h = createHarness();
   const renderer = await h.render('navigation/MainTabs.js');
@@ -532,7 +535,7 @@ test('main tabs: five sections with shared navigation; venue and list pages reac
   assert.equal(navigator.props.backBehavior, 'none', 'VoiceOver back cannot jump between sections');
   const tabs = renderer.root.findAllByType(h.Screen);
   assert.deepEqual(tabs.map(node => node.props.name), SECTIONS);
-  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites'], [4, 'Profile']]) {
+  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites'], [3, 'Map'], [4, 'Profile']]) {
     let section;
     await act(async () => { section = Renderer.create(React.createElement(tabs[index].props.component)); });
     const names = section.root.findAllByType(h.Screen).map(node => node.props.name);

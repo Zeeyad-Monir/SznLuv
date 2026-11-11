@@ -3,7 +3,7 @@
 // Anyone else sees the public copy, with Follow, share and report. Opened with { listId }.
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, LayoutAnimation, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, Alert, Animated, LayoutAnimation, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +26,7 @@ import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
 import { cityName, spotKey } from '../services/catalogue';
-import { followList, isFollowingList, markListOpened, unfollowList } from '../services/follows';
+import { followList, getFollowedList, markListOpened, setListOnMap, unfollowList } from '../services/follows';
 import { deleteList, mutateList, publishList, subscribeList } from '../services/lists';
 import {
   LIMITS, addSpot, coverBackground, hasUnpublishedChanges, insertSpot, moveSpot, needsReview, removeSpot,
@@ -37,6 +37,7 @@ import { shareList } from '../services/shareList';
 import { canNavigate, openSpot } from '../services/venueNavigation';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
+const ON_MAP_TRACK = { false: '#CFC6BA', true: colors.ink };
 const haptic = () => { if (Platform.OS === 'ios') selectionAsync().catch(() => {}); };
 export default function ListScreen({ navigation, route }) {
   const { listId, from } = route.params;
@@ -303,6 +304,9 @@ function VisitorList({ navigation, list, from, view, setView }) {
   // Undo in the snackbar runs later, so the toggle reads the current answer rather than the one it was made with.
   const followingNow = useRef(false);
   const setFollowing = value => { followingNow.current = value; setFollowingState(value); };
+  // Whether this list's spots are pinned on the Map tab without being picked there. Off for a new follow.
+  const [onMap, setOnMap] = useState(false);
+  const savingOnMap = useRef(false);
   const [favourites, setFavourites] = useFavouriteSpots();
   const { saveRef, isSaved } = useSaveSpot(favourites, setFavourites, { sourceListId: list.id });
   const working = useRef(false);
@@ -312,9 +316,11 @@ function VisitorList({ navigation, list, from, view, setView }) {
   // Opening a followed list clears its "Updated" mark.
   useEffect(() => {
     let active = true;
-    isFollowingList(uid, list.id).then(isFollowing => {
+    getFollowedList(uid, list.id).then(pointer => {
       if (!active) return;
+      const isFollowing = !!pointer;
       setFollowing(isFollowing);
+      setOnMap(pointer?.showOnMap === true);
       if (isFollowing) {
         markListOpened(uid, list.id).catch(() => {});
         track(EVENTS.followedListReopened, { listId: list.id, from: from === 'link' ? 'link' : 'library' });
@@ -327,7 +333,9 @@ function VisitorList({ navigation, list, from, view, setView }) {
     if (working.current) return;
     working.current = true;
     const next = !followingNow.current;
+    const wasOnMap = onMap;
     setFollowing(next); // Flips at once; put back if the save fails
+    setOnMap(false); // The map switch belongs to the follow: a new follow starts with it off
     try {
       if (next) {
         await followList(uid, list);
@@ -341,9 +349,26 @@ function VisitorList({ navigation, list, from, view, setView }) {
     } catch (error) {
       console.error('Error changing follow:', { code: error?.code });
       setFollowing(!next);
+      setOnMap(wasOnMap);
       snackbar.show({ message: SAVE_FAILED });
     } finally {
       working.current = false;
+    }
+  };
+
+  // Only changes what the Map tab shows by default. The list stays followed either way.
+  const toggleOnMap = async value => {
+    if (savingOnMap.current || !followingNow.current) return;
+    savingOnMap.current = true;
+    setOnMap(value);
+    try {
+      await setListOnMap(uid, list.id, value);
+    } catch (error) {
+      console.error('Error changing map visibility:', { code: error?.code });
+      setOnMap(!value);
+      snackbar.show({ message: SAVE_FAILED });
+    } finally {
+      savingOnMap.current = false;
     }
   };
 
@@ -410,6 +435,19 @@ function VisitorList({ navigation, list, from, view, setView }) {
           </TouchableOpacity>
         </Animated.View>
 
+        {following && (
+          <View style={styles.onMap}>
+            <View style={styles.onMapWords}>
+              <Text style={styles.onMapLabel}>Show all spots on map</Text>
+              <Text style={styles.onMapHint}>When enabled, spots from this collection will appear on your map.</Text>
+            </View>
+            <Switch accessibilityLabel="Show all spots on map"
+              accessibilityHint="When enabled, spots from this collection will appear on your map."
+              trackColor={ON_MAP_TRACK} thumbColor={colors.white} ios_backgroundColor={ON_MAP_TRACK.false}
+              value={onMap} onValueChange={toggleOnMap} />
+          </View>
+        )}
+
         <Animated.View style={entrance[2]}>
           <ListBody sections={[{ entries }]} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
             onOpen={ref => openSpot(navigation, ref, list.id)} retry={retry}
@@ -449,6 +487,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.field, borderWidth: 1, borderColor: colors.fieldBorder,
   },
   pendingText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.summary },
+  onMap: {
+    marginTop: -8, marginBottom: 20, minHeight: 56, paddingVertical: 10, paddingLeft: 14, paddingRight: 12, borderRadius: 12, gap: 12,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.field, borderWidth: 1, borderColor: colors.fieldBorder,
+  },
+  onMapWords: { flex: 1, gap: 2 },
+  onMapLabel: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  onMapHint: { fontSize: 13, lineHeight: 18, color: colors.muted },
   pendingAction: { minHeight: 44, minWidth: 64, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   pendingActionText: { fontSize: 15, fontWeight: '800', color: colors.ink, textDecorationLine: 'underline' },
 });

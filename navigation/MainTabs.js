@@ -21,7 +21,11 @@ import SeasonalFavourites from '../screens/SeasonalFavourites';
 import ExploreScreen from '../screens/ExploreScreen';
 import ListScreen from '../screens/ListScreen';
 import OwnSpotScreen from '../screens/OwnSpotScreen';
-import SpinTheWheel from '../screens/SpinTheWheel';
+// Spin the Wheel is parked while the Map tab takes its place in the bar. Its screen, logic and assets are
+// untouched in screens/SpinTheWheel.js. To bring it back, restore this import, its entry in `bottomItems`
+// and its <Tabs.Screen> below (each is commented out beside a "Spin the Wheel" note).
+// import SpinTheWheel from '../screens/SpinTheWheel';
+import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonScreen from '../screens/PersonScreen';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
@@ -36,6 +40,7 @@ const HomeStack = createNativeStackNavigator();
 const FavouritesStack = createNativeStackNavigator();
 const ExploreStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
+const MapStack = createNativeStackNavigator();
 
 const stackOptions = { headerShown: false };
 
@@ -95,6 +100,16 @@ function ExploreSection() {
   );
 }
 
+// Spots and lists open on top of the map, so it keeps its place, zoom, search and filters underneath.
+function MapSection() {
+  return (
+    <MapStack.Navigator screenOptions={stackOptions}>
+      <MapStack.Screen name="Map" component={MapScreen} />
+      {renderVenues(MapStack)}
+    </MapStack.Navigator>
+  );
+}
+
 function ProfileSection() {
   return (
     <ProfileStack.Navigator screenOptions={stackOptions}>
@@ -129,10 +144,20 @@ const bottomItems = [
     ),
   },
   {
-    route: 'SpinTab',
-    label: 'Spin the Wheel',
-    renderIcon: () => <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.discoveryIcon} />,
+    route: 'MapTab',
+    label: 'Map',
+    hint: 'Shows your saved spots on a map',
+    returnToRoot: true,
+    renderIcon: ({ selected, color }) => (
+      <Ionicons name={selected ? 'map' : 'map-outline'} size={26} color={color} />
+    ),
   },
+  // Spin the Wheel, parked (see the note at the import):
+  // {
+  //   route: 'SpinTab',
+  //   label: 'Spin the Wheel',
+  //   renderIcon: () => <Image source={require('../assets/SPINTHEWHEEL.png')} style={styles.discoveryIcon} />,
+  // },
   {
     route: 'ProfileTab',
     label: 'Profile',
@@ -185,7 +210,9 @@ export default function MainTabs() {
           <Tabs.Screen name="HomeTab" component={HomeSection} />
           <Tabs.Screen name="ExploreTab" component={ExploreSection} />
           <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
-          <Tabs.Screen name="SpinTab" component={SpinTheWheel} />
+          <Tabs.Screen name="MapTab" component={MapSection} />
+          {/* Spin the Wheel, parked (see the note at the import):
+          <Tabs.Screen name="SpinTab" component={SpinTheWheel} /> */}
           <Tabs.Screen name="ProfileTab" component={ProfileSection} />
         </Tabs.Navigator>
         </SnackbarProvider>

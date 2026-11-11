@@ -17,7 +17,8 @@ const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 const EMPTY = {};
 
 // Live copy of the user's saved spots, keyed by spot name. `onError` runs if they can't be loaded.
-export function useFavouriteSpots(onError) {
+// A third entry says whether they have arrived yet, and a new `attempt` listens again after a failure.
+export function useFavouriteSpots(onError, attempt = 0) {
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
   const currentUid = useRef(uid);
@@ -34,8 +35,8 @@ export function useFavouriteSpots(onError) {
       console.error('Favourites subscription failed:', { code: error.code });
       onError?.(error);
     });
-  }, [uid, setFavourites]);
-  return [loaded?.uid === uid ? loaded?.favourites ?? EMPTY : EMPTY, setFavourites];
+  }, [uid, setFavourites, attempt]);
+  return [loaded?.uid === uid ? loaded?.favourites ?? EMPTY : EMPTY, setFavourites, loaded?.uid === uid];
 }
 
 // `sourceListId`: the public list the spots are being saved from, if any, for the launch metrics.

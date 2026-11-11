@@ -39,6 +39,11 @@ service cloud.firestore {
       return getAfter(publicList(listId)).data.get('followerCount', 0);
     }
 
+    // "Show all spots on map" on a followed list: a plain true or false, or not there at all.
+    function validMapSwitch(data) {
+      return !('showOnMap' in data) || data.showOnMap is bool;
+    }
+
     function followPointer(listId) {
       return /databases/$(database)/documents/users/$(request.auth.uid)/followedLists/$(listId);
     }
@@ -58,11 +63,14 @@ service cloud.firestore {
         allow create: if isOwner(uid)
           && exists(publicList(listId))
           && request.resource.data.publishedAt == get(publicList(listId)).data.publishedAt
+          && validMapSwitch(request.resource.data)
           && followersAfter(listId) == followersBefore(listId) + 1;
-        // Only "opened": the pointer's publishedAt is what ties it to the count. A missing pointer is left
-        // for Firestore to answer "not found".
+        // Only "opened" and the Map tab's switch: the pointer's publishedAt is what ties it to the count.
+        // A missing pointer is left for Firestore to answer "not found".
         allow update: if isOwner(uid)
-          && (resource == null || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastOpenedAt']));
+          && (resource == null || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastOpenedAt', 'showOnMap'])
+            && validMapSwitch(request.resource.data)));
         // A stale pointer (list gone, or withdrawn and published again) goes without touching any count.
         allow delete: if isOwner(uid)
           && (!exists(publicList(listId))

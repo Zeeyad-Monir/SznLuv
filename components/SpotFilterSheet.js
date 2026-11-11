@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Keyboard, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { SettingsContext } from '../screens/SettingsContext';
 import { DEFAULT_FILTERS, DISTANCE_OPTIONS, hasCoordinates, usesOrigin, withoutCurrentLocation } from '../services/spotDiscovery';
 import { customLocationAvailable, findCustomOrigins, getCurrentOrigin } from '../services/spotLocation';
@@ -20,7 +21,29 @@ function Option({ label, selected, onPress }) {
   );
 }
 
-export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) {
+// A list that can be picked on the Map tab, shown as a row with a tick.
+function ListOption({ title, caption, checked, onPress }) {
+  return (
+    <TouchableOpacity style={styles.listRow} onPress={onPress} accessibilityRole="checkbox"
+      accessibilityState={{ checked }} accessibilityLabel={[title, caption].filter(Boolean).join(', ')}>
+      <View style={styles.listWords}>
+        <Text style={styles.listTitle} numberOfLines={1}>{title}</Text>
+        {!!caption && <Text style={styles.listCaption} numberOfLines={1}>{caption}</Text>}
+      </View>
+      <View style={[styles.check, checked && styles.checked]}>
+        {checked && <Ionicons name="checkmark" size={18} color="#FFF" />}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// The Map tab adds to the same sheet: `collections` ([{ id, title, caption }]) puts "Select a List /
+// Collection" first and keeps the picks in `filters.listIds`; `showSort={false}` drops sorting, which a map
+// has no use for; `defaults` is what Reset goes back to.
+export default function SpotFilterSheet({
+  filters, index, onApply, onDismiss, collections = null, showSort = true, defaults = DEFAULT_FILTERS,
+  distanceUnavailable = 'Distance filters are unavailable for this season.',
+}) {
   const { bottom } = useSafeAreaInsets();
   const { isLocationEnabled, setIsLocationEnabled } = useContext(SettingsContext);
   const [draft, setDraft] = useState(filters);
@@ -49,7 +72,7 @@ export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) 
   const reset = () => {
     cancelLookup();
     Keyboard.dismiss();
-    setDraft(DEFAULT_FILTERS);
+    setDraft(defaults);
     setSource(null);
     setCustomText('');
     setLookup(EMPTY_LOOKUP);
@@ -119,6 +142,12 @@ export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) 
       : [...previous.categories, title],
   }));
 
+  const pickedLists = draft.listIds ?? [];
+  const toggleList = id => setDraft(previous => {
+    const picked = previous.listIds ?? [];
+    return { ...previous, listIds: picked.includes(id) ? picked.filter(other => other !== id) : [...picked, id] };
+  });
+
   const needsOrigin = usesOrigin(draft) && !hasCoordinates(draft.origin);
   const canApply = !lookup.pending && !needsOrigin;
   const sortOptions = [{ value: 'catalogue', label: 'Catalogue order' }];
@@ -131,6 +160,33 @@ export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) 
         <>
           <ScrollView ref={scroll} style={styles.body} contentContainerStyle={styles.bodyContent}
             keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+            {!!collections && (
+              <View style={styles.section}>
+                <View style={styles.labelRow}>
+                  <Text accessibilityRole="header" style={[styles.label, styles.labelGrow]}>Select a List / Collection</Text>
+                  {pickedLists.length > 0 && (
+                    <Text style={styles.hint} accessibilityLiveRegion="polite">{pickedLists.length} selected</Text>
+                  )}
+                </View>
+                {collections.length > 0 ? (
+                  <>
+                    <Text style={styles.hint}>Show only the spots in the lists you pick. With none picked, the map shows everything you’ve saved.</Text>
+                    {collections.map(({ id, title, caption }) => (
+                      <ListOption key={id} title={title} caption={caption} checked={pickedLists.includes(id)}
+                        onPress={() => toggleList(id)} />
+                    ))}
+                    {pickedLists.length > 0 && (
+                      <TouchableOpacity accessibilityRole="button" style={styles.inlineAction}
+                        onPress={() => update({ listIds: [] })}>
+                        <Text style={styles.actionText}>Clear selection</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.hint}>You don’t have any lists yet. Lists you make, follow or keep with a heart can be picked here.</Text>
+                )}
+              </View>
+            )}
             {index.categoryOptions.length > 0 && (
               <View style={styles.section}>
                 <Text accessibilityRole="header" style={styles.label}>Categories</Text>
@@ -144,7 +200,7 @@ export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) 
                 </View>
               </View>
             )}
-            {sortOptions.length > 1 && (
+            {showSort && sortOptions.length > 1 && (
               <View style={styles.section}>
                 <Text accessibilityRole="header" style={styles.label}>Sort by</Text>
                 <View style={styles.options}>
@@ -229,7 +285,7 @@ export default function SpotFilterSheet({ filters, index, onApply, onDismiss }) 
                   </View>
                   <Text style={styles.hint}>Distances are measured in a straight line.</Text>
                 </>
-              ) : <Text style={styles.hint}>Distance filters are unavailable for this season.</Text>}
+              ) : <Text style={styles.hint}>{distanceUnavailable}</Text>}
             </View>
           </ScrollView>
           <View style={[styles.footer, { paddingBottom: Math.max(12, bottom) }]}>
@@ -258,6 +314,20 @@ const styles = StyleSheet.create({
   bodyContent: { paddingBottom: 16 },
   section: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DED8D1', paddingTop: 14, paddingBottom: 14, gap: 8 },
   label: { color: '#323232', fontSize: 16, fontWeight: '700' },
+  labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  labelGrow: { flex: 1 },
+  listRow: {
+    minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderColor: '#DDD5CC', backgroundColor: '#FFF9F1',
+  },
+  listWords: { flex: 1 },
+  listTitle: { color: '#36322E', fontSize: 16, fontWeight: '600' },
+  listCaption: { color: '#61594F', fontSize: 13, fontWeight: '500', marginTop: 2 },
+  check: {
+    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#333', backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  checked: { backgroundColor: '#333' },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   option: {
     minHeight: 44, maxWidth: '100%', justifyContent: 'center', paddingVertical: 8,

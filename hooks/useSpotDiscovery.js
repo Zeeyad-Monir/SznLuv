@@ -49,6 +49,19 @@ export function SpotDiscoveryProvider({ children }) {
   return createElement(DiscoveryContext.Provider, { value }, children);
 }
 
+// Just the search text and filters kept for a section, for a screen that does its own matching (the Map tab).
+export function useDiscoveryState(sectionKey) {
+  const { sections, setSection } = useContext(DiscoveryContext);
+  const { query, filters } = sections[sectionKey] ?? DEFAULT_STATE;
+  return {
+    query,
+    filters,
+    setQuery: next => { if (next !== query) setSection(sectionKey, { query: next }); },
+    applyFilters: next => { if (next !== filters) setSection(sectionKey, { filters: next }); },
+    clearFilters: () => setSection(sectionKey, { filters: DEFAULT_FILTERS }),
+  };
+}
+
 export default function useSpotDiscovery(sectionKey, categories, config) {
   const { sections, setSection } = useContext(DiscoveryContext);
   const { query, filters } = sections[sectionKey] ?? DEFAULT_STATE;

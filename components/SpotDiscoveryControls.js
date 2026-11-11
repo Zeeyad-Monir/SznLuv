@@ -5,14 +5,16 @@ import { usesOrigin } from '../services/spotDiscovery';
 import { focusAccessibility } from './DiscoveryBottomSheet';
 import SpotFilterSheet from './SpotFilterSheet';
 
-export function SpotSearchBar({ value, onChangeText }) {
+// `placeholder`, `style`, `onFocus` and `onBlur` let the Map tab float the same bar over the map.
+export function SpotSearchBar({ value, onChangeText, placeholder = 'Search spots', style, onFocus, onBlur }) {
   return (
-    <View style={styles.searchBar}>
+    <View style={[styles.searchBar, style]}>
       <Icon name="search" size={22} color="#62584E" accessible={false} importantForAccessibility="no" />
       <TextInput
         style={styles.searchInput} value={value} onChangeText={onChangeText}
-        placeholder="Search spots" placeholderTextColor="#6B635A" accessibilityLabel="Search spots"
+        placeholder={placeholder} placeholderTextColor="#6B635A" accessibilityLabel={placeholder}
         autoCorrect={false} autoCapitalize="none" returnKeyType="search" onSubmitEditing={Keyboard.dismiss}
+        onFocus={onFocus} onBlur={onBlur}
       />
       {!!value && (
         <TouchableOpacity style={styles.clearText} accessibilityRole="button"
@@ -24,9 +26,9 @@ export function SpotSearchBar({ value, onChangeText }) {
   );
 }
 
-export const SpotFilterButton = forwardRef(function SpotFilterButton({ active, expanded, onPress }, ref) {
+export const SpotFilterButton = forwardRef(function SpotFilterButton({ active, expanded, onPress, style }, ref) {
   return (
-    <TouchableOpacity ref={ref} style={[styles.filterButton, active && styles.filterActive]}
+    <TouchableOpacity ref={ref} style={[styles.filterButton, style, active && styles.filterActive]}
       accessibilityRole="button" accessibilityState={{ expanded }}
       accessibilityLabel={active ? 'Filter spots, filters active' : 'Filter spots'} onPress={onPress}>
       <Icon name="tune" size={22} color={active ? '#FFF' : '#333'} accessible={false} importantForAccessibility="no" />

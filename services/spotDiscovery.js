@@ -104,8 +104,10 @@ function usesOrigin(filters) {
   return filters.radiusKm !== null || filters.sort === 'nearest';
 }
 
+// `listIds` is only set by the Map tab, where saved spots can be narrowed to chosen lists.
 function hasActiveFilters(filters) {
-  return filters.categories.length > 0 || filters.radiusKm !== null || filters.sort !== 'catalogue';
+  return filters.categories.length > 0 || filters.radiusKm !== null || filters.sort !== 'catalogue'
+    || (filters.listIds?.length ?? 0) > 0;
 }
 
 function withoutCurrentLocation(filters) {

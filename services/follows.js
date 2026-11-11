@@ -1,6 +1,6 @@
 // Following a list or a person. Each follow is a private pointer under the follower's own user document,
 // so nobody can see who follows what, and the owner of a list never writes to a follower's data.
-import { collection, deleteDoc, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 const followedLists = uid => collection(db, 'users', uid, 'followedLists');
@@ -52,6 +52,23 @@ export async function unfollowList(uid, listId) {
 
 export async function isFollowingList(uid, listId) {
   return (await getDoc(doc(followedLists(uid), listId))).exists();
+}
+
+// The follow itself, or null when not following: the list page needs its "Show all spots on map" answer too.
+export async function getFollowedList(uid, listId) {
+  const snapshot = await getDoc(doc(followedLists(uid), listId));
+  return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+}
+
+// Whether a followed list's spots are pinned on the Map tab without being picked there. It lives on the
+// follow, so it is off for a new follow and goes when the list is unfollowed. Nothing else is touched.
+export const setListOnMap = (uid, listId, showOnMap) => updateDoc(doc(followedLists(uid), listId), { showOnMap: !!showOnMap });
+
+// Every follow, live, for the Map tab: following, unfollowing and the map switch all show at once.
+export function subscribeFollowedLists(uid, onPointers, onError) {
+  return onSnapshot(followedLists(uid), snapshot => {
+    onPointers(snapshot.docs.map(pointer => ({ id: pointer.id, ...pointer.data() })));
+  }, onError);
 }
 
 // Clears the "Updated" mark. A missing pointer (not following) is not an error.

@@ -208,6 +208,12 @@ test('a list’s followerCount moves by one, only together with the follower’s
   await assertSucceeds(follow(4));
   await assertSucceeds(updateDoc(pointer, { lastOpenedAt: 2 }));
   await assertFails(updateDoc(pointer, { publishedAt: 0 }));
+  // The Map tab's switch: a plain true or false on my own follow, and nothing else rides along with it.
+  await assertSucceeds(updateDoc(pointer, { showOnMap: true }));
+  await assertSucceeds(updateDoc(pointer, { showOnMap: false, lastOpenedAt: 3 }));
+  await assertFails(updateDoc(pointer, { showOnMap: 'yes' }));
+  await assertFails(updateDoc(pointer, { showOnMap: true, publishedAt: 0 }));
+  await assertFails(updateDoc(doc(maya, 'users/alex/followedLists/mayaList'), { showOnMap: true }));
   await assertFails(follow(5)); // Already following: the pointer exists
   await assertFails(deleteDoc(pointer)); // Unfollowing has to give the follow back
 

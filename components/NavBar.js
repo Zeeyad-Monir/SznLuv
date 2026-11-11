@@ -25,6 +25,7 @@ const PARENT_TITLES = {
   Favourites: 'Favourites',
   SeasonalFavourites: 'Saved Spots',
   Explore: 'Explore',
+  Map: 'Map',
   ListScreen: 'List',
   PersonScreen: 'Profile',
   Profile: 'Profile',
