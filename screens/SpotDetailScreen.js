@@ -9,7 +9,7 @@ import PhotoGallery from '../components/spot/PhotoGallery';
 import ReadMoreText from '../components/spot/ReadMoreText';
 import SpotLocation from '../components/spot/SpotLocation';
 import SpotWeather from '../components/spot/SpotWeather';
-import { colors, controls, spot as spotStyle } from '../components/theme';
+import { colors, controls, honey, spot as spotStyle } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useDeleteSpot from '../hooks/useDeleteSpot';
 import useDistanceTo from '../hooks/useDistanceTo';
@@ -175,7 +175,7 @@ function SpotPage({
               </Text>
               {!!onMenu && (
                 <TouchableOpacity style={styles.more} onPress={onMenu} accessibilityRole="button" accessibilityLabel="More options">
-                  <Ionicons name="ellipsis-horizontal" size={22} color={colors.spotInk} />
+                  <Ionicons name="ellipsis-horizontal" size={22} color={honey.ink} />
                 </TouchableOpacity>
               )}
             </View>
@@ -190,14 +190,14 @@ function SpotPage({
                 <PhotoGallery photos={photos} name={name} />
                 {!!onAddPhotos && (
                   <TouchableOpacity style={[controls.secondary, styles.light, styles.addPhotos]} onPress={onAddPhotos} accessibilityRole="button">
-                    <Text style={controls.secondaryText}>Add photos</Text>
+                    <Text style={[controls.secondaryText, styles.lightText]}>Add photos</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </>
           )}
         </Animated.View>
-        {status === 'loading' && <ActivityIndicator style={styles.status} size="large" color={colors.spotInk} accessibilityLabel="Loading spot" />}
+        {status === 'loading' && <ActivityIndicator style={styles.status} size="large" color={honey.ink} accessibilityLabel="Loading spot" />}
         {status === 'error' && (
           <EmptyCard style={styles.status} icon="cloud-off" title="Couldn’t open this spot"
             text="Check your connection and try again." actionLabel="Try again" onAction={retry} />
@@ -214,13 +214,13 @@ function SpotPage({
               {!!url && (
                 <TouchableOpacity style={[controls.primary, styles.dark, styles.action]} accessibilityRole="button"
                   onPress={() => Linking.openURL(url).catch(() => snackbar.show({ message: 'Couldn’t open Maps.' }))}>
-                  <Ionicons name="navigate" size={17} color={colors.white} />
-                  <Text style={[controls.primaryText, styles.actionText]}>Directions</Text>
+                  <Ionicons name="navigate" size={17} color={honey.onAccent} />
+                  <Text style={[controls.primaryText, styles.darkText, styles.actionText]}>Directions</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={[controls.secondary, styles.light, styles.action]} accessibilityRole="button" onPress={() => addToList(reference)}>
-                <Ionicons name="add" size={18} color={colors.spotInk} />
-                <Text style={[controls.secondaryText, styles.actionText]}>Add to list</Text>
+                <Ionicons name="add" size={18} color={honey.ink} />
+                <Text style={[controls.secondaryText, styles.lightText, styles.actionText]}>Add to list</Text>
               </TouchableOpacity>
             </View>
             {!!(tagline || description) && (
@@ -263,10 +263,10 @@ function SpotPage({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.page },
+  container: { flex: 1, backgroundColor: honey.page },
   content: { paddingHorizontal: 20, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  title: { flex: 1, fontSize: 32, fontWeight: '800', color: colors.spotInk, textAlign: 'center', letterSpacing: -0.4 },
+  title: { flex: 1, fontSize: 32, fontWeight: '800', color: honey.ink, textAlign: 'center', letterSpacing: -0.4 },
   more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta: { marginTop: 4, textAlign: 'center' },
   photos: { marginTop: 16 },
@@ -274,10 +274,12 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch', gap: 8, marginTop: 20 },
   heartBox: {
     width: 48, minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceBorder,
+    backgroundColor: honey.card, borderWidth: 1, borderColor: honey.cardBorder,
   },
-  light: { backgroundColor: colors.surface, borderColor: colors.surfaceBorder },
-  dark: { backgroundColor: colors.spotInk },
+  light: { backgroundColor: honey.card, borderColor: honey.cardBorder },
+  lightText: { color: honey.ink },
+  dark: { backgroundColor: honey.accent },
+  darkText: { color: honey.onAccent },
   action: { flexGrow: 1, flexBasis: 98, flexDirection: 'row', gap: 5, paddingHorizontal: 8, paddingVertical: 8 },
   actionText: { flexShrink: 1 },
   fact: { paddingVertical: 2, gap: 2 },

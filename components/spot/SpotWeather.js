@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import useVenueWeather from '../../hooks/useVenueWeather';
-import { colors, spot } from '../theme';
+import { honey, spot } from '../theme';
 
 export default function SpotWeather({ latitude, longitude }) {
   const { weatherData, dailyData, weatherError, weatherLoading } = useVenueWeather(latitude, longitude);
@@ -12,7 +12,7 @@ export default function SpotWeather({ latitude, longitude }) {
   return (
     <View style={spot.section}>
       <Text style={spot.heading} accessibilityRole="header">Weather</Text>
-      {weatherLoading && <ActivityIndicator color={colors.spotInk} accessibilityLabel="Loading weather" />}
+      {weatherLoading && <ActivityIndicator color={honey.ink} accessibilityLabel="Loading weather" />}
       {!!weatherError && <Text style={spot.body}>{weatherError}</Text>}
       {!!weatherData && (
         <>
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   days: { gap: 8 },
   day: {
     width: 102, minHeight: 84, padding: 8, borderRadius: 12, alignItems: 'center',
-    backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.surfaceBorder,
+    ...spot.inset,
   },
   detail: { fontSize: 12, textAlign: 'center' },
   icon: { width: 32, height: 32 },

@@ -1,7 +1,7 @@
 // Long text cut to a few lines, with Read more / Read less, like the About section of SznLuv's spot pages.
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { colors, text } from '../theme';
+import { colors, honey, text } from '../theme';
 
 export default function ReadMoreText({ children, lines = 5, style }) {
   const [open, setOpen] = useState(false);
@@ -24,5 +24,5 @@ export default function ReadMoreText({ children, lines = 5, style }) {
 
 const styles = StyleSheet.create({
   toggle: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  toggleText: { fontSize: 15, fontWeight: '700', color: colors.ink, textDecorationLine: 'underline' },
+  toggleText: { fontSize: 15, fontWeight: '700', color: honey.accent, textDecorationLine: 'underline' },
 });

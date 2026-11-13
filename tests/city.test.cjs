@@ -379,8 +379,12 @@ test('screens and components read the chosen city, never a hardcoded one', () =>
   const files = ['App.js', ...['screens', 'components', 'navigation', 'hooks', 'contexts']
     .flatMap(folder => fs.readdirSync(path.join(root, folder)).filter(name => name.endsWith('.js')).map(name => path.join(folder, name)))];
   for (const file of files) {
-    // Comments may name the city; code may not.
-    const source = fs.readFileSync(path.join(root, file), 'utf8').split('\n').filter(line => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line)).join('\n');
+    const lines = fs.readFileSync(path.join(root, file), 'utf8').split('\n');
+    const source = lines.filter(line => {
+      if (/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line)) return false;
+      // Photo credits use the publisher's actual name.
+      return file !== path.join('screens', 'spotImages.js') || !/^\s*author:/.test(line);
+    }).join('\n');
     assert.equal(/DEFAULT_CITY/.test(source), false, `${file} uses DEFAULT_CITY`);
     assert.equal(/['"`>]\s*(Explore |All )?Vancouver\b/.test(source), false, `${file} spells out Vancouver`);
   }

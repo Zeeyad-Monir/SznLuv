@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import StoragePhoto, { PhotoPlaceholder } from '../StoragePhoto';
-import { colors } from '../theme';
+import { honey } from '../theme';
 
 export default function PhotoGallery({ photos = [], name, height = 240, gutter = 20 }) {
   const { width: screen } = useWindowDimensions();
@@ -50,13 +50,13 @@ export default function PhotoGallery({ photos = [], name, height = 240, gutter =
 }
 
 const styles = StyleSheet.create({
-  frame: { borderRadius: 14, overflow: 'hidden', backgroundColor: '#EFE6D8' },
+  frame: { borderRadius: 14, overflow: 'hidden', backgroundColor: honey.frame },
   empty: { alignItems: 'center', justifyContent: 'center', gap: 6 },
   placeholder: { width: 36, height: 36 },
-  emptyText: { color: colors.muted, fontSize: 15 },
-  credit: { color: colors.spotMeta, fontSize: 12, marginTop: 6 },
+  emptyText: { color: honey.meta, fontSize: 15 },
+  credit: { color: honey.meta, fontSize: 12, marginTop: 6 },
   creditLink: { textDecorationLine: 'underline' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D6CCBE' },
-  dotOn: { backgroundColor: colors.ink },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: honey.dot },
+  dotOn: { backgroundColor: honey.accent },
 });

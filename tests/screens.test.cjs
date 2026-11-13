@@ -16,6 +16,46 @@ const auditedPhotoFiles = {
   'Hopcott Farms Cranberry Tours': { file: 'hopcott-farms-cranberry-tours.jpg', author: 'Ocean Spray' },
   'Maan Farms': { file: 'maan-farms.jpg', author: 'GoToVan', license: 'CC BY 2.0' },
   'Taves Family Farms': { file: 'taves-family-farms.jpg', author: 'GoToVan', license: 'CC BY 2.0' },
+  'Krause Berry Farms': { file: 'krause-berry-farms.jpg', author: 'Krause Berry Farms' },
+  'Willow View Farms': { file: 'willow-view-farms.jpg', author: 'Willow View Farms' },
+  'Fort Langley Cranberry Festival': { file: 'fort-langley-cranberry-festival.jpg', author: 'James.bc', license: 'CC BY-SA 3.0' },
+  'UBC Apple Festival': { file: 'ubc-apple-festival.jpg', author: 'UBC Botanical Garden' },
+  'VanDusen Harvest Days': { file: 'vandusen-harvest-days.jpg', author: 'Vancouver Is Awesome' },
+  'Nitobe Memorial Garden': { file: 'nitobe-memorial-garden.jpg', author: 'Ruth Hartnup', license: 'CC BY 2.0' },
+  'Sun Yat-Sen Garden Moon Palace': { file: 'sun-yat-sen-garden-moon-palace.jpg', author: 'Tiqets' },
+  'Darts Hill Garden Park': { file: 'darts-hill-garden-park.jpg', author: 'Susan Murray, Darts Hill Garden Conservancy' },
+  'VanDusen Mushroom Show': { file: 'vandusen-mushroom-show.jpg', author: 'Rich Sobel, Burke Mountain Naturalists' },
+  'Stewart Farm Harvest Fair': { file: 'stewart-farm-harvest-fair.jpg', author: 'Family Fun Vancouver' },
+  'Renfrew Ravine Moon Festival': { file: 'renfrew-ravine-moon-festival.jpg', author: 'Rod Raglin', license: 'CC BY-SA 2.0' },
+  'Haney House Apple Harvest Fest': { file: 'haney-house-apple-harvest-fest.jpg', author: 'Maple Ridge Museum via Culture Days' },
+  'Granville Island Day of the Dead Market': { file: 'granville-island-day-of-the-dead-market.jpg', author: 'MOSAIC engage' },
+  'Burnaby Haunted Village': { file: 'burnaby-haunted-village.jpg', author: 'City of Burnaby' },
+  'Fright Nights at Playland': { file: 'fright-nights-at-playland.jpg', author: 'La Carmina' },
+  'Canyon Frights at Capilano': { file: 'canyon-frights-at-capilano.jpg', author: 'Capilano Suspension Bridge Park' },
+  'Lost Souls of Gastown': { file: 'lost-souls-of-gastown.jpg', author: 'Forbidden Vancouver Walking Tours' },
+  'Haunted Halloween Trolley': { file: 'haunted-halloween-trolley.jpg', author: 'Gray Line Vancouver' },
+  'Bear Creek Halloween Train': { file: 'bear-creek-halloween-train.jpg', author: 'Bear Creek Park Train' },
+  'Cougar Creek House of Horrors': { file: 'cougar-creek-house-of-horrors.jpg', author: 'Curiocity' },
+  'Grave Tales at Fort Langley': { file: 'grave-tales-fort-langley.jpg', author: 'Parks Canada' },
+  'Steveston Scarecrow Crawl': { file: 'steveston-scarecrow-crawl.jpg', author: 'Steveston Heritage' },
+  'Central Spark': { file: 'central-spark.jpg', author: 'City of Burnaby' },
+  'Tynehead Hatchery': { file: 'tynehead-hatchery.jpg', author: 'Henry’s Take' },
+  'Hoy Creek Hatchery': { file: 'hoy-creek-hatchery.jpg', author: 'Hoy-Scott Watershed Society' },
+  'Reifel Bird Sanctuary': { file: 'reifel-bird-sanctuary.jpg', author: 'ShayneKayePhoto', license: 'CC BY-SA 4.0' },
+  'Kanaka Creek Fish Fence': { file: 'kanaka-creek-fish-fence.jpg', author: 'Paul Cipywnyk' },
+  'Wings Over Iona': { file: 'wings-over-iona.jpg', author: 'Paula Gomez Villalba' },
+  'Hyde Creek Hatchery': { file: 'hyde-creek-hatchery.jpg', author: 'Nicolas Untz' },
+  'Boundary Bay Fall Bird Migration': { file: 'boundary-bay-fall-migration.jpg', author: 'Brian Avent' },
+  'Buntzen Lake': { file: 'buntzen-lake.jpg', author: 'Vancouver Trails photo contest' },
+  'Queen Elizabeth Park': { file: 'queen-elizabeth-park.jpg', author: 'Analise Zocher', license: 'CC BY 2.0' },
+  'Pacific Spirit Park': { file: 'pacific-spirit-park.jpg', author: 'popejon2', license: 'CC BY 2.0' },
+  'Stanley Park': { file: 'stanley-park-fall-walk.jpg', author: 'Adam Jones', license: 'CC BY-SA 2.0' },
+  'Deer Lake Park': { file: 'deer-lake-park.jpg', author: 'D70' },
+  'Campbell Valley Park': { file: 'campbell-valley-park.jpg', author: 'Colin W', license: 'CC BY-SA 3.0' },
+  'UBC Main Mall': { file: 'ubc-main-mall.jpg', author: 'Visit UBC' },
+  'Trout Lake': { file: 'trout-lake.jpg', author: 'David Zhang', license: 'CC BY-SA 2.0' },
+  'Burnaby Mountain Park': { file: 'burnaby-mountain-park.jpg', author: 'Ann Badjura' },
+  'Hadden Park': { file: 'hadden-park.jpg', author: 'popejon2', license: 'CC BY 2.0' },
 };
 
 for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'CitySpotsScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
@@ -636,6 +676,68 @@ test('SpotDetailScreen explains an unknown spot instead of querying reviews for 
   assert.match(JSON.stringify(renderer.toJSON()), /This spot isn’t available/);
   await act(async () => renderer.unmount());
 });
+
+test('Fall spots open directions to the audited venue entrances and meeting points', async () => {
+  const destinations = {
+    'Krause Berry Farms': '49.11321,-122.53729',
+    'Willow View Farms': '49.00717,-122.2935',
+    'Fort Langley Cranberry Festival': '49.16912,-122.5799',
+    'UBC Apple Festival': '49.25429,-123.2504',
+    'VanDusen Harvest Days': '49.23935,-123.12899',
+    'Nitobe Memorial Garden': '49.26654,-123.25925',
+    'Sun Yat-Sen Garden Moon Palace': '49.27987,-123.10425',
+    'Darts Hill Garden Park': '49.03183,-122.75205',
+    'VanDusen Mushroom Show': '49.23817,-123.12883',
+    'Stewart Farm Harvest Fair': '49.06477,-122.84196',
+    'Renfrew Ravine Moon Festival': '49.24455,-123.04703',
+    'Haney House Apple Harvest Fest': '49.21307,-122.60225',
+    'Granville Island Day of the Dead Market': '49.27002,-123.1351',
+    'Burnaby Haunted Village': '49.24068,-122.96779',
+    'Fright Nights at Playland': '49.28153,-123.03618',
+    'Canyon Frights at Capilano': '49.34222,-123.11396',
+    'Lost Souls of Gastown': '49.28452,-123.11044',
+    'Haunted Halloween Trolley': '49.28713,-123.11512',
+    'Bear Creek Halloween Train': '49.16272,-122.84106',
+    'Cougar Creek House of Horrors': '49.1338,-122.87585',
+    'Grave Tales at Fort Langley': '49.16867,-122.57279',
+    'Steveston Scarecrow Crawl': '49.12531,-123.18014',
+    'Central Spark': '49.23182,-123.01285',
+    'Tynehead Hatchery': '49.17755,-122.76105',
+    'Hoy Creek Hatchery': '49.28698,-122.79711',
+    'Reifel Bird Sanctuary': '49.09803,-123.17839',
+    'Kanaka Creek Fish Fence': '49.19936,-122.5584',
+    'Wings Over Iona': '49.21896,-123.21339',
+    'Hyde Creek Hatchery': '49.27853,-122.75974',
+    'Boundary Bay Fall Bird Migration': '49.01562,-123.04177',
+    'Buntzen Lake': '49.33766,-122.85702',
+    'Queen Elizabeth Park': '49.2416,-123.11226',
+    'Pacific Spirit Park': '49.27759,-123.22519',
+    'Stanley Park': '49.29433,-123.13782',
+    'Deer Lake Park': '49.2359,-122.96527',
+    'Campbell Valley Park': '49.02974,-122.66083',
+    'UBC Main Mall': '49.26768,-123.25492',
+    'Trout Lake': '49.25599,-123.0654',
+    'Burnaby Mountain Park': '49.28213,-122.93531',
+    'Hadden Park': '49.27752,-123.14662',
+  };
+  for (const platform of ['ios', 'android']) {
+    const h = createHarness({ platform });
+    for (const [name, destination] of Object.entries(destinations)) {
+      const renderer = await h.render('screens/SpotDetailScreen.js', { props: spotProps(name) });
+      const button = renderer.root.findAllByType('TouchableOpacity').find(node => screenText(node).includes('Directions'));
+      assert.ok(button, name);
+      const previousLinks = h.calls.filter(([action]) => action === 'openURL').length;
+      await act(async () => button.props.onPress());
+      const links = h.calls.filter(([action]) => action === 'openURL');
+      assert.equal(links.length, previousLinks + 1, name);
+      const url = new URL(links.at(-1)[1]);
+      assert.equal(url.hostname, platform === 'ios' ? 'maps.apple.com' : 'www.google.com', name);
+      assert.equal(url.searchParams.get(platform === 'ios' ? 'daddr' : 'destination'), destination, name);
+      await act(async () => renderer.unmount());
+    }
+  }
+});
+
 test('Fall screen lists every spot in category order and opens the right venue page', async () => {
   const h = createHarness();
   const renderer = await h.render('screens/FallDatesScreen.js');
@@ -648,12 +750,25 @@ test('Fall screen lists every spot in category order and opens the right venue p
   for (const [name, { file }] of Object.entries(auditedPhotoFiles)) {
     assert.ok(detail(name).findAllByType('Image').some(image => String(image.props.source).endsWith(file)), name);
   }
-  assert.equal(detail('Reifel Bird Sanctuary').findAllByType('Image').length, 0);
+  for (const spot of detailedFallSpots) assert.ok(auditedPhotoFiles[spot.name], spot.name);
   await act(async () => detail('Aldor Family Farm').props.onPress());
   await act(async () => detail('Reifel Bird Sanctuary').props.onPress());
   assert.deepEqual(h.navigations, ['Aldor Family Farm', 'Reifel Bird Sanctuary'].map(name => ['SpotDetailScreen', { spot: { k: 'c', name } }]));
   await act(async () => renderer.unmount());
 });
+test('catalogue spots without a bundled photo show the placeholder on the card and detail', async () => {
+  const h = createHarness();
+  const name = 'Glacier Rink';
+  const list = await h.render('screens/WinterDatesScreen.js');
+  const card = list.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
+  assert.ok(card);
+  assert.equal(card.findAllByType('Image').length, 0);
+  await act(async () => list.unmount());
+  const detail = await h.render('screens/SpotDetailScreen.js', { props: spotProps(name) });
+  assert.ok(JSON.stringify(detail.toJSON()).includes('Photo coming soon'));
+  await act(async () => detail.unmount());
+});
+
 test('Seasons screen shows the same Fall count as the Fall list', async () => {
   const h = createHarness();
   const renderer = await h.render('screens/SeasonsScreen.js');

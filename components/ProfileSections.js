@@ -90,7 +90,7 @@ function PublicListTiles({ lists, size, navigation, empty }) {
 }
 
 // The screen that loads the profile decides which picks and actions the viewer is allowed to see.
-export default function ProfileView({ identity, picks, lists, navigation, actions, onPressPick, onAdd, top4Controls, children }) {
+export default function ProfileView({ identity, picks, lists, navigation, actions, onPressPick, onAdd, top4Controls, ownSpots, children }) {
   const { width } = useWindowDimensions();
   const size = tileWidth(width);
   const scrollStyle = useFloatingScrollStyle(styles.content);
@@ -111,7 +111,7 @@ export default function ProfileView({ identity, picks, lists, navigation, action
           {(onAdd || picks.length > 0) && (
             <>
               <ProfileHeading title="Top 4" chip={city.name} />
-              <Top4Grid picks={picks} size={size} editable={!!onAdd} onPressPick={onPressPick} onAdd={onAdd} />
+              <Top4Grid picks={picks} size={size} editable={!!onAdd} onPressPick={onPressPick} onAdd={onAdd} ownSpots={ownSpots} />
               {top4Controls}
             </>
           )}

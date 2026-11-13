@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FILTER_OPTIONS, SORT_OPTIONS } from '../../services/reviews';
-import { colors as theme, spot } from '../theme';
+import { honey, spot } from '../theme';
 
 const PROFILE_COLOURS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
 
@@ -217,18 +217,18 @@ const styles = StyleSheet.create({
   filterTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginTop: 20, marginBottom: 15 },
 });
 
-// The newer pages' cream and ink.
+// Oat & Honey, the spot pages' look.
 const themedStyles = StyleSheet.create({
   section: { ...StyleSheet.flatten(spot.section), marginHorizontal: 0, marginTop: 0, marginBottom: 0, padding: 16, gap: 0 },
-  average: { color: theme.spotInk },
-  heading: { color: theme.spotInk },
-  inset: { backgroundColor: theme.surfaceInset, borderColor: theme.surfaceBorder, borderRadius: 12 },
-  options: { backgroundColor: theme.surfaceInset },
-  separator: { backgroundColor: theme.surfaceBorder },
+  average: { color: honey.ink },
+  heading: { color: honey.ink },
+  inset: { ...StyleSheet.flatten(spot.inset), borderRadius: 12 },
+  options: { backgroundColor: honey.inset },
+  separator: { backgroundColor: honey.cardBorder },
   reviewItem: {
-    backgroundColor: theme.surfaceInset, borderWidth: 1, borderColor: theme.surfaceBorder, borderRadius: 12, padding: 10,
+    ...StyleSheet.flatten(spot.inset), borderRadius: 12, padding: 10,
     shadowOpacity: 0, elevation: 0,
   },
-  submit: { backgroundColor: theme.spotInk, borderRadius: 12, minHeight: 48, justifyContent: 'center' },
-  submitText: { color: theme.white },
+  submit: { backgroundColor: honey.accent, borderRadius: 12, minHeight: 48, justifyContent: 'center' },
+  submitText: { color: honey.onAccent },
 });

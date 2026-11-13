@@ -11,7 +11,7 @@ import { SettingsContext } from '../../screens/SettingsContext';
 import { GOOGLE_MAPS_APIKEY } from '../../services/apiKeys';
 import { hasCoordinates } from '../../services/spotDiscovery';
 import { useSnackbar } from '../Snackbar';
-import { colors, spot } from '../theme';
+import { honey, spot } from '../theme';
 
 export default function SpotLocation({ name, address, latitude, longitude, previewRoute }) {
   const { isLocationEnabled } = useContext(SettingsContext);
@@ -64,7 +64,7 @@ export default function SpotLocation({ name, address, latitude, longitude, previ
         <View style={styles.addressRow}>
           <Text style={[spot.body, styles.address]} selectable>{address}</Text>
           <TouchableOpacity style={styles.copy} onPress={copyAddress} accessibilityRole="button" accessibilityLabel="Copy address">
-            <Ionicons name="copy-outline" size={18} color={colors.spotInk} />
+            <Ionicons name="copy-outline" size={18} color={honey.ink} />
           </TouchableOpacity>
         </View>
       )}
@@ -94,8 +94,8 @@ const styles = StyleSheet.create({
   address: { flex: 1 },
   copy: {
     width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.surfaceBorder,
+    ...spot.inset,
   },
-  frame: { height: 240, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E8E1D5' },
+  frame: { height: 240, borderRadius: 12, overflow: 'hidden', backgroundColor: honey.frame },
   map: { flex: 1 },
 });

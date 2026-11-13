@@ -17,8 +17,9 @@ const SCOPES = [{ value: 'all', label: 'All' }, { value: 'mine', label: 'My spot
 
 // title: sheet heading. addedKeys: spot keys already in the target. mySpots: the user's own spot records
 // (hooks/useMySpots.js), added by reference so editing one later shows everywhere.
-// full: the target can't take more. onAdd(ref) adds one. onAddOwn(typedText) leaves for the own-spot screen.
-export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots = [], full = false, fullHint, onAdd, onAddOwn, onDismiss }) {
+// full: the target can't take more. onAdd(ref) adds one; closeOnAdd closes the sheet after it (to swap one pick).
+// onAddOwn(typedText) leaves for the own-spot screen.
+export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots = [], full = false, fullHint, closeOnAdd = false, onAdd, onAddOwn, onDismiss }) {
   const { bottom } = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState('all');
@@ -26,7 +27,7 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots 
   const mine = mySpots.filter(spot => matchesSpot(spot, query)).map(spot => toRef(spot.id, spot));
   const onlyMine = scope === 'mine';
 
-  const row = ref => {
+  const row = (ref, dismiss) => {
     const spot = resolveSpot(ref);
     const added = addedKeys.has(spot.key);
     const disabled = added || full;
@@ -36,7 +37,7 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots 
           <Text style={styles.rowName} numberOfLines={1}>{spot.name}</Text>
           {!!spot.meta && <Text style={text.meta} numberOfLines={1}>{spot.meta}</Text>}
         </View>
-        <TouchableOpacity style={[styles.add, added && styles.added]} disabled={disabled} onPress={() => onAdd(ref)}
+        <TouchableOpacity style={[styles.add, added && styles.added]} disabled={disabled} onPress={() => { onAdd(ref); if (closeOnAdd) dismiss(); }}
           accessibilityRole="button" accessibilityState={{ disabled }}
           accessibilityLabel={added ? `${spot.name} added` : `Add ${spot.name}`}>
           {added && <Ionicons name="checkmark" size={16} color={colors.ink} />}
@@ -58,13 +59,13 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots 
             {mine.length > 0 && (
               <View>
                 <Text style={styles.group} accessibilityRole="header">Your spots</Text>
-                {mine.map(row)}
+                {mine.map(ref => row(ref, dismiss))}
               </View>
             )}
             {!onlyMine && matches.sections.map(section => (
               <View key={section.title ?? 'results'}>
                 {!!section.title && <Text style={styles.group} accessibilityRole="header">{section.title}</Text>}
-                {section.spots.map(spot => row(catalogueRef(spot.name)))}
+                {section.spots.map(spot => row(catalogueRef(spot.name), dismiss))}
               </View>
             ))}
             {onlyMine && mySpots.length === 0 && (

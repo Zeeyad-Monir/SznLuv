@@ -43,6 +43,22 @@ const colors = {
   track: '#E9DFD2',
 };
 
+// Oat & Honey: every spot page, whatever its season or collection. Golden oat page, cream cards, toasted honey actions.
+const honey = {
+  page: '#EEE2CA',
+  card: '#FFFBF3',
+  cardBorder: '#E6D6B8',
+  inset: '#F6ECDA',
+  insetBorder: '#E3D0AE',
+  accent: '#7B5230',
+  onAccent: '#FFFFFF',
+  ink: '#2B2420',
+  body: '#3A3028',
+  meta: '#6B5A48',
+  frame: '#E7D9BE',
+  dot: '#D9C6A3',
+};
+
 const GUTTER = 20;
 const GRID_GAP = 16;
 // Two columns at every phone width.
@@ -121,16 +137,18 @@ const controls = StyleSheet.create({
 const spot = StyleSheet.create({
   section: {
     marginTop: 16, padding: 16, gap: 10, borderRadius: 16,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceBorder,
+    backgroundColor: honey.card, borderWidth: 1, borderColor: honey.cardBorder,
     shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1,
   },
-  heading: { fontSize: 18, fontWeight: '700', color: colors.spotInk },
-  body: { fontSize: 15, lineHeight: 22, color: colors.spotBody },
-  label: { fontSize: 14, fontWeight: '700', color: colors.spotInk },
-  meta: { fontSize: 14, fontWeight: '500', color: colors.spotMeta },
+  heading: { fontSize: 18, fontWeight: '700', color: honey.ink },
+  body: { fontSize: 15, lineHeight: 22, color: honey.body },
+  label: { fontSize: 14, fontWeight: '700', color: honey.ink },
+  meta: { fontSize: 14, fontWeight: '500', color: honey.meta },
+  // A tile or field inside a section card (weather days, the copy button, the review box).
+  inset: { backgroundColor: honey.inset, borderWidth: 1, borderColor: honey.insetBorder },
 });
 
 module.exports = {
   colors, GUTTER, GRID_GAP, CARD_RADIUS, tileWidth, cardShadow, artFade, onArt, text, controls, spot,
-  glass, floatShadow, liftShadow,
+  glass, floatShadow, liftShadow, honey,
 };

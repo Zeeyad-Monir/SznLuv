@@ -100,7 +100,7 @@ test('profile: showing Top 4 confirms any place you added yourself, then mirrors
 
   // Reorder and remove from the pick's menu; removing the last pick hides Top 4 again.
   await screen.press('Number 2: Waterfront steps, Dropped pin');
-  assert.deepEqual(h.menus.at(-1).options, ['Open', 'Move earlier', 'Remove', 'Cancel']);
+  assert.deepEqual(h.menus.at(-1).options, ['Open', 'Move earlier', 'Replace', 'Remove', 'Cancel']);
   await act(async () => { await h.menus.at(-1).pick('Move earlier'); });
   await flush();
   assert.deepEqual(h.documents.get('profiles/audit').top4.vancouver, [steps, farm]);
@@ -150,12 +150,78 @@ test('profile: a failed Top 4 change is put back; edit profile saves colour and 
   const h = createHarness({ documents: base });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   await screen.press('Edit profile');
-  assert.deepEqual(h.navigations.at(-1), ['EditProfile', { bio: '', avatarColor: null }]);
+  assert.deepEqual(h.navigations.at(-1), ['EditProfile', { bio: '', avatarColor: null, top4Picks: [], top4Public: false }]);
   const sheet = await mount(h, 'screens/EditProfileSheet.js', { params: h.navigations.at(-1)[1] });
   await act(async () => sheet.all('TextInput')[0].props.onChangeText('  Long evenings. '));
   await sheet.press('Avatar colour 3');
   await sheet.press('Save');
   assert.deepEqual(h.documents.get('profiles/audit'), { username: 'audit', bio: 'Long evenings.', avatarColor: '#A7C8FF' });
+});
+
+test('edit profile: a full Top 4 can be reordered, swapped and trimmed, and only changes on Save', async () => {
+  const cafe = catalogueRef('Krause Berry Farms');
+  const h = createHarness({ documents: { ...base,
+    'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, maan, rink, steps], public: true }, brooklyn: { picks: [farm], public: false } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, maan, rink, steps] } },
+  } });
+  const screen = await mount(h, 'screens/ProfileScreen.js');
+  assert.equal(screen.button('Add a pick'), undefined, 'a full Top 4 has no open slots on the profile');
+  await screen.press('Edit profile');
+  const params = h.navigations.at(-1)[1];
+  assert.deepEqual([params.top4Picks, params.top4Public], [[farm, maan, rink, steps], true]);
+
+  // Closing without saving leaves Top 4 alone.
+  const closed = await mount(h, 'screens/EditProfileSheet.js', { params });
+  await closed.press('Remove Maan Farms');
+  await closed.press('Close Edit profile');
+  assert.deepEqual(h.documents.get('users/audit').top4.vancouver.picks, [farm, maan, rink, steps]);
+
+  const sheet = await mount(h, 'screens/EditProfileSheet.js', { params });
+  assert.equal(sheet.button('Add a pick'), undefined, 'four picks leave nothing to add');
+  assert.equal(sheet.button('Move Aldor Family Farm up'), undefined);
+  assert.equal(sheet.button('Move Waterfront steps down'), undefined);
+  await sheet.press('Move Glacier Rink up');
+  await sheet.press('Replace Aldor Family Farm');
+  await flush();
+  await sheet.press(`Add ${cafe.name}`);
+  await flush();
+  await sheet.press('Remove Waterfront steps');
+  assert.ok(sheet.button('Add a pick'), 'removing one opens a slot');
+  await sheet.press('Save');
+  await flush();
+
+  const expected = [cafe, rink, maan];
+  assert.deepEqual(h.documents.get('users/audit').top4.vancouver, { picks: expected, public: true });
+  assert.deepEqual(h.documents.get('users/audit').top4.brooklyn, { picks: [farm], public: false }, 'another city is untouched');
+  assert.deepEqual(h.documents.get('profiles/audit').top4, { vancouver: expected });
+  assert.equal(h.alerts.length, 0, 'catalogue spots need no confirm');
+});
+
+test('edit profile: adding your own place to a shown Top 4 is confirmed, and removing every pick hides it', async () => {
+  const h = createHarness({ documents: { ...base,
+    'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm], public: true } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm] } },
+    'spots/audit_steps1': { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [], createdAt: 1 },
+  } });
+  const params = { bio: '', avatarColor: null, top4Picks: [farm], top4Public: true };
+  const sheet = await mount(h, 'screens/EditProfileSheet.js', { params });
+  await sheet.press('Add a pick');
+  await flush();
+  await sheet.press('Add Waterfront steps');
+  await sheet.press('Save');
+  const [title, , buttons] = h.alerts.at(-1);
+  assert.equal(title, 'Show these places?');
+  assert.deepEqual(h.documents.get('profiles/audit').top4, { vancouver: [farm] }, 'nothing changes until confirmed');
+  await act(async () => { await buttons.find(option => option.text === 'Show').onPress(); });
+  await flush();
+  assert.equal(h.documents.get('profiles/audit').top4.vancouver.length, 2);
+
+  const again = await mount(h, 'screens/EditProfileSheet.js', { params });
+  await again.press('Remove Aldor Family Farm');
+  await again.press('Save');
+  await flush();
+  assert.deepEqual(h.documents.get('users/audit').top4.vancouver, { picks: [], public: false });
+  assert.deepEqual(h.documents.get('profiles/audit').top4, {});
 });
 
 // ---------------------------------------------------------------- Someone else's profile
@@ -208,20 +274,39 @@ test('person: the header shows free stats and a backdrop from their #1 pick, fal
   assert.match(byTestID(bare, 'profile-stats').props.accessibilityLabel, /^0 picks, /);
 });
 
-test('profile: who-can-see-Top-4 sits in a light card, and Share is a round glass button', async () => {
+test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Share is a round glass button', async () => {
   const h = createHarness({ documents: {
-    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm], public: true } } },
-    'profiles/audit': { username: 'audit', top4: { vancouver: [farm] } },
+    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, rink], public: true } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, rink] } },
   } });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.ok(screen.texts().includes('Anyone on SznLuv can see these.'));
   const toggle = screen.renderer.root.findByType('Switch');
-  const card = ancestorWith(toggle.parent, style => 'backgroundColor' in style);
-  assert.equal(flatStyle(card).backgroundColor, '#FFFFFF', 'a light card, not the old dark row');
+  assert.equal(toggle.props.accessibilityLabel, 'Show Top 4 on my profile');
+  assert.deepEqual(flatStyle(toggle).transform, [{ scale: 0.75 }], 'a smaller switch');
+  assert.equal(ancestorWith(toggle.parent, style => style.backgroundColor === '#FFFFFF' || style.backgroundColor === '#2C2C2C'), null,
+    'no card or dark bar around it');
   const share = screen.button('Share profile');
   assert.ok(share);
   assert.ok(ancestorWith(share, style => style.width === 48 && style.height === 48), 'round, 48pt');
   assert.ok(screen.button('Edit profile'));
+
+  // A place with a cover photo shows it; one without keeps its season colour.
+  const tileImages = label => screen.button(label).findAllByType('Image').map(node => String(node.props.source));
+  assert.equal(tileImages('Number 1: Aldor Family Farm, Langley · Fall').length, 1);
+  assert.match(tileImages('Number 1: Aldor Family Farm, Langley · Fall')[0], /FamilyFarm\.jpg$/);
+  assert.deepEqual(tileImages('Number 2: Glacier Rink, Winter'), []);
+  // The photo is sized to the square tile, so "cover" crops it around the centre instead of showing a corner.
+  const photo = flatStyle(screen.button('Number 1: Aldor Family Farm, Langley · Fall').findAllByType('Image')[0]);
+  assert.equal(typeof photo.width, 'number');
+  assert.equal(photo.width, photo.height);
+});
+
+test('profile: with no picks there is only the prompt, no switch', async () => {
+  const h = createHarness({ documents: base });
+  const screen = await mount(h, 'screens/ProfileScreen.js');
+  assert.ok(screen.texts().includes('Pick up to four favourite spots.'));
+  assert.equal(screen.all('Switch').length, 0);
 });
 
 test('person: following is separate from following their lists, and names where to find them', async () => {

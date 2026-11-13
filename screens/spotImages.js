@@ -10,6 +10,46 @@ const spotImages = {
   'Hopcott Farms Cranberry Tours': require('../assets/Seasonal/fall/hopcott-farms-cranberry-tours.jpg'),
   'Maan Farms': require('../assets/Seasonal/fall/maan-farms.jpg'),
   'Taves Family Farms': require('../assets/Seasonal/fall/taves-family-farms.jpg'),
+  'Krause Berry Farms': require('../assets/Seasonal/fall/krause-berry-farms.jpg'),
+  'Willow View Farms': require('../assets/Seasonal/fall/willow-view-farms.jpg'),
+  'Fort Langley Cranberry Festival': require('../assets/Seasonal/fall/fort-langley-cranberry-festival.jpg'),
+  'UBC Apple Festival': require('../assets/Seasonal/fall/ubc-apple-festival.jpg'),
+  'VanDusen Harvest Days': require('../assets/Seasonal/fall/vandusen-harvest-days.jpg'),
+  'Nitobe Memorial Garden': require('../assets/Seasonal/fall/nitobe-memorial-garden.jpg'),
+  'Sun Yat-Sen Garden Moon Palace': require('../assets/Seasonal/fall/sun-yat-sen-garden-moon-palace.jpg'),
+  'Darts Hill Garden Park': require('../assets/Seasonal/fall/darts-hill-garden-park.jpg'),
+  'VanDusen Mushroom Show': require('../assets/Seasonal/fall/vandusen-mushroom-show.jpg'),
+  'Stewart Farm Harvest Fair': require('../assets/Seasonal/fall/stewart-farm-harvest-fair.jpg'),
+  'Renfrew Ravine Moon Festival': require('../assets/Seasonal/fall/renfrew-ravine-moon-festival.jpg'),
+  'Haney House Apple Harvest Fest': require('../assets/Seasonal/fall/haney-house-apple-harvest-fest.jpg'),
+  'Granville Island Day of the Dead Market': require('../assets/Seasonal/fall/granville-island-day-of-the-dead-market.jpg'),
+  'Burnaby Haunted Village': require('../assets/Seasonal/fall/burnaby-haunted-village.jpg'),
+  'Fright Nights at Playland': require('../assets/Seasonal/fall/fright-nights-at-playland.jpg'),
+  'Canyon Frights at Capilano': require('../assets/Seasonal/fall/canyon-frights-at-capilano.jpg'),
+  'Lost Souls of Gastown': require('../assets/Seasonal/fall/lost-souls-of-gastown.jpg'),
+  'Haunted Halloween Trolley': require('../assets/Seasonal/fall/haunted-halloween-trolley.jpg'),
+  'Bear Creek Halloween Train': require('../assets/Seasonal/fall/bear-creek-halloween-train.jpg'),
+  'Cougar Creek House of Horrors': require('../assets/Seasonal/fall/cougar-creek-house-of-horrors.jpg'),
+  'Grave Tales at Fort Langley': require('../assets/Seasonal/fall/grave-tales-fort-langley.jpg'),
+  'Steveston Scarecrow Crawl': require('../assets/Seasonal/fall/steveston-scarecrow-crawl.jpg'),
+  'Central Spark': require('../assets/Seasonal/fall/central-spark.jpg'),
+  'Tynehead Hatchery': require('../assets/Seasonal/fall/tynehead-hatchery.jpg'),
+  'Hoy Creek Hatchery': require('../assets/Seasonal/fall/hoy-creek-hatchery.jpg'),
+  'Reifel Bird Sanctuary': require('../assets/Seasonal/fall/reifel-bird-sanctuary.jpg'),
+  'Kanaka Creek Fish Fence': require('../assets/Seasonal/fall/kanaka-creek-fish-fence.jpg'),
+  'Wings Over Iona': require('../assets/Seasonal/fall/wings-over-iona.jpg'),
+  'Hyde Creek Hatchery': require('../assets/Seasonal/fall/hyde-creek-hatchery.jpg'),
+  'Boundary Bay Fall Bird Migration': require('../assets/Seasonal/fall/boundary-bay-fall-migration.jpg'),
+  'Buntzen Lake': require('../assets/Seasonal/fall/buntzen-lake.jpg'),
+  'Queen Elizabeth Park': require('../assets/Seasonal/fall/queen-elizabeth-park.jpg'),
+  'Pacific Spirit Park': require('../assets/Seasonal/fall/pacific-spirit-park.jpg'),
+  'Stanley Park': require('../assets/Seasonal/fall/stanley-park-fall-walk.jpg'),
+  'Deer Lake Park': require('../assets/Seasonal/fall/deer-lake-park.jpg'),
+  'Campbell Valley Park': require('../assets/Seasonal/fall/campbell-valley-park.jpg'),
+  'UBC Main Mall': require('../assets/Seasonal/fall/ubc-main-mall.jpg'),
+  'Trout Lake': require('../assets/Seasonal/fall/trout-lake.jpg'),
+  'Burnaby Mountain Park': require('../assets/Seasonal/fall/burnaby-mountain-park.jpg'),
+  'Hadden Park': require('../assets/Seasonal/fall/hadden-park.jpg'),
 };
 
 const goToVanCredit = (photoId, changes) => ({
@@ -40,6 +80,194 @@ export const spotPhotoCredits = {
   },
   'Maan Farms': goToVanCredit('50468762542', 'Resized and cropped'),
   'Taves Family Farms': goToVanCredit('51518353333', 'Resized and cropped'),
+  'Krause Berry Farms': {
+    author: 'Krause Berry Farms',
+    sourceUrl: 'https://www.krauseberryfarms.com/',
+  },
+  'Willow View Farms': {
+    author: 'Willow View Farms',
+    sourceUrl: 'https://www.willowviewfarms.com/u-pick',
+  },
+  'Fort Langley Cranberry Festival': {
+    author: 'James.bc',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Fort_Langley,_BC_-_Cranberry_Festival_1.jpg',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+    changes: 'Resized',
+  },
+  'UBC Apple Festival': {
+    author: 'UBC Botanical Garden',
+    sourceUrl: 'https://botanicalgarden.ubc.ca/news-events/heritage-and-heart/',
+  },
+  'VanDusen Harvest Days': {
+    author: 'Vancouver Is Awesome',
+    sourceUrl: 'https://www.vancouverisawesome.com/events-and-entertainment/vandusen-botanical-garden-fall-event-harvest-days-vancouver-2024-9567968',
+  },
+  'Nitobe Memorial Garden': {
+    author: 'Ruth Hartnup',
+    sourceUrl: 'https://www.flickr.com/photos/ruthanddave/1532989052',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+  },
+  'Sun Yat-Sen Garden Moon Palace': {
+    author: 'Tiqets',
+    sourceUrl: 'https://www.tiqets.com/en/vancouver-attractions-c62496/tickets-for-dr-sun-yat-sen-chinese-garden-entry-guided-tour-option-p979755/',
+  },
+  'Darts Hill Garden Park': {
+    author: 'Susan Murray, Darts Hill Garden Conservancy',
+    sourceUrl: 'https://dartshill.ca/wp-content/uploads/2025/11/The-Oracle-November-2025-V2.pdf#page=10',
+  },
+  'VanDusen Mushroom Show': {
+    author: 'Rich Sobel, Burke Mountain Naturalists',
+    sourceUrl: 'https://www.burkemountainnaturalists.ca/wp-content/uploads/2024/07/BMN_NL-2019-11-309.pdf#page=4',
+  },
+  'Stewart Farm Harvest Fair': {
+    author: 'Family Fun Vancouver',
+    sourceUrl: 'https://www.familyfuncanada.com/vancouver/historic-stewart-farm/',
+  },
+  'Renfrew Ravine Moon Festival': {
+    author: 'Rod Raglin',
+    sourceUrl: 'https://www.flickr.com/photos/78791029@N04/54018135679/',
+    license: 'CC BY-SA 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.0/',
+  },
+  'Haney House Apple Harvest Fest': {
+    author: 'Maple Ridge Museum via Culture Days',
+    sourceUrl: 'https://culturedays.ca/en/events/fd25b7f7-69d2-4882-a74c-6aceb12ffb17',
+  },
+  'Granville Island Day of the Dead Market': {
+    author: 'MOSAIC engage',
+    sourceUrl: 'https://engage.mosaicbc.org/blog/events-in-vancouver-day-of-the-dead-market',
+  },
+  'Burnaby Haunted Village': {
+    author: 'City of Burnaby',
+    sourceUrl: 'https://www.burnaby.ca/recreation-and-arts/events/haunted-village',
+  },
+  'Fright Nights at Playland': {
+    author: 'La Carmina',
+    sourceUrl: 'https://lacarmina.com/blog/2019/10/vancouver-halloween-attractions-gothic-pne-fright-nights-gardens-pumpkins/',
+  },
+  'Canyon Frights at Capilano': {
+    author: 'Capilano Suspension Bridge Park',
+    sourceUrl: 'https://www.capbridge.com/events/canyon-frights/',
+  },
+  'Lost Souls of Gastown': {
+    author: 'Forbidden Vancouver Walking Tours',
+    sourceUrl: 'https://forbiddenvancouver.ca/lost-souls-of-gastown-vancouver-tour/',
+  },
+  'Haunted Halloween Trolley': {
+    author: 'Gray Line Vancouver',
+    sourceUrl: 'https://www.grayline.com/tours/vancouver-city-tour/',
+  },
+  'Bear Creek Halloween Train': {
+    author: 'Bear Creek Park Train',
+    sourceUrl: 'https://www.bctrains.com/mini-golf',
+  },
+  'Cougar Creek House of Horrors': {
+    author: 'Curiocity',
+    sourceUrl: 'https://curiocity.com/cougar-creeks-house-of-horrors/',
+  },
+  'Grave Tales at Fort Langley': {
+    author: 'Parks Canada',
+    sourceUrl: 'https://parks.canada.ca/lhn-nhs/bc/langley/activ/calendrier-calendar/6b566c1d-f6b6-4385-be7b-ff4cb56a7383',
+  },
+  'Steveston Scarecrow Crawl': {
+    author: 'Steveston Heritage',
+    sourceUrl: 'https://stevestonheritage.ca/2024/10/01/steveston-scarecrow-crawl-2024/',
+  },
+  'Central Spark': {
+    author: 'City of Burnaby',
+    sourceUrl: 'https://www.burnaby.ca/our-city/news/2025-09-18/spooktacular-halloween-events-burnaby-all-ages',
+  },
+  'Tynehead Hatchery': {
+    author: 'Henry’s Take',
+    sourceUrl: 'https://henrystake.com/tynehead-regional-park/',
+  },
+  'Hoy Creek Hatchery': {
+    author: 'Hoy-Scott Watershed Society',
+    sourceUrl: 'https://www.hoyscottcreeks.org/calendar/salmon-come-home',
+  },
+  'Reifel Bird Sanctuary': {
+    author: 'ShayneKayePhoto',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Reifel_Bird_Sanctuary_Snow_Geese.jpg',
+    license: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    changes: 'Resized',
+  },
+  'Kanaka Creek Fish Fence': {
+    author: 'Paul Cipywnyk',
+    sourceUrl: 'https://cipywnyk.com/blog/2018/10/21/kanaka-creek-return-of-the-salmon/',
+  },
+  'Wings Over Iona': {
+    author: 'Paula Gomez Villalba',
+    sourceUrl: 'https://wildresearch.ca/stories-in-flight/',
+  },
+  'Hyde Creek Hatchery': {
+    author: 'Nicolas Untz',
+    sourceUrl: 'https://medium.com/%40nuntz/spawning-salmon-at-hyde-creek-56e3e36574df',
+  },
+  'Boundary Bay Fall Bird Migration': {
+    author: 'Brian Avent',
+    sourceUrl: 'https://deltanaturalists.org/2025/11/12/delta-naturalists-outing-to-centennial-beach-november-12-2025/',
+  },
+  'Buntzen Lake': {
+    author: 'Vancouver Trails photo contest',
+    sourceUrl: 'https://www.vancouvertrails.com/contest/gallery/2014/photo/buntzen-lake-fall-colours/',
+  },
+  'Queen Elizabeth Park': {
+    author: 'Analise Zocher',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Queen_Elizabeth_Park_in_autumn_2017.jpg',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+    changes: 'Resized',
+  },
+  'Pacific Spirit Park': {
+    author: 'popejon2',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Pacific_Spirit_Park_(5157019015).jpg',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+    changes: 'Resized',
+  },
+  'Stanley Park': {
+    author: 'Adam Jones',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:At_Lost_Lagoon_-_Stanley_Park_-_Vancouver_-_BC_-_Canada_-_02_(37943485202)_(2).jpg',
+    license: 'CC BY-SA 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.0/',
+    changes: 'Resized',
+  },
+  'Deer Lake Park': {
+    author: 'D70',
+    sourceUrl: 'https://www.flickr.com/photos/d70w7/53233792504',
+  },
+  'Campbell Valley Park': {
+    author: 'Colin W',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Campbell_Valley_Regional_Park_-_panoramio.jpg',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+    changes: 'Resized',
+  },
+  'UBC Main Mall': {
+    author: 'Visit UBC',
+    sourceUrl: 'https://visit.ubc.ca/2019/09/4-places-to-enjoy-fall-foliage-at-ubc/',
+  },
+  'Trout Lake': {
+    author: 'David Zhang',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Autumn_at_Trout_Lake,_Vancouver_(54210905867).jpg',
+    license: 'CC BY-SA 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.0/',
+    changes: 'Resized',
+  },
+  'Burnaby Mountain Park': {
+    author: 'Ann Badjura',
+    sourceUrl: 'https://www.flickr.com/photos/23980543@N04/10443665114',
+  },
+  'Hadden Park': {
+    author: 'popejon2',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Sunset_from_Hadden_Park_(5846564739).jpg',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+    changes: 'Cropped and resized',
+  },
 };
 
 export default spotImages;
