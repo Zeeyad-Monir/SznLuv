@@ -2,13 +2,21 @@
 // search, filters and map as a season page. Opened with { collectionId }.
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import BackgroundLottie from '../components/BackgroundLottie';
 import EmptyCard from '../components/EmptyCard';
 import SpotBrowser from '../components/SpotBrowser';
-import { GUTTER, colors } from '../components/theme';
+import { GUTTER } from '../components/theme';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { collectionById, collectionSections } from '../services/collections';
 
 const RANKED = { rankSearch: true };
+// The same green and full-screen sprigs as "All Vancouver spots" (screens/CitySpotsScreen.js).
+const BACKGROUND = '#D9E0D8';
+const SPRIGS = require('../assets/animations/Floating_Evergreen_Sprigs_Animation_v1.json');
+// Built in a function because `styles` is defined below.
+const sprigs = () => (
+  <BackgroundLottie source={SPRIGS} speed={0.5} resizeMode="cover" pointerEvents="none" style={styles.sprigs} />
+);
 
 export default function CollectionSpotsScreen({ navigation, route }) {
   const collectionId = route.params?.collectionId;
@@ -28,11 +36,13 @@ export default function CollectionSpotsScreen({ navigation, route }) {
   }
   return (
     <SpotBrowser navigation={navigation} title={collection.title} sectionKey={`collection:${collection.id}`}
-      sections={sections} search={RANKED} />
+      sections={sections} search={RANKED} backgroundColor={BACKGROUND}
+      backdrop={sprigs()} />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.page },
+  container: { flex: 1, backgroundColor: BACKGROUND },
+  sprigs: { ...StyleSheet.absoluteFillObject, opacity: 0.7 },
   empty: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP },
 });

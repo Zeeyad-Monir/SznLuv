@@ -3,8 +3,14 @@ import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { SettingsContext } from '../screens/SettingsContext';
 import {
-  createSpotIndex, DEFAULT_FILTERS, findMatchingSpots, hasActiveFilters, withoutCurrentLocation,
+  createSpotIndex, DEFAULT_FILTERS, findMatchingSpots, hasActiveFilters, withCurrentPosition, withoutCurrentLocation,
 } from '../services/spotDiscovery';
+import { followPosition } from '../services/followPosition';
+
+// While a filter is measured from "Current location", the position is followed: a new fix every 100 m moved,
+// a fresh one whenever the watch has been quiet for 30 s (see followPosition), and another as soon as the app
+// comes back to the front.
+const FOLLOW = { accuracy: Location.Accuracy.Balanced, distanceInterval: 100, timeInterval: 10000 };
 
 const DiscoveryContext = createContext();
 const DEFAULT_STATE = { query: '', filters: DEFAULT_FILTERS };
@@ -33,14 +39,40 @@ export function SpotDiscoveryProvider({ children }) {
     }
 
     let active = true;
+    const moveTo = position => {
+      if (!active) return;
+      const point = { ...position?.coords };
+      setSections(previous => {
+        let changed = false;
+        const next = Object.fromEntries(Object.entries(previous).map(([key, section]) => {
+          const filters = withCurrentPosition(section.filters, point);
+          if (filters !== section.filters) changed = true;
+          return [key, filters === section.filters ? section : { ...section, filters }];
+        }));
+        return changed ? next : previous;
+      });
+    };
+    // Starts following once; a refused permission found on coming back to the app drops the filters instead.
+    let following = null;
+    const follow = async ({ clearIfRefused = false } = {}) => {
+      const { granted } = await Location.getForegroundPermissionsAsync();
+      if (!active) return false;
+      if (!granted) {
+        if (clearIfRefused) clearCurrentOrigins();
+        return false;
+      }
+      following ??= followPosition(FOLLOW, moveTo);
+      return true;
+    };
+    follow().catch(() => {});
     const listener = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
-      Location.getForegroundPermissionsAsync().then(({ granted }) => {
-        if (active && !granted) clearCurrentOrigins();
-      }).catch(() => {});
+      follow({ clearIfRefused: true }).then(allowed => allowed
+        && Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(moveTo)).catch(() => {});
     });
     return () => {
       active = false;
+      following?.remove();
       listener.remove();
     };
   }, [hasCurrentOrigin, isLocationEnabled]);

@@ -9,7 +9,7 @@ const { mount, textOf, quiet, flush } = require('./support.cjs');
 const { CITIES, findCity, activeCities, isSelectableCity, catalogueSpots } = require('../services/catalogue');
 const { selectedCityFrom, unavailableCityFrom, isNewAccount, withTimeout } = require('../services/cityPreference');
 const {
-  THEMES, collectionsForCity, collectionSpots, collectionSections, citySpotSections, homeCollections, featuredForCity,
+  THEMES, collectionsForCity, collectionSpots, collectionSections, citySpotSections, homeCollections, featuredRotation,
 } = require('../services/collections');
 
 const vancouver = findCity('vancouver');
@@ -97,15 +97,30 @@ test('home collections: cards that open come first, and an empty collection neve
   }
 });
 
-test('featured: a collection with spots, and nothing at all for a city that has none', async () => {
-  assert.deepEqual(featuredForCity('vancouver'), {
-    key: 'outdoors', art: 'morning-outdoors', title: 'A morning outdoors', subtitle: 'Explore the Outdoors collection',
-    target: { screen: 'CollectionSpots', params: { collectionId: 'vancouver-outdoors' } },
-  });
+test('featured: the large card rotates through the city\'s hand-picked collections, none of them a grid card', async () => {
+  const slides = featuredRotation('vancouver');
+  assert.deepEqual(slides.map(slide => slide.key), ['rain-days', 'golden-hour', 'table-for-one']);
+  const gridTargets = homeCollections('vancouver').map(card => JSON.stringify(card.target));
+  for (const slide of slides) {
+    const { collectionId } = slide.target.params;
+    assert.deepEqual(slide.target, { screen: 'CollectionSpots', params: { collectionId } });
+    assert.ok(!gridTargets.includes(JSON.stringify(slide.target)), `${slide.key} repeats a grid card`);
+    assert.ok(slide.title && slide.subtitle, `${slide.key} has a title and a tagline`);
+  }
   await withCity(toronto, () => {
-    assert.equal(featuredForCity('toronto'), null);
+    assert.deepEqual(featuredRotation('toronto'), []);
     assert.ok(homeCollections('toronto').every(card => !card.available));
   });
+});
+
+test('curated collections: every spot they name is in the catalogue, in the order named, grouped by category to browse', () => {
+  for (const collection of collectionsForCity('vancouver', 'curated')) {
+    const spots = collectionSpots(collection.id);
+    assert.deepEqual(spots.map(spot => spot.name), collection.spotNames, collection.key);
+    const sections = collectionSections(collection.id);
+    assert.equal(sections.flatMap(section => section.spots).length, spots.length);
+    assert.equal(new Set(sections.map(section => section.title)).size, sections.length);
+  }
 });
 
 // ---------------------------------------------------------------- The gate (App.js)

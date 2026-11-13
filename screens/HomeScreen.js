@@ -1,6 +1,6 @@
 // Home: the first page of the signed-in app, and where exploring a city starts.
 //
-// Top to bottom: the page's one large line, a featured collection, the collections to browse, and a way
+// Top to bottom: the page's one large line, a few featured picks that take turns, the collections to browse, and a way
 // into every spot in the city. All of it is read from services/collections.js for the chosen city, so a
 // new collection or city shows up here without this file changing. The city itself is shown, and changed,
 // in the header above (components/NavBar.js).
@@ -10,14 +10,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import CollectionTile from '../components/CollectionTile';
 import EmptyCard from '../components/EmptyCard';
-import FeaturedCollectionCard from '../components/FeaturedCollectionCard';
+import FeaturedCarousel from '../components/FeaturedCarousel';
 import PressableScale from '../components/PressableScale';
 import { CARD_RADIUS, GRID_GAP, GUTTER, colors, text, tileWidth } from '../components/theme';
 import { useCity } from '../contexts/CityContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
-import { citySpotSections, featuredForCity, homeCollections } from '../services/collections';
+import { citySpotSections, featuredRotation, homeCollections } from '../services/collections';
 import { canNavigate } from '../services/venueNavigation';
 
 // Card heights follow the screen's width, so the illustrations keep their shape on every phone.
@@ -33,7 +33,7 @@ export default function HomeScreen() {
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
   const entrance = useEntrance(4);
 
-  const featured = useMemo(() => featuredForCity(city.id), [city.id]);
+  const featured = useMemo(() => featuredRotation(city.id), [city.id]);
   const collections = useMemo(() => homeCollections(city.id), [city.id]);
   const hasSpots = useMemo(() => citySpotSections(city.id).length > 0, [city.id]);
   const tile = tileWidth(width);
@@ -54,10 +54,10 @@ export default function HomeScreen() {
           </Text>
         </Animated.View>
 
-        {featured && (
+        {featured.length > 0 && (
           <Animated.View style={[styles.featured, entrance[1]]}>
-            <FeaturedCollectionCard featured={featured} height={Math.round((width - 2 * GUTTER) * FEATURED_SHAPE)}
-              onPress={() => open(featured.target)} />
+            <FeaturedCarousel slides={featured} height={Math.round((width - 2 * GUTTER) * FEATURED_SHAPE)}
+              onOpen={slide => open(slide.target)} />
           </Animated.View>
         )}
 

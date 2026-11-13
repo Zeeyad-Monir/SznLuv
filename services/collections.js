@@ -24,15 +24,35 @@ const THEMES = [
 ];
 const THEME_SCREEN = 'CollectionSpots';
 
-// What Home's large card highlights, first match wins. An entry is skipped while its collection is empty,
-// and a city with no entry gets the current season instead (see featuredForCity).
-// `art` names an illustration in components/covers.js; without it the card uses its collection's own.
-const FEATURED = [
-  {
-    collectionId: 'vancouver-outdoors', title: 'A morning outdoors', subtitle: 'Explore the Outdoors collection',
-    art: 'morning-outdoors',
-  },
-];
+// Hand-picked collections that cut across categories, by spot `name` (services/spots.js), in the order shown.
+// They are not grid tiles: Home's large card rotates through them, and they open like a theme. A spot named
+// here that the catalogue no longer has is simply left out; one with no spots left drops out of the rotation.
+// `title` and `tagline` are what the large card says; `art` names an illustration in components/covers.js.
+const CURATED = {
+  vancouver: [
+    {
+      key: 'rain-days', title: 'Better in the rain', tagline: '165 rainy days a year. Lean in.', art: 'rain-days',
+      spotNames: [
+        'Sun Yat-Sen Garden Moon Palace', 'VanDusen Mushroom Show', 'Pacific Spirit Park', 'Lost Souls of Gastown',
+        'Haunted Halloween Trolley', 'Burnaby Haunted Village', 'Taves Family Farms', 'Krause Berry Farms',
+      ],
+    },
+    {
+      key: 'golden-hour', title: 'Golden hour', tagline: 'Where the light turns gold', art: 'golden-hour',
+      spotNames: [
+        'Burnaby Mountain Park', 'Wings Over Iona', 'Queen Elizabeth Park', 'Reifel Bird Sanctuary', 'Deer Lake Park',
+        'Stanley Park', 'Buntzen Lake',
+      ],
+    },
+    {
+      key: 'table-for-one', title: 'Table for one', tagline: 'Quiet spots made for going solo', art: 'table-for-one',
+      spotNames: [
+        'Nitobe Memorial Garden', 'UBC Main Mall', 'Pacific Spirit Park', 'VanDusen Harvest Days', 'Reifel Bird Sanctuary',
+        'Tynehead Hatchery', 'Trout Lake', 'Campbell Valley Park',
+      ],
+    },
+  ],
+};
 
 const COLLECTIONS = CITIES.flatMap(city => [
   ...SEASON_SCREENS.map(({ season, screen }) => ({
@@ -53,12 +73,23 @@ const COLLECTIONS = CITIES.flatMap(city => [
     categories,
     screen: THEME_SCREEN,
   })),
+  ...(CURATED[city.id] ?? []).map(({ key, title, tagline, art, spotNames }) => ({
+    id: `${city.id}-${key}`,
+    cityId: city.id,
+    kind: 'curated',
+    key,
+    title,
+    tagline,
+    art,
+    spotNames,
+    screen: THEME_SCREEN,
+  })),
 ]);
 
 const byId = new Map(COLLECTIONS.map(collection => [collection.id, collection]));
 
 const collectionById = id => byId.get(id);
-// A city's season collections, or with `kind: 'theme'` its themes.
+// A city's season collections, or with `kind: 'theme'` / `'curated'` its themes or hand-picked ones.
 const collectionsForCity = (cityId, kind = 'season') => (
   COLLECTIONS.filter(collection => collection.cityId === cityId && collection.kind === kind)
 );
@@ -70,13 +101,22 @@ function collectionSpots(id) {
   const inCity = catalogueSpots.filter(spot => spot.cityId === collection.cityId);
   if (collection.kind === 'season') return inCity.filter(spot => spot.season === collection.season);
   if (collection.kind === 'theme') return inCity.filter(spot => collection.categories.includes(spot.category));
+  if (collection.kind === 'curated') {
+    const byName = new Map(inCity.map(spot => [spot.name, spot]));
+    return collection.spotNames.map(name => byName.get(name)).filter(Boolean);
+  }
   return [];
 }
 
 // A theme's spots under the category each came from, in the shape services/spotDiscovery.js indexes.
+// A curated collection has no categories of its own, so it uses its spots' categories, first seen first.
 function collectionSections(id) {
   const spots = collectionSpots(id);
-  return (byId.get(id)?.categories ?? [])
+  const collection = byId.get(id);
+  const categories = collection?.kind === 'curated'
+    ? [...new Set(spots.map(spot => spot.category))]
+    : (collection?.categories ?? []);
+  return categories
     .map(title => ({ title, spots: spots.filter(spot => spot.category === title) }))
     .filter(section => section.spots.length > 0);
 }
@@ -98,7 +138,7 @@ function collectionCaption(id) {
 }
 
 const hasSpots = collection => collectionSpots(collection.id).length > 0;
-const openCollection = collection => (collection.kind === 'theme'
+const openCollection = collection => (collection.kind !== 'season'
   ? { screen: collection.screen, params: { collectionId: collection.id } }
   : { screen: collection.screen });
 
@@ -125,30 +165,28 @@ function homeCollections(cityId) {
   return [...cards.filter(card => card.available), ...cards.filter(card => !card.available)];
 }
 
-// Home's large card: the first FEATURED entry for this city that has spots, otherwise the season it is now.
-// Null when the city has nothing to feature, and Home then leaves the card out.
-function featuredForCity(cityId, date = new Date()) {
-  for (const entry of FEATURED) {
-    const collection = byId.get(entry.collectionId);
-    if (collection?.cityId === cityId && hasSpots(collection)) {
-      return {
-        key: collection.key, art: entry.art ?? collection.key, title: entry.title, subtitle: entry.subtitle,
-        target: openCollection(collection),
-      };
-    }
+// Home's large card, which rotates: one slide per curated collection of this city that has spots. A city with
+// none gets the season it is now, alone; one with nothing to feature gets [], and Home leaves the card out.
+function featuredRotation(cityId, date = new Date()) {
+  const curated = collectionsForCity(cityId, 'curated').filter(hasSpots);
+  if (curated.length > 0) {
+    return curated.map(collection => ({
+      key: collection.key, art: collection.art ?? collection.key, title: collection.title, subtitle: collection.tagline,
+      target: openCollection(collection),
+    }));
   }
   const season = collectionsForCity(cityId, 'season').find(collection => collection.season === currentSeason(date));
-  if (!season || !hasSpots(season)) return null;
-  return {
+  if (!season || !hasSpots(season)) return [];
+  return [{
     key: season.key,
     art: season.key,
     title: `${season.title} in ${cityName(cityId)}`,
     subtitle: `Explore the ${season.title} collection`,
     target: openCollection(season),
-  };
+  }];
 }
 
 module.exports = {
   COLLECTIONS, THEMES, collectionById, collectionsForCity, collectionSpots, collectionSections, citySpotSections,
-  collectionCaption, homeCollections, featuredForCity,
+  collectionCaption, homeCollections, featuredRotation,
 };

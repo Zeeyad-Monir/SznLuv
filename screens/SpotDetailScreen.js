@@ -30,7 +30,7 @@ import { getBlocked } from '../services/moderation';
 import { deleteReview, reviewSource } from '../services/reviews';
 import { hasCoordinates } from '../services/spotDiscovery';
 import { findSpotByName } from '../services/spots';
-import spotImages from './spotImages';
+import spotImages, { spotPhotoCredits } from './spotImages';
 
 const seasonNames = values => values?.map(value => SPOT_SEASONS.find(season => season.value === value)?.label ?? value).join(', ');
 
@@ -58,7 +58,7 @@ export default function SpotDetailScreen({ navigation, route }) {
       category={details?.category} creator="By SznLuv" tagline={details?.tagline}
       description={about.filter(paragraph => !paragraph.startsWith('Good to know:')).join('\n\n')}
       tips={about.find(paragraph => paragraph.startsWith('Good to know:'))?.slice('Good to know:'.length).trim()}
-      bestSeason={details?.season} photos={photo ? [{ id: details.name, source: photo }] : []}
+      bestSeason={details?.season} photos={photo ? [{ id: details.name, source: photo, credit: spotPhotoCredits[details.name] }] : []}
       latitude={details?.latitude} longitude={details?.longitude} venue
       source={details?.placeID ? reviewSource({ placeID: details.placeID }) : null} />
   );

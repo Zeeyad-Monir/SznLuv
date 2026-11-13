@@ -257,7 +257,7 @@ function createHarness(options = {}) {
     'react-native-safe-area-context': { SafeAreaProvider: ({ children }) => React.createElement('SafeAreaProvider', null, children), useSafeAreaInsets: () => ({ top: 62, bottom: 34, left: 0, right: 0, ...options.insets }) },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     'react-native-svg': { __esModule: true, default: 'Svg', Svg: 'Svg', Path: 'Path', G: 'G', Text: 'SvgText', TSpan: 'TSpan' },
-    '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async key => storage.get(key) ?? null, setItem: async (key, value) => { storage.set(key, value); } } },
+    '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async key => storage.get(key) ?? null, setItem: async (key, value) => { storage.set(key, value); }, removeItem: async key => { storage.delete(key); } } },
     'expo-location': {
       requestForegroundPermissionsAsync: options.locationPermissions || (async () => ({ status: 'denied' })),
       getForegroundPermissionsAsync: options.getLocationPermissions || (async () => ({ granted: true })),

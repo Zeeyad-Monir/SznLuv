@@ -1,6 +1,7 @@
 // Profiles, Top 4, follows, blocking, people in Explore, the Vancouver page and the list map.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { featuredRotation } = require('../services/collections');
 const { createHarness, act } = require('./renderHarness.cjs');
 const { mount, quiet, flush } = require('./support.cjs');
 const { catalogueRef } = require('../services/catalogue');
@@ -284,11 +285,13 @@ test('Home: shows the city\'s collections without a community section even when 
   const h = createHarness({ documents: { ...base, ...maya } });
   const screen = await mount(h, 'screens/HomeScreen.js');
   assert.deepEqual(screen.texts(), [
-    'What sounds good?', 'A morning outdoors', 'Explore the Outdoors collection', 'Browse collections',
+    'What sounds good?',
+    ...featuredRotation('vancouver').flatMap(slide => [slide.title, slide.subtitle]),
+    'Browse collections',
     'Seasonal', 'Outdoors', 'Unique Food', 'Coming soon', 'Night Out', 'Coming soon', 'All Vancouver spots',
   ]);
   assert.deepEqual(labels(screen), [
-    'Featured: A morning outdoors. Explore the Outdoors collection', 'Seasonal collection', 'Outdoors collection', 'All Vancouver spots',
+    `Featured: ${featuredRotation('vancouver')[0].title}. ${featuredRotation('vancouver')[0].subtitle}`, 'Seasonal collection', 'Outdoors collection', 'All Vancouver spots',
   ]);
   await act(async () => screen.renderer.unmount());
 });

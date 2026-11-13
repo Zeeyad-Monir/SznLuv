@@ -265,7 +265,7 @@ test('map: without location it opens on the last view, or else on the saved spot
   await act(async () => first.mapView().props.onMapReady());
   await first.settle();
   const [, fitted] = first.moves().at(-1);
-  for (const [latitude, longitude] of [[49.15313, -122.53021], [49.28651, -123.112]]) {
+  for (const [latitude, longitude] of [[49.15467, -122.53112], [49.28651, -123.112]]) {
     assert.ok(Math.abs(latitude - fitted.latitude) <= fitted.latitudeDelta / 2 && Math.abs(longitude - fitted.longitude) <= fitted.longitudeDelta / 2);
   }
   assert.ok(first.screen.texts().includes('Location is off'));
@@ -314,7 +314,7 @@ test('map filter: picking lists shows only their spots, including a followed lis
   await screen.press('Filter spots');
   const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox');
   assert.deepEqual(rows().map(node => node.props.accessibilityLabel),
-    ['Weekend, 2 spots', 'Golden Hour, Following · by maya', 'Fall, Vancouver · 43 spots']);
+    ['Weekend, 2 spots', 'Golden Hour, Following · by maya', 'Fall, Vancouver · 50 spots']);
   assert.ok(screen.texts().includes('Lists & collections'));
   assert.equal(screen.texts().includes('Sort by'), false, 'sorting is left out on a map');
   assert.equal(screen.button('Search lists'), undefined, 'three lists all fit, so there is nothing to search');

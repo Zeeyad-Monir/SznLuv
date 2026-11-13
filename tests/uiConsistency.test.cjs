@@ -129,7 +129,7 @@ test('the shared detail layout orders venue and personal content and offers addr
   const open = spot => mount(h, 'screens/SpotDetailScreen.js', { params: { spot } });
   const venue = await open(catalogueRef('Richmond Country Farms'));
   const personal = await open(privateRef);
-  for (const [screen, name, photoCount] of [[venue, 'Richmond Country Farms', 0], [personal, cafe.name, 1]]) {
+  for (const [screen, name, photoCount] of [[venue, 'Richmond Country Farms', 1], [personal, cafe.name, 1]]) {
     const words = screen.texts();
     const sequence = [name, 'Directions', 'Add to list', 'About', 'Good to know', 'Location'];
     const positions = sequence.map(label => words.indexOf(label));
@@ -138,6 +138,17 @@ test('the shared detail layout orders venue and personal content and offers addr
   }
   assert.ok(venue.texts().indexOf('Weather') > venue.texts().indexOf('Location'));
   assert.ok(venue.texts().indexOf('Reviews') > venue.texts().indexOf('Weather'));
+  await venue.press('Directions');
+  assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=49.13343%2C-123.08205']);
+  for (const [label, url] of [
+    ['GoToVan', 'https://www.flickr.com/photos/gotovan/30144361371'],
+    ['CC BY 2.0', 'https://creativecommons.org/licenses/by/2.0/'],
+  ]) {
+    const link = venue.all('Text').find(node => node.props.accessibilityRole === 'link' && node.props.children === label);
+    assert.ok(link, label);
+    await act(async () => link.props.onPress());
+    assert.deepEqual(h.calls.at(-1), ['openURL', url]);
+  }
   assert.equal(personal.all('MapView').length, 0);
   await personal.press('Directions');
   assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=12%20Main%20St']);

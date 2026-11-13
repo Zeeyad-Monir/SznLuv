@@ -158,6 +158,23 @@ function withoutCurrentLocation(filters) {
   };
 }
 
+// "Current location" means where the person is now, not where they were when they chose it. A fresh fix is
+// written into every filter measured from there; other filters, and one already at that spot, are unchanged.
+function withCurrentPosition(filters, position) {
+  if (filters.origin?.source !== 'current' || !hasCoordinates(position)) return filters;
+  const { latitude, longitude } = position;
+  const accuracyM = Number.isFinite(position.accuracy) ? position.accuracy : null;
+  const { origin } = filters;
+  if (origin.latitude === latitude && origin.longitude === longitude && origin.accuracyM === accuracyM) return filters;
+  return { ...filters, origin: { ...origin, latitude, longitude, accuracyM } };
+}
+
+// iOS without Precise Location, and Android with coarse location, place you only within a few kilometres.
+const APPROXIMATE_M = 1000;
+function isApproximate(origin) {
+  return origin?.source === 'current' && Number.isFinite(origin.accuracyM) && origin.accuracyM > APPROXIMATE_M;
+}
+
 function findMatchingSpots(index, query, filters) {
   const normalized = index.rankSearch ? normalizeRanked(query) : normalize(query);
   const words = index.rankSearch ? queryWords(normalized) : normalized.split(' ').filter(Boolean);
@@ -212,6 +229,6 @@ function findMatchingSpots(index, query, filters) {
 module.exports = {
   RADIUS_MIN, RADIUS_MAX, RADIUS_DEFAULT, RADIUS_STOPS, radiusAt, radiusPosition, stepRadius, widerRadius,
   DEFAULT_FILTERS, hasCoordinates, distanceKm, createSpotIndex,
-  usesOrigin, hasActiveFilters, withoutCurrentLocation, findMatchingSpots,
+  usesOrigin, hasActiveFilters, withoutCurrentLocation, withCurrentPosition, isApproximate, findMatchingSpots,
   normalize, wordForm,
 };

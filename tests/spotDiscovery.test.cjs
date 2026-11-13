@@ -2,10 +2,11 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const React = require('react');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { fallCategories, legacyFallSpots, detailedFallSpots } = require('../services/spots');
+const { fallCategories, legacyFallSpots, detailedFallSpots, fallSpotNames } = require('../services/spots');
 const {
   createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasCoordinates,
   RADIUS_MIN, RADIUS_MAX, RADIUS_STOPS, radiusAt, radiusPosition, stepRadius, widerRadius,
+  withCurrentPosition, isApproximate,
 } = require('../services/spotDiscovery');
 
 const origin = { latitude: 0, longitude: 0 };
@@ -47,7 +48,7 @@ test('catalogue sections keep their order and global sorts handle unknown coordi
 
 test('every Fall spot has ten distinct tags and appears in a search for its locality', () => {
   const catalogue = [...legacyFallSpots, ...detailedFallSpots];
-  assert.equal(catalogue.length, 43);
+  assert.equal(catalogue.length, fallSpotNames.length);
   for (const { name, address, searchTags } of catalogue) {
     assert.equal(searchTags.length, 10, name);
     assert.ok(searchTags.every(tag => tag.trim().length > 0), name);
@@ -61,7 +62,7 @@ test('every Fall spot has ten distinct tags and appears in a search for its loca
 });
 
 test('Fall activity searches use relevant tags and descriptions, including wording variations', () => {
-  const salmonSpots = new Set(['Tynehead Hatchery', 'Hoy Creek Hatchery', 'Kanaka Creek Fish Fence']);
+  const salmonSpots = new Set(['Tynehead Hatchery', 'Hoy Creek Hatchery', 'Kanaka Creek Fish Fence', 'Hyde Creek Hatchery']);
   assert.deepEqual(new Set(fallMatches('Salmon')), salmonSpots);
   assert.deepEqual(new Set(fallMatches('Fish')), salmonSpots);
   assert.deepEqual(fallMatches('Where can I see fish in Surrey?'), ['Tynehead Hatchery']);
@@ -75,7 +76,7 @@ test('Fall activity searches use relevant tags and descriptions, including wordi
   assert.ok(fallMatches('pumpkin patches').includes('Eagle Acres Dairy'));
   assert.ok(!fallMatches('Pumpkins').includes('The Bog Cranberry Farm'));
   assert.deepEqual(fallMatches('apple picking'), ['Taves Family Farms', 'Willow View Farms']);
-  assert.deepEqual(fallMatches('bird watching'), ['Reifel Bird Sanctuary', 'Wings Over Iona']);
+  assert.deepEqual(fallMatches('bird watching'), ['Reifel Bird Sanctuary', 'Wings Over Iona', 'Boundary Bay Fall Bird Migration']);
   assert.deepEqual(fallMatches('fall colors'), fallMatches('autumn foliage'));
   assert.ok(fallMatches('corn maz').includes('Taves Family Farms'));
   assert.deepEqual(fallMatches('biodegradable'), ['VanDusen Harvest Days']);
@@ -183,7 +184,7 @@ test('draft filters discard on dismiss and applied state survives a season remou
   assert.deepEqual(cards(renderer), ['Evergreen Acres']);
   await act(async () => selectSeason(() => Fall));
   assert.equal(input(renderer).props.value, '');
-  assert.equal(cards(renderer).length, 43);
+  assert.equal(cards(renderer).length, fallSpotNames.length);
   await act(async () => selectSeason(() => Winter));
   assert.equal(input(renderer).props.value, 'road');
   assert.deepEqual(cards(renderer), ['Evergreen Acres']);
@@ -263,7 +264,7 @@ test('denied permission offers settings and disabled services skip the permissio
   await press(button(renderer, 'Use current location'));
   assert.match(output(renderer), /Turn on location services/);
   assert.equal(requests, 1);
-  assert.equal(cards(renderer).length, 43);
+  assert.equal(cards(renderer).length, fallSpotNames.length);
   await act(async () => renderer.unmount());
 });
 
@@ -325,7 +326,7 @@ test('custom lookup handles ambiguity, invalid queries, network failures and sta
     await press(button(renderer, 'Find location'));
     await act(async () => lookup({ ok: false, status: 503 }));
     assert.match(output(renderer), /Custom location lookup failed/);
-    assert.equal(cards(renderer).length, 43);
+    assert.equal(cards(renderer).length, fallSpotNames.length);
 
     await change(input(renderer, 'Custom location search'), 'Vancouver');
     await press(button(renderer, 'Find location'));
@@ -336,7 +337,7 @@ test('custom lookup handles ambiguity, invalid queries, network failures and sta
     await press(button(renderer, vancouver.formatted));
     await apply(renderer);
     assert.match(output(renderer), /Within 10 km of Vancouver, BC, Canada/);
-    assert.ok(cards(renderer).length > 0 && cards(renderer).length < 43);
+    assert.ok(cards(renderer).length > 0 && cards(renderer).length < fallSpotNames.length);
     assert.equal(permissionRequests, 0);
 
     await openSheet(renderer);
@@ -403,7 +404,7 @@ test('the distance slider reaches both ends, steps finely, applies and reopens a
   await apply(renderer);
   assert.match(output(renderer), /Within 15 km of Current location/);
   const within = cards(renderer).length;
-  assert.ok(within > 0 && within < 43);
+  assert.ok(within > 0 && within < fallSpotNames.length);
 
   await openSheet(renderer);
   assert.equal(limitSwitch(renderer).props.value, true);
@@ -413,7 +414,7 @@ test('the distance slider reaches both ends, steps finely, applies and reopens a
   assert.equal(radius(renderer), 15, 'on again brings back the last distance');
   await limit(renderer, false);
   await apply(renderer);
-  assert.equal(cards(renderer).length, 43, 'off is any distance');
+  assert.equal(cards(renderer).length, fallSpotNames.length, 'off is any distance');
   await act(async () => renderer.unmount());
 });
 
@@ -452,4 +453,113 @@ test('while the location loads the slider waits, and Apply stays off until there
   assert.equal(slider(renderer).props.accessibilityState.disabled, false);
   assert.equal(button(renderer, 'Apply Filters').props.disabled, false);
   await act(async () => renderer.unmount());
+});
+
+test('a current-location filter takes each new fix; other filters and unchanged fixes are left alone', () => {
+  const here = { ...DEFAULT_FILTERS, radiusKm: 10, origin: { source: 'current', label: 'Current location', latitude: 1, longitude: 2, accuracyM: 30 } };
+  const moved = withCurrentPosition(here, { latitude: 3, longitude: 4, accuracy: 65 });
+  assert.deepEqual(moved.origin, { source: 'current', label: 'Current location', latitude: 3, longitude: 4, accuracyM: 65 });
+  assert.equal(moved.radiusKm, 10);
+  assert.equal(withCurrentPosition(moved, { latitude: 3, longitude: 4, accuracy: 65 }), moved, 'the same fix changes nothing');
+  const custom = { ...here, origin: { source: 'custom', label: 'Vancouver', latitude: 49.28, longitude: -123.12 } };
+  assert.equal(withCurrentPosition(custom, { latitude: 3, longitude: 4 }), custom, 'a typed place stays put');
+  assert.equal(withCurrentPosition(here, { latitude: null, longitude: 4 }), here, 'a broken fix is ignored');
+  assert.equal(isApproximate(moved.origin), false);
+  assert.equal(isApproximate({ ...moved.origin, accuracyM: 3200 }), true);
+  assert.equal(isApproximate({ ...custom.origin, accuracyM: 3200 }), false);
+});
+
+test('"Current location" follows the person: moving updates the results, and an approximate fix says so', async () => {
+  const surrey = { latitude: 49.104599, longitude: -122.823509, accuracy: 35 };
+  const downtown = { latitude: 49.2827, longitude: -123.1207, accuracy: 35 };
+  let fix = surrey;
+  let report;
+  const watches = [];
+  const location = {
+    hasServicesEnabledAsync: async () => true,
+    requestForegroundPermissionsAsync: async () => ({ status: 'granted', granted: true }),
+    getForegroundPermissionsAsync: async () => ({ status: 'granted', granted: true }),
+    getCurrentPositionAsync: async () => ({ coords: fix }),
+    watchPositionAsync: async (options, callback) => {
+      watches.push(options);
+      report = coords => callback({ coords });
+      return { remove() { watches.push('removed'); } };
+    },
+    Accuracy: { Balanced: 3, High: 4 },
+  };
+  const h = createHarness({ stubs: { 'expo-location': location } });
+  const renderer = await h.render('screens/CitySpotsScreen.js', { location: true });
+  await openSheet(renderer);
+  await limit(renderer, true);
+  await adjust(renderer, 10);
+  await apply(renderer);
+  const near = ['Stewart Farm Harvest Fair', 'Cougar Creek House of Horrors', 'Bear Creek Halloween Train', 'Tynehead Hatchery', 'Darts Hill Garden Park'];
+  assert.deepEqual(new Set(cards(renderer)), new Set(near), 'the five spots within 10 km of Surrey');
+  assert.equal(watches.length, 1, 'following starts once the filter is applied');
+  assert.deepEqual(watches[0], { accuracy: 3, distanceInterval: 100, timeInterval: 10000 });
+
+  await act(async () => report(downtown));
+  assert.equal(cards(renderer).length, 18, 'after moving downtown, the 18 spots within 10 km of there');
+  assert.ok(cards(renderer).includes('Stanley Park'));
+  assert.ok(!cards(renderer).includes('Stewart Farm Harvest Fair'));
+
+  // Coming back to the app takes a fresh fix straight away.
+  fix = surrey;
+  await act(async () => { h.appState('active'); await new Promise(resolve => setTimeout(resolve, 0)); });
+  assert.deepEqual(new Set(cards(renderer)), new Set(near));
+
+  // The sheet shows the moved position too, so Apply doesn't put the old one back.
+  await openSheet(renderer);
+  await act(async () => report(downtown));
+  await apply(renderer);
+  assert.equal(cards(renderer).length, 18);
+
+  // Precise Location off: a fix only good to a few kilometres is called approximate.
+  await act(async () => report({ ...downtown, accuracy: 3000 }));
+  assert.match(output(renderer), /Within 10 km of Current location \(approximate\)/);
+  await openSheet(renderer);
+  const words = require('./support.cjs').textOf(renderer.root).join(' ');
+  assert.match(words, /only sharing an approximate location \(within about 3 km\)/);
+  assert.ok(button(renderer, 'Open device settings'), 'with the way to turn Precise Location on');
+  await close(renderer);
+
+  await press(button(renderer, 'Clear filters'));
+  assert.equal(watches.at(-1), 'removed', 'following stops when nothing is measured from here');
+  await act(async () => renderer.unmount());
+});
+
+test('following the position starts the watch again when iOS quietly ends it', async t => {
+  const started = [];
+  let removed = 0;
+  const location = {
+    watchPositionAsync: async (options, callback) => { started.push(callback); return { remove() { removed += 1; } }; },
+    Accuracy: { Balanced: 3 },
+  };
+  const h = createHarness({ stubs: { 'expo-location': location } });
+  const { followPosition } = h.load('services/followPosition.js');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const fixes = [];
+  const following = followPosition({ accuracy: 3 }, position => fixes.push(position.coords.latitude), { quietMs: 30000 });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(started.length, 1);
+  started[0]({ coords: { latitude: 1 } });
+  t.mock.timers.tick(20000);
+  started[0]({ coords: { latitude: 2 } });
+  t.mock.timers.tick(20000);
+  assert.equal(started.length, 1, 'a watch that keeps reporting is left alone');
+
+  // Core Location's "location unknown" ends the watch with no word to the app: it goes quiet.
+  t.mock.timers.tick(10001);
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(started.length, 2, 'started again once quiet for 30 s');
+  assert.equal(removed, 1, 'the dead watch is let go');
+  started[1]({ coords: { latitude: 3 } });
+  assert.deepEqual(fixes, [1, 2, 3]);
+
+  following.remove();
+  t.mock.timers.tick(60000);
+  await Promise.resolve();
+  assert.equal(started.length, 2, 'nothing restarts after it is stopped');
+  started[0]({ coords: { latitude: 9 } });
+  assert.deepEqual(fixes, [1, 2, 3]);
 });

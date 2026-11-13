@@ -30,7 +30,7 @@ import {
   SEASON_NAMES, currentSeason, listSeason, mostFollowed, parseQuery, rankLists, sortLists, visibleLists,
 } from '../services/listSearch';
 import { flushEvents } from '../services/events';
-import { getExploreFeed } from '../services/explore';
+import { exploreLikelyOff, getExploreFeed, peekExploreFeed } from '../services/explore';
 import { seenCards } from '../services/exploreState';
 import { followList, loadFollowedListPointers, loadFollowedPeople, unfollowList } from '../services/follows';
 import { EVENTS, track } from '../services/metrics';
@@ -127,7 +127,11 @@ export default function ExploreScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [blocked, setBlocked] = useState([]);
   // The ranked feed: 'loading' until the first answer, 'off' when the recommendations can't be reached.
-  const [recs, setRecs] = useState({ status: 'loading', lists: [], shown: PAGE });
+  // A ranking that is already here (asked for when the app opened) is on the page from its first frame.
+  const [recs, setRecs] = useState(() => {
+    const ready = peekExploreFeed(uid, city.id);
+    return ready ? { status: 'ready', lists: ready.lists, shown: PAGE } : { status: 'loading', lists: [], shown: PAGE };
+  });
   const [feed, setFeed] = useState({ status: 'loading', lists: [], more: false });
   const [candidates, setCandidates] = useState({ status: 'loading', lists: [] });
   const [following, setFollowing] = useState({ status: 'loading', people: 0, lists: [] });
@@ -205,26 +209,47 @@ export default function ExploreScreen({ navigation }) {
     const request = ++refreshRequest.current;
     const current = () => request === refreshRequest.current;
     loaded.current = { browse: false, following: false };
-    const [blockedNow, pointers] = await Promise.allSettled([getBlocked(uid), loadFollowedListPointers(uid)]);
-    if (!current()) return true;
-    if (blockedNow.status === 'fulfilled') setBlocked(blockedNow.value);
-    if (pointers.status === 'fulfilled') {
-      const ids = pointers.value.map(pointer => pointer.id);
-      setFollowedIds(new Set(ids));
-      setLoadedFollowedIds(new Set(ids));
+    // Nothing here waits for anything it doesn't need: the blocked people, the hearts and the ranking are
+    // read together, and each is put on the page as it arrives.
+    const blockedRead = getBlocked(uid);
+    const pointersRead = loadFollowedListPointers(uid);
+    const sides = Promise.allSettled([
+      blockedRead.then(value => { if (current()) setBlocked(value); }),
+      pointersRead.then(value => {
+        if (!current()) return;
+        const ids = value.map(pointer => pointer.id);
+        setFollowedIds(new Set(ids));
+        setLoadedFollowedIds(new Set(ids));
+      }),
+    ]);
+    let browse = null;
+    const startBrowse = () => { browse ??= loadBrowse(current); return browse; };
+    // If the recommendations couldn't be reached last time, the newest lists are shown without waiting for
+    // them to fail again. Should they answer after all, that ranking is the page on the next visit.
+    let shownOff = false;
+    if (!pull) {
+      exploreLikelyOff(uid, city.id).then(off => {
+        if (!off || !current() || shownOff === null) return;
+        shownOff = true;
+        setRecs(previous => (previous.status === 'loading' ? { status: 'off', lists: [], shown: PAGE } : previous));
+        if (view.current.chip !== FOLLOWING) startBrowse();
+      });
     }
     const ranked = await getExploreFeed(uid, {
-      followed: pointers.value ?? [], blocked: blockedNow.value ?? view.current.blocked, refresh: pull, cityId: city.id,
+      followed: pointersRead.catch(() => []), blocked: blockedRead.catch(() => view.current.blocked), refresh: pull, cityId: city.id,
     });
     if (!current()) return true;
-    setRecs(previous => (ranked
-      ? { status: 'ready', lists: ranked.lists, shown: pull || previous.status !== 'ready' ? PAGE : previous.shown }
+    const answered = shownOff ? null : ranked;
+    shownOff = null; // Answered: too late to start on the newest lists instead
+    setRecs(previous => (answered
+      ? { status: 'ready', lists: answered.lists, shown: pull || previous.status !== 'ready' ? PAGE : previous.shown }
       : { status: 'off', lists: [], shown: PAGE }));
     const { chip: chipNow, sort: sortNow } = view.current;
     const rest = chipNow === FOLLOWING ? await loadFollowing(current)
-      : ranked && sortNow === RECOMMENDED ? true : await loadBrowse(current);
+      : answered && sortNow === RECOMMENDED ? true : await startBrowse();
+    const [blockedNow, pointers] = await sides;
     return blockedNow.status === 'fulfilled' && pointers.status === 'fulfilled' && rest;
-  }, [loadBrowse, loadFollowing, uid]);
+  }, [loadBrowse, loadFollowing, uid, city.id]);
 
   // Fresh each time Explore comes into view, so a list published a moment ago is there. Leaving sends what was seen.
   useFocusEffect(useCallback(() => {

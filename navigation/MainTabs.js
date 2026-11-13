@@ -1,5 +1,5 @@
 // The signed-in tabs and the pages each one can open.
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -33,6 +33,7 @@ import SpotDetailScreen from '../screens/SpotDetailScreen';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCity } from '../contexts/CityContext';
 import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
+import { warmExploreFeed } from '../services/explore';
 import useReduceMotion from '../hooks/useReduceMotion';
 import { FloatingNavigationLayoutProvider } from './floatingNavigationLayout';
 import { TopNavigationHeightContext } from './topNavigationLayout';
@@ -196,6 +197,10 @@ export default function MainTabs() {
   const { user } = useContext(AuthContext);
   const { city } = useCity();
   const reduceMotion = useReduceMotion();
+  // Explore's ranking is asked for now, not when its tab is tapped, so the tab opens with it already there.
+  const uid = user?.uid;
+  const cityId = city?.id;
+  useEffect(() => { warmExploreFeed(uid, cityId); }, [uid, cityId]);
   return (
     // Search text and filters belong to one person in one city: neither carries over to another.
     <SpotDiscoveryProvider key={`${user?.uid}:${city?.id}`}>

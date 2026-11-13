@@ -7,6 +7,7 @@ import { AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { SettingsContext } from '../screens/SettingsContext';
 import { hasCoordinates } from '../services/spotDiscovery';
+import { followPosition } from '../services/followPosition';
 
 const allowed = permission => !!permission && (permission.granted ?? permission.status === 'granted');
 const neverAsked = permission => !!permission && !allowed(permission)
@@ -48,21 +49,16 @@ export default function useMapLocation(watching = true) {
     if (!on) { setCoords(null); return undefined; }
     if (!watching) return undefined;
     let active = true;
-    let tracking;
     const accept = position => {
       if (active && hasCoordinates(position?.coords)) {
         setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
       }
     };
-    (async () => {
-      tracking = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 50 }, accept,
-      );
-      if (!active) tracking.remove();
-    })().catch(() => {});
+    // Restarted by itself if iOS quietly ends it, so the blue dot and "x km away" keep up.
+    const tracking = followPosition({ accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 50 }, accept);
     return () => {
       active = false;
-      tracking?.remove();
+      tracking.remove();
     };
   }, [on, watching]);
 

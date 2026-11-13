@@ -66,8 +66,8 @@ test('map: a kept season is never on the default map but can be picked', () => {
   assert.deepEqual(sources.map(source => source.id), ['saved', 'collection:vancouver-fall']);
   assert.deepEqual(keys(eligibleRefs(sources)), ['Maan Farms']);
   const picked = eligibleRefs(sources, ['collection:vancouver-fall']);
-  assert.equal(picked.length, 43);
-  assert.match(sources[1].caption, /Vancouver · 43 spots/);
+  assert.equal(picked.length, 50);
+  assert.match(sources[1].caption, /Vancouver · 50 spots/);
 });
 
 // ---------------------------------------------------------------- Picking lists in the filter

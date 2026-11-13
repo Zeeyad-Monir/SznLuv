@@ -19,12 +19,14 @@ export const CITY_ART = {
 // Home's collection cards, by the card's key in services/collections.js.
 // Only Seasonal has its own illustration so far. The rest borrow one the app already ships until theirs is drawn.
 const COLLECTION_ART = {
-  seasonal: require('../assets/Seasonal/SeasonalCoverIMG.png'),
+  seasonal: require('../assets/VancouverSeasonalCollectionCover.png'),
   outdoors: require('../assets/VancouverOutdoorsCollectionCover.png'),
   'unique-food': require('../assets/VancouverFoodCollectionCover.png'),
   'night-out': require('../assets/VancouverNightOutCollectionCover.png'),
-  // The featured "A morning outdoors" card, so it doesn't repeat the Outdoors card beneath it.
-  'morning-outdoors': require('../assets/fall.png'),
+  // The picks Home's large card rotates through (services/collections.js CURATED).
+  'rain-days': require('../assets/VancouverRainDaysCollectionCover.png'),
+  'golden-hour': require('../assets/VancouverGoldenHourCollectionCover.png'),
+  'table-for-one': require('../assets/VancouverTableForOneCollectionsCover.png'),
 };
 
 // Undefined when a key has no art: the card then draws its plain tinted background instead.

@@ -124,9 +124,12 @@ export default function App() {
   }, [user, registering, retry]);
 
   // Explore's events are written in batches: whoever is signed in owns the batch, and leaving the app sends it.
+  // The ranking saved on the device for whoever just signed out goes with them.
+  const lastUid = useRef(null);
   useEffect(() => {
     setEventsUser(user?.uid);
-    forgetExploreFeed();
+    forgetExploreFeed({ signedOut: lastUid.current });
+    lastUid.current = user?.uid ?? null;
   }, [user?.uid]);
   useEffect(() => {
     setMetricsSink(recordEvent);

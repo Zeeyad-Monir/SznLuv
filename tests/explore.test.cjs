@@ -173,6 +173,107 @@ test('explore: an answer that is not a feed is treated as no answer', async () =
   assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex']);
 });
 
+// ---------------------------------------------------------------- Opening without a wait
+
+const HOUR = 60 * 60 * 1000;
+const savedFeed = (lists, more = {}) => ({
+  'explore.feed.audit': JSON.stringify({ cityId: 'vancouver', at: Date.now() - HOUR, feed: { algo: 'recs-1', lists }, off: false, ...more }),
+});
+const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+
+test('explore: a ranking asked for when the app opened is on the page without another request', async () => {
+  const h = createHarness({ documents: documents(), exploreFeed: async () => ({ algo: 'recs-1', lists: [card('a', 'By the water', 'ana')] }) });
+  const explore = h.load('services/explore.js');
+  const [first, second] = await Promise.all([explore.warmExploreFeed('audit', 'vancouver'), explore.warmExploreFeed('audit', 'vancouver')]);
+  assert.equal(first, second);
+  assert.equal(feedCalls(h).length, 1, 'two askers share one request');
+  assert.deepEqual(feedCalls(h)[0].signals.followedLists, [{ id: 'f1', at: 7 }]);
+  assert.deepEqual(feedCalls(h)[0].signals.blocked, ['troll-uid']);
+  assert.equal(explore.peekExploreFeed('audit', 'vancouver'), first);
+  assert.equal(explore.peekExploreFeed('audit', 'toronto'), null);
+
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana']);
+  assert.equal(feedCalls(h).length, 1);
+});
+
+test('explore: after a restart the saved ranking is shown at once, and a new one is fetched for the next visit', async () => {
+  const answer = deferred();
+  const h = createHarness({
+    documents: documents(),
+    storage: savedFeed([card('s', 'Saved earlier', 'sam')]),
+    exploreFeed: () => answer.promise,
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam'], 'shown while the function has not answered');
+  assert.equal(feedCalls(h).length, 1);
+
+  await act(async () => { answer.resolve({ algo: 'recs-1', lists: [card('n', 'Brand new', 'nia')] }); });
+  await flush();
+  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam'], 'the cards do not move under the reader');
+  const explore = h.load('services/explore.js');
+  assert.deepEqual(explore.peekExploreFeed('audit', 'vancouver').lists.map(list => list.id), ['n']);
+  assert.deepEqual(JSON.parse(h.storage.get('explore.feed.audit')).feed.lists.map(list => list.id), ['n']);
+});
+
+test('explore: a saved ranking that is a day old, or for another city, is not shown', async () => {
+  const lists = [card('a', 'By the water', 'ana')];
+  for (const more of [{ at: Date.now() - 25 * HOUR }, { cityId: 'toronto' }]) {
+    const h = createHarness({
+      documents: documents(),
+      storage: savedFeed([card('s', 'Saved earlier', 'sam')], more),
+      exploreFeed: async () => ({ algo: 'recs-1', lists }),
+    });
+    const screen = await mount(h, 'screens/ExploreScreen.js');
+    assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana']);
+  }
+});
+
+test('explore: a pull to refresh asks again even when a ranking is saved', async () => {
+  const h = createHarness({
+    documents: documents(),
+    storage: savedFeed([card('s', 'Saved earlier', 'sam')]),
+    exploreFeed: async () => ({ algo: 'recs-1', lists: [card('n', 'Brand new', 'nia')] }),
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam']);
+  const refresh = screen.all('ScrollView')[0].props.refreshControl;
+  await act(async () => { await refresh.props.onRefresh(); });
+  await flush();
+  assert.deepEqual(labels(screen), ['Featured: Brand new, 3 spots, by nia']);
+  assert.notEqual(feedCalls(h).at(-1).nonce, '');
+});
+
+test('explore: when the function was unreachable last time, the newest lists do not wait for it', async () => {
+  const answer = deferred();
+  const h = createHarness({
+    documents: documents({ 'publicLists/n1': publicList('Just published', 'alex-uid', 'alex', 500) }),
+    storage: { 'explore.feed.audit': JSON.stringify({ off: true }) },
+    exploreFeed: () => answer.promise,
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex'], 'shown while the function has not answered');
+
+  await act(async () => { answer.resolve({ algo: 'recs-1', lists: [card('a', 'By the water', 'ana')] }); });
+  await flush();
+  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex'], 'the page does not change under the reader');
+  assert.equal(JSON.parse(h.storage.get('explore.feed.audit')).off, false, 'and the ranking is there next time');
+});
+
+test('explore: a failure is remembered on the device, and signing out removes what was saved', async () => {
+  const h = createHarness({ documents: documents() });
+  const explore = h.load('services/explore.js');
+  assert.equal(await explore.exploreLikelyOff('audit', 'vancouver'), false);
+  assert.equal(await explore.getExploreFeed('audit', { cityId: 'vancouver' }), null);
+  assert.equal(await explore.exploreLikelyOff('audit', 'vancouver'), true);
+  assert.equal(await explore.getExploreFeed('audit', { cityId: 'vancouver' }), null);
+  assert.equal(feedCalls(h).length, 1, 'not asked again straight after failing');
+
+  explore.forgetExploreFeed({ signedOut: 'audit' });
+  await flush();
+  assert.equal(h.storage.has('explore.feed.audit'), false);
+});
+
 // ---------------------------------------------------------------- Events
 
 test('events: opens and follows from Explore are written as one document when the page is left', async () => {

@@ -52,7 +52,10 @@ export async function getCurrentOrigin(signal) {
   const { coords } = await withTimeout(fix, signal, timeoutMessage);
   if (signal.aborted) return null;
   if (!hasCoordinates(coords)) throw locationError('Your location could not be found. Try again or use a custom location.');
-  return { source: 'current', label: 'Current location', latitude: coords.latitude, longitude: coords.longitude };
+  return {
+    source: 'current', label: 'Current location', latitude: coords.latitude, longitude: coords.longitude,
+    accuracyM: Number.isFinite(coords.accuracy) ? coords.accuracy : null,
+  };
 }
 
 export async function findCustomOrigins(query, signal) {

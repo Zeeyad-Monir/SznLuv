@@ -123,7 +123,7 @@ export default function NavBar({ state, navigation, insets, onLayout }) {
                 accessibilityLabel={`City: ${city.name}`}
                 accessibilityHint="Opens the list of cities so you can explore another one"
               >
-                <Ionicons name="location-outline" size={20} color={CITY_INK} />
+                <Ionicons name="location-outline" size={19} color={CITY_INK} style={styles.cityIcon} />
                 <Text style={styles.cityName} numberOfLines={1}>{city.name}</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -193,10 +193,14 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 6,
   },
+  // Nudged down so the pin and the name end on the same line as the SznLuv title and the gear.
+  cityIcon: { transform: [{ translateY: 2.67 }] },
   cityName: {
     flexShrink: 1,
+    position: 'relative',
+    top: 2.5,
     color: CITY_INK,
-    fontSize: 17,
+    fontSize: 15.3,
     fontWeight: '700',
   },
   settingsButton: {

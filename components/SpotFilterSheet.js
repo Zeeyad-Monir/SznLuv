@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SettingsContext } from '../screens/SettingsContext';
 import {
-  DEFAULT_FILTERS, RADIUS_DEFAULT, hasCoordinates, usesOrigin, withoutCurrentLocation,
+  DEFAULT_FILTERS, RADIUS_DEFAULT, hasCoordinates, isApproximate, usesOrigin, withCurrentPosition, withoutCurrentLocation,
 } from '../services/spotDiscovery';
 import { customLocationAvailable, findCustomOrigins, getCurrentOrigin } from '../services/spotLocation';
 import { getReduceMotion } from '../hooks/useReduceMotion';
@@ -49,6 +49,9 @@ export default function SpotFilterSheet({
   useEffect(() => {
     if (!isLocationEnabled || (appliedOrigin.current?.source === 'current' && !filters.origin)) {
       setDraft(withoutCurrentLocation);
+    } else if (filters.origin?.source === 'current') {
+      // The applied position moved while the sheet is open: the draft follows, so Apply keeps the new fix.
+      setDraft(previous => withCurrentPosition(previous, { ...filters.origin, accuracy: filters.origin.accuracyM }));
     }
     appliedOrigin.current = filters.origin;
   }, [filters.origin, isLocationEnabled]);
@@ -262,6 +265,20 @@ export default function SpotFilterSheet({
                     </TouchableOpacity>
                   )}
                   {!!draft.origin && <Text style={shared.emphasis}>Measuring from {draft.origin.label}</Text>}
+                  {isApproximate(draft.origin) && (
+                    <>
+                      <Text style={shared.hint} accessibilityLiveRegion="polite">
+                        Your phone is only sharing an approximate location (within about {Math.max(1, Math.round(draft.origin.accuracyM / 1000))} km), so
+                        distances may be off. Turn on Precise Location for SznLuv in Settings for exact results.
+                      </Text>
+                      {lookup.error?.action !== 'settings' && (
+                        <TouchableOpacity accessibilityRole="button" style={shared.inlineAction}
+                          onPress={() => Linking.openSettings().catch(() => {})}>
+                          <Text style={[shared.actionText, shared.underlined]}>Open device settings</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
                   <View style={[shared.switchRow, styles.limit]}>
                     <Text style={shared.switchLabel}>Limit by distance</Text>
                     <Switch value={limited} onValueChange={limitDistance} accessibilityLabel="Limit by distance"

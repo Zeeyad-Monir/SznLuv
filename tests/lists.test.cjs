@@ -45,7 +45,7 @@ test('catalogue: the season sections feed the existing ranked search', () => {
 test('spot references resolve for cards, including own spots and spots no longer in the app', () => {
   assert.deepEqual(resolveSpot(farm), {
     key: 'c:Aldor Family Farm', name: 'Aldor Family Farm', meta: 'Langley · Fall', season: 'Fall', locality: 'Langley',
-    latitude: 49.15313, longitude: -122.53021, missing: false, own: false,
+    latitude: 49.15467, longitude: -122.53112, missing: false, own: false,
   });
   assert.equal(resolveSpot(catalogueRef('Glacier Rink')).meta, 'Winter');
   const gone = resolveSpot(catalogueRef('Closed Farm'));

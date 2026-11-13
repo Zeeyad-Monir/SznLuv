@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { usesOrigin, widerRadius } from '../services/spotDiscovery';
+import { isApproximate, usesOrigin, widerRadius } from '../services/spotDiscovery';
 import { focusAccessibility } from './DiscoveryBottomSheet';
 import SpotFilterSheet from './SpotFilterSheet';
 import { FilterButton, SearchBar, SpotFilterButton, SpotSearchBar } from './filters/SearchControls';
@@ -12,9 +12,8 @@ export { FilterButton, SearchBar, SpotFilterButton, SpotSearchBar };
 // What a distance filter says it is doing: "Within 25 km of Current location", or "Nearest to …".
 export function distanceSummary(filters) {
   if (!usesOrigin(filters) || !filters.origin) return null;
-  return filters.radiusKm === null
-    ? `Nearest to ${filters.origin.label}`
-    : `Within ${filters.radiusKm} km of ${filters.origin.label}`;
+  const place = `${filters.origin.label}${isApproximate(filters.origin) ? ' (approximate)' : ''}`;
+  return filters.radiusKm === null ? `Nearest to ${place}` : `Within ${filters.radiusKm} km of ${place}`;
 }
 
 export default function SpotDiscoveryControls({ discovery }) {

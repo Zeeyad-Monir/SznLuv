@@ -1,5 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const firstPick = require('../services/collections').featuredRotation('vancouver')[0];
 const fs = require('fs');
 const path = require('path');
 const { createHarness, act } = require('./renderHarness.cjs');
@@ -7,6 +8,15 @@ const { flush, textOf: screenText } = require('./support.cjs');
 const { CommonActions, StackRouter } = require('@react-navigation/routers');
 const { detailedFallSpots, legacyFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 const spotProps = name => ({ route: { params: { spot: { k: 'c', name } } } });
+const auditedPhotoFiles = {
+  'Richmond Country Farms': { file: 'richmond-country-farms.jpg', author: 'GoToVan', license: 'CC BY 2.0' },
+  'Westham Island Herb Farm': { file: 'westham-island-herb-farm.jpg', author: 'FernShade' },
+  'Hazelmere Pumpkin Patch': { file: 'hazelmere-pumpkin-patch.jpg', author: 'Gabriel Farms' },
+  'The Bog Cranberry Farm': { file: 'the-bog-cranberry-farm.jpg', author: 'Riverside Cranberry Farm' },
+  'Hopcott Farms Cranberry Tours': { file: 'hopcott-farms-cranberry-tours.jpg', author: 'Ocean Spray' },
+  'Maan Farms': { file: 'maan-farms.jpg', author: 'GoToVan', license: 'CC BY 2.0' },
+  'Taves Family Farms': { file: 'taves-family-farms.jpg', author: 'GoToVan', license: 'CC BY 2.0' },
+};
 
 for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'CitySpotsScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
@@ -32,7 +42,7 @@ test('home hierarchy: Home > its collections and all spots; Seasonal > the four 
   }
   // Unique Food and Night Out have no spots yet: they are on the page, but there is nothing to press.
   assert.deepEqual(await pressCards('HomeScreen'), {
-    'Featured: A morning outdoors. Explore the Outdoors collection': ['CollectionSpots', { collectionId: 'vancouver-outdoors' }],
+    [`Featured: ${firstPick.title}. ${firstPick.subtitle}`]: ['CollectionSpots', { collectionId: 'vancouver-rain-days' }],
     'Seasonal collection': ['SeasonsScreen'],
     'Outdoors collection': ['CollectionSpots', { collectionId: 'vancouver-outdoors' }],
     'All Vancouver spots': ['CitySpots'],
@@ -306,7 +316,7 @@ test('signed-in layout: seasonal background fills the screen while content clear
     children: React.createElement(FallDates, { navigation: h.navigation }),
   }));
   const surfaceStyle = () => renderer.root.findAllByType('View')
-    .find(node => [node.props.style].flat(Infinity).some(style => style?.backgroundColor === '#F4A460')).props.style;
+    .find(node => [node.props.style].flat(Infinity).some(style => style?.backgroundColor === '#F5AD70')).props.style;
   assert.equal(surfaceStyle()[1].paddingTop, 117);
   const bar = renderer.root.findAllByType('View').find(node => node.props.onLayout);
   await act(async () => bar.props.onLayout({ nativeEvent: { layout: { height: 139 } } }));
@@ -601,11 +611,22 @@ for (const { name } of legacyFallSpots) {
 }
 
 for (const spot of detailedFallSpots) {
-  test(`SpotDetailScreen renders ${spot.placeID} with its own title, address, tagline and photo placeholder`, async () => {
+  test(`SpotDetailScreen renders ${spot.placeID} with its own title, address, tagline and photo state`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/SpotDetailScreen.js', { props: spotProps(spot.name) });
     const output = JSON.stringify(renderer.toJSON());
-    for (const text of [spot.title, spot.detailAddress, spot.tagline, 'Photo coming soon']) assert.ok(output.includes(text), `${spot.placeID} shows ${text}`);
+    for (const text of [spot.title, spot.detailAddress, spot.tagline]) assert.ok(output.includes(text), `${spot.placeID} shows ${text}`);
+    const photo = auditedPhotoFiles[spot.name];
+    if (photo) {
+      assert.ok(fs.existsSync(path.join(__dirname, '../assets/Seasonal/fall', photo.file)));
+      assert.ok(renderer.root.findAllByType('Image').some(image => String(image.props.source).endsWith(photo.file)));
+      const links = renderer.root.findAllByType('Text')
+        .filter(node => node.props.accessibilityRole === 'link').map(node => node.props.children);
+      assert.deepEqual(links, [photo.author, photo.license].filter(Boolean));
+      assert.ok(!output.includes('Photo coming soon'));
+    } else {
+      assert.ok(output.includes('Photo coming soon'));
+    }
     await act(async () => renderer.unmount());
   });
 }
@@ -624,6 +645,10 @@ test('Fall screen lists every spot in category order and opens the right venue p
   assert.ok(!output.includes('Sunset Summit') && !output.includes('Riverfront Meadows'));
   for (const category of fallCategories) for (const spot of category.spots) assert.ok(!output.includes(spot.address), `${spot.name} card does not show its address`);
   const detail = name => renderer.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
+  for (const [name, { file }] of Object.entries(auditedPhotoFiles)) {
+    assert.ok(detail(name).findAllByType('Image').some(image => String(image.props.source).endsWith(file)), name);
+  }
+  assert.equal(detail('Reifel Bird Sanctuary').findAllByType('Image').length, 0);
   await act(async () => detail('Aldor Family Farm').props.onPress());
   await act(async () => detail('Reifel Bird Sanctuary').props.onPress());
   assert.deepEqual(h.navigations, ['Aldor Family Farm', 'Reifel Bird Sanctuary'].map(name => ['SpotDetailScreen', { spot: { k: 'c', name } }]));
@@ -668,9 +693,12 @@ test('the city and Seasonal cards use the cover images from the assets folder', 
   await act(async () => picker.unmount());
 
   const home = await h.render('screens/HomeScreen.js');
-  const sources = home.root.findAllByType('ImageBackground').map(node => String(node.props.source));
-  assert.equal(sources.length, 5, 'the featured card and the four collections');
-  assert.ok(sources[1].endsWith('assets/Seasonal/SeasonalCoverIMG.png'), 'Seasonal keeps its own illustration');
+  const featured = home.root.findAllByType('AnimatedImage').map(node => String(node.props.source));
+  const tiles = home.root.findAllByType('ImageBackground').map(node => String(node.props.source));
+  assert.equal(featured.length, 3, 'one picture per featured pick');
+  assert.equal(tiles.length, 4, 'the four collections');
+  assert.ok(tiles[0].endsWith('assets/VancouverSeasonalCollectionCover.png'), 'Seasonal keeps its own illustration');
+  const sources = [...featured, ...tiles];
   assert.equal(new Set(sources).size, sources.length, 'no two cards share an illustration');
   await act(async () => home.unmount());
 });
@@ -680,7 +708,7 @@ const spotPages = [...legacyFallSpots, ...detailedFallSpots].map(spot => ({
   label: spot.placeID ?? spot.name, title: spot.title ?? spot.name, props: spotProps(spot.name),
   latitude: spot.latitude, longitude: spot.longitude,
 }));
-test('there are 43 spot info pages under test', () => assert.equal(spotPages.length, 43));
+test('every Fall spot has a spot info page under test', () => assert.equal(spotPages.length, fallSpotNames.length));
 for (const page of spotPages) {
   test(`${page.label}: shared title and a forecast for the spot without a GPS fix`, async () => {
     const h = createHarness();
