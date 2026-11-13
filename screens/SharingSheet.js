@@ -1,5 +1,6 @@
 // Who can see a list. Private lists show exactly what going public would reveal before the switch;
 // public lists can be shared, updated with pending changes, or made private again. Opened with { listId }.
+// A list whose spots aren't all somewhere the map can pin can't go public, or push changes, until they are.
 import React, { useContext, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,9 +10,11 @@ import { spotCount } from '../components/ListTile';
 import { colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useMyLists from '../hooks/useMyLists';
+import useMySpots from '../hooks/useMySpots';
+import useSpotEntries from '../hooks/useSpotEntries';
 import usePublishedList, { rememberPublished } from '../hooks/usePublishedList';
 import { publishList, revertListToPublic, unpublishList } from '../services/lists';
-import { exposure, hasUnpublishedChanges, newExposure } from '../services/listsState';
+import { exposure, hasUnpublishedChanges, newExposure, placeFromEntries, spotsOffTheMap } from '../services/listsState';
 import { isMine } from '../services/customSpotsState';
 import { shareList } from '../services/shareList';
 
@@ -23,6 +26,9 @@ export default function SharingSheet({ navigation, route }) {
   const { lists, status } = useMyLists();
   const list = lists.find(candidate => candidate.id === route?.params?.listId);
   const { published, loaded, refresh } = usePublishedList(list);
+  // Where every spot is, the way the owner's list page reads it.
+  const mySpots = useMySpots();
+  const { entries } = useSpotEntries((list?.items ?? []).map(item => item.spot), { privateSpots: mySpots, ownedDraft: true });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   // The sheet is as tall as its content when it opens and does not resize afterwards, so a step with a
@@ -75,6 +81,11 @@ export default function SharingSheet({ navigation, route }) {
       : <ActivityIndicator style={styles.loading} color={colors.ink} />);
   }
 
+  // Spots still loading aren't judged here; publishing checks every one again before it writes.
+  const offMap = spotsOffTheMap(list.items, placeFromEntries(entries));
+  const blocked = offMap.length > 0;
+  const offMapNote = blocked && <Reveal heading="Needs a place on the map" entries={offMap} />;
+
   const publish = () => run(async () => {
     rememberPublished(list.id, await publishList(user?.uid, username, list.id));
   }, () => (list.public ? refresh() : show({ justPublished: true })));
@@ -101,10 +112,13 @@ export default function SharingSheet({ navigation, route }) {
           <Reveal heading="Places you added yourself" entries={revealed.locations} none="None." />
           {madeNote}
         </ScrollView>
+        {offMapNote}
         <Text style={styles.hint}>
-          {empty ? 'Add a spot first.' : 'Anyone on SznLuv will be able to open it, and it will show on your profile.'}
+          {empty ? 'Add a spot first.'
+            : blocked ? 'Fix or remove these spots to make the list public.'
+              : 'Anyone on SznLuv will be able to open it, and it will show on your profile.'}
         </Text>
-        {primary('Make public', publish, { disabled: empty, icon: 'globe-outline' })}
+        {primary('Make public', publish, { disabled: empty || blocked, icon: 'globe-outline' })}
       </>,
     );
   }
@@ -145,8 +159,16 @@ export default function SharingSheet({ navigation, route }) {
               {fresh.locations.length > 0 && madeNote}
             </ScrollView>
           ) : <Text style={styles.body}>Nothing personal is added by this update.</Text>}
-          {primary('Update public list', publish)}
+          {offMapNote}
+          {blocked && <Text style={styles.hint}>Fix or remove these spots to update the public list.</Text>}
+          {primary('Update public list', publish, { disabled: blocked })}
           {secondary('Revert to public version', () => run(() => revertListToPublic(list.id), refresh))}
+        </View>
+      )}
+      {!pending && blocked && (
+        <View style={styles.pending}>
+          {offMapNote}
+          <Text style={styles.hint}>Visitors still see the list as it is. Your next update will need these spots fixed or removed.</Text>
         </View>
       )}
       {!pending && primary('Share link', share, { icon: 'share-outline' })}

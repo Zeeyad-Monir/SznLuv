@@ -10,7 +10,7 @@ import {
   setDoc, startAfter, where,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { createList, migrateCollections, revertToPublic, toPublicSnapshot } from './listsState';
+import { assertOnTheMap, createList, migrateCollections, placeFrom, revertToPublic, toPublicSnapshot } from './listsState';
 import { mySpotIdsIn, toPublicSpot } from './customSpotsState';
 import { parseQuery } from './listSearch';
 
@@ -98,7 +98,13 @@ export async function deleteList(listId) {
 
 // ---------------------------------------------------------------- Publishing
 
+// Other people's spots in a list: where they are is only in their public copies.
+const theirSpotIds = (items = [], uid) => [...new Set(items
+  .filter(item => item.spot?.k === 'x' && item.spot.owner && item.spot.owner !== uid)
+  .map(item => item.spot.id))];
+
 // Makes a private list public, or pushes the draft's changes to an already public one.
+// Throws list/unpinned, writing nothing, while any spot in the draft isn't somewhere the map can pin.
 export async function publishList(uid, username, listId) {
   requireUser(uid);
   const draftRef = doc(drafts(), listId), publicRef = doc(published(), listId), profileRef = doc(db, 'profiles', uid);
@@ -110,6 +116,14 @@ export async function publishList(uid, username, listId) {
     const listed = mySpotIds(draft.data().items, uid);
     const before = current.exists() ? mySpotIds(current.data().items, uid) : [];
     const spots = await readSpots(transaction, [...new Set([...listed, ...before])]);
+    const theirs = theirSpotIds(draft.data().items, uid);
+    const copies = await Promise.all(theirs.map(id => transaction.get(doc(db, 'publicSpots', id))));
+    const owners = new Map(draft.data().items.map(item => [item.spot?.id, item.spot?.owner]));
+    const mine = Object.fromEntries(spots.filter(spot => listed.includes(spot.id))
+      .map(spot => [spot.id, spot.exists() ? spot.data() : null]));
+    const shared = Object.fromEntries(copies.map(copy => [copy.id,
+      copy.exists() && copy.data().ownerUid === owners.get(copy.id) ? copy.data() : null]));
+    assertOnTheMap(draft.data().items, placeFrom({ mine, shared }));
     const now = Date.now();
     const snapshot = toPublicSnapshot(draft.data(), {
       ownerUsername: username, now, publishedAt: current.exists() ? current.data().publishedAt : now,

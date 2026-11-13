@@ -104,7 +104,9 @@ export default function OwnSpotScreen({ navigation, route }) {
 
   const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
   const input = { ...form, pin: form.mode === 'pin' ? form.pin : form.chosen, label: form.chosen?.label };
-  const problem = spotProblem(input)
+  // A spot already in a public list has to stay somewhere the map can pin (services/listsState.js).
+  const inPublicList = editing && (spot?.publicListIds?.length ?? 0) > 0;
+  const problem = spotProblem({ ...input, needsPin: inPublicList, lookup: customLocationAvailable })
     || (slots.failed ? 'A photo didn’t upload. Retry it, or remove it.' : null);
   const formChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
   const dirty = formChanged || savedPhotos !== initialPhotos || slots.uploading || slots.failed;
@@ -136,7 +138,7 @@ export default function OwnSpotScreen({ navigation, route }) {
     try {
       const matches = await findCustomOrigins(form.address, controller.signal);
       if (controller.signal.aborted) return;
-      setLookup({ pending: false, matches, error: matches.length ? '' : 'No matching address. You can still save it as typed.' });
+      setLookup({ pending: false, matches, error: matches.length ? '' : 'No matching address. You can still save it as typed, but it won’t show on the map or go in a public list.' });
     } catch (error) {
       if (!controller.signal.aborted) setLookup({ pending: false, matches: [], error: error.message });
     }
@@ -218,7 +220,6 @@ export default function OwnSpotScreen({ navigation, route }) {
     );
   }
 
-  const publicNote = editing && (spot?.publicListIds?.length ?? 0) > 0;
   const action = slots.uploading ? 'Uploading photos…' : editing ? 'Save changes' : listId ? 'Add to list' : 'Save spot';
   const blocked = saving || slots.uploading;
 
@@ -230,7 +231,7 @@ export default function OwnSpotScreen({ navigation, route }) {
           {!editing && (
             <Text style={[text.body, styles.intro]}>For a place SznLuv doesn’t list yet. Only you can see it unless you add it to a public list.</Text>
           )}
-          {publicNote && (
+          {inPublicList && (
             <Text style={[text.body, styles.intro]} accessibilityRole="alert">This spot is in a public list, so changes show to everyone straight away.</Text>
           )}
 
@@ -286,6 +287,9 @@ export default function OwnSpotScreen({ navigation, route }) {
               ))}
               {!!form.chosen && <Text style={[text.meta, styles.hint]}>Found. Directions will lead to this address.</Text>}
               {!!lookup.error && <Text style={[text.meta, styles.hint]}>{lookup.error}</Text>}
+              {!customLocationAvailable && (
+                <Text style={[text.meta, styles.hint]}>A typed address won’t show on the map, so the spot can’t go in a public list. Drop a pin to share it.</Text>
+              )}
               {lookup.matches.length > 0 && (
                 <Text style={styles.attribution}>
                   <Text accessibilityRole="link" onPress={() => Linking.openURL('https://www.geoapify.com/').catch(() => {})}>Geoapify</Text>

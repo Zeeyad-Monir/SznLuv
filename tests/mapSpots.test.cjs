@@ -49,17 +49,16 @@ test('map: a spot stays while any source still holds it, and goes when none does
   assert.deepEqual(eligibleRefs(mapSources({ favourites: unhearted, myLists: [] })), []);
 });
 
-test('map: a followed list adds its spots only while "Show all spots on map" is on', () => {
+test('map: a followed list is never on the default map, even with an old "Show all spots on map" flag', () => {
   const off = mapSources({ favourites: hearted('Maan Farms'), followed: [follow('forest', [farm, laity])] });
   assert.deepEqual(keys(eligibleRefs(off)), ['Maan Farms']);
   assert.equal(off.at(-1).onMap, false);
   assert.equal(off.at(-1).caption, 'Following · by maya');
 
-  const on = mapSources({ favourites: hearted('Maan Farms'), followed: [follow('forest', [farm, laity], { showOnMap: true })] });
-  assert.deepEqual(keys(eligibleRefs(on)), ['Aldor Family Farm', 'Laity Pumpkin Patch', 'Maan Farms']);
-  // Only a real `true` switches it on.
-  const odd = mapSources({ followed: [follow('forest', [farm], { showOnMap: 'yes' })] });
-  assert.deepEqual(eligibleRefs(odd), []);
+  // The list page used to have a switch that saved `showOnMap` on the follow. It no longer counts.
+  const legacy = mapSources({ favourites: hearted('Maan Farms'), followed: [follow('forest', [farm, laity], { showOnMap: true })] });
+  assert.deepEqual(keys(eligibleRefs(legacy)), ['Maan Farms']);
+  assert.equal(legacy.at(-1).onMap, false);
 });
 
 test('map: a kept season is never on the default map but can be picked', () => {
@@ -85,7 +84,7 @@ test('map filter: picked lists replace the default set, combined without repeats
   assert.equal(keys(eligibleRefs(sources, [])).includes('Tynehead Hatchery'), true);
 });
 
-test('map filter: a followed list can be picked while its switch is off, without switching it on', () => {
+test('map filter: a followed list can be picked, and only then is its public copy needed', () => {
   const followed = [follow('forest', [farm, laity])];
   const sources = mapSources({ favourites: hearted('Maan Farms'), followed });
   assert.deepEqual(keys(eligibleRefs(sources, ['followed:forest'])), ['Aldor Family Farm', 'Laity Pumpkin Patch']);
@@ -93,22 +92,22 @@ test('map filter: a followed list can be picked while its switch is off, without
   assert.deepEqual(keys(eligibleRefs(sources, [])), ['Maan Farms']);
   assert.deepEqual(neededListIds([followed[0].pointer], []), []);
   assert.deepEqual(neededListIds([followed[0].pointer], ['followed:forest']), ['forest']);
-  assert.deepEqual(neededListIds([{ id: 'forest', showOnMap: true }, { id: 'quiet' }], []), ['forest']);
+  assert.deepEqual(neededListIds([{ id: 'forest', showOnMap: true }, { id: 'quiet' }], []), [], 'an old flag reads nothing');
 });
 
 test('map filter: lists that were unfollowed, deleted or withdrawn leave the selection', () => {
   const sources = mapSources({
     myLists: [list('weekend', [farm])],
     followed: [
-      follow('forest', [laity], { showOnMap: true }),
-      follow('private-now', [maan], { showOnMap: true, gone: true }),
-      follow('republished', [maan], { showOnMap: true, listPublishedAt: 9 }),
+      follow('forest', [laity]),
+      follow('private-now', [maan], { gone: true }),
+      follow('republished', [maan], { listPublishedAt: 9 }),
       follow('unread', [], { unread: true }),
     ],
   });
   assert.deepEqual(selectableSources(sources).map(source => source.id), ['mine:weekend', 'followed:forest', 'followed:unread']);
   // Neither the list made private nor the one shared again under a new date adds anything.
-  assert.deepEqual(keys(eligibleRefs(sources)), ['Aldor Family Farm', 'Laity Pumpkin Patch']);
+  assert.deepEqual(keys(eligibleRefs(sources, ['followed:forest', 'followed:private-now', 'followed:republished'])), ['Laity Pumpkin Patch']);
   const selection = ['mine:weekend', 'followed:private-now', 'mine:deleted', 'followed:forest'];
   assert.deepEqual(pruneSelection(selection, sources), ['mine:weekend', 'followed:forest']);
   const untouched = ['mine:weekend'];

@@ -24,6 +24,8 @@ test('publishing shares my spots in the list; they stop being shared once no pub
   const h = createHarness({ documents: {
     ...base,
     'spots/audit_sunset': record({ description: 'Best at 8pm', legacyId: 'old' }),
+    // Maya shares hers, which is how it got into the list (and where the map finds it).
+    'publicSpots/maya_sunset': { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint', lat: 49.3, lng: -123.1, photos: [] },
     'lists/a': listDoc('Golden Hour', [farm, sunset, mayaSunset]),
     'lists/b': listDoc('Weekend', [sunset]),
   } });
@@ -32,7 +34,7 @@ test('publishing shares my spots in the list; they stop being shared once no pub
   const copy = h.documents.get('publicSpots/audit_sunset');
   assert.deepEqual([copy.ownerUid, copy.ownerUsername, copy.description, 'publicListIds' in copy, 'legacyId' in copy], ['audit', 'audit', 'Best at 8pm', false, false]);
   assert.deepEqual(h.documents.get('spots/audit_sunset').publicListIds, ['a']);
-  assert.equal(h.documents.get('publicSpots/maya_sunset'), undefined, 'someone else\'s spot is theirs to share');
+  assert.equal(h.documents.get('publicSpots/maya_sunset').ownerUid, 'maya', 'someone else\'s spot is theirs to share');
 
   await lists.publishList('audit', 'audit', 'b');
   assert.deepEqual(h.documents.get('spots/audit_sunset').publicListIds, ['a', 'b']);

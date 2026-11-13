@@ -1,15 +1,16 @@
 // Which saved spots belong on the Map tab. Pure functions over plain objects, so every visibility rule is
 // unit-tested without Firestore. Plain CommonJS.
 //
-// A spot can be on the map for more than one reason (hearted, in one of my lists, in a followed list that is
-// switched on). Each reason is a "source"; a spot is pinned once, and only leaves when no source holds it.
+// A spot can be on the map for more than one reason (hearted, in one of my lists, in a list picked in the
+// filter). Each reason is a "source"; a spot is pinned once, and only leaves when no source holds it.
 //
 // - saved: spots hearted one by one. Always on the map.
 // - mine: a list the user made. Always on the map.
-// - followed: someone else's public list. On the map only while its "Show all spots on map" is on.
+// - followed: someone else's public list. Never on the map by default; pick it in the filter. (An old
+//   `showOnMap` flag on a follow, from the switch the list page used to have, is ignored.)
 // - collection: a season the user kept with a heart. Never on the map by default; pick it in the filter.
 //
-// Picking lists in the filter replaces the default set with just those lists, whatever their switch says.
+// Picking lists in the filter replaces the default set with just those lists.
 const { catalogueRef, findCatalogueSpot, hasPin, spotKey } = require('./catalogue');
 const { collectionById, collectionCaption, collectionSpots } = require('./collections');
 const { SPOT_CATEGORIES, ownerOfSpotId, savedCustomSpots } = require('./customSpotsState');
@@ -48,7 +49,7 @@ function mapSources({ favourites, myLists = [], followed = [], keptCollections =
       kind: 'followed',
       title: list?.title ?? pointer.title ?? 'List',
       caption: ['Following', by].filter(Boolean).join(' · '),
-      onMap: pointer.showOnMap === true,
+      onMap: false,
       refs: (list?.items ?? []).map(item => item.spot),
     });
   }
@@ -78,11 +79,11 @@ function pruneSelection(selectedIds = [], sources) {
   return kept.length === selectedIds.length ? selectedIds : kept;
 }
 
-// The followed lists whose contents are needed right now: switched on, or picked in the filter.
+// The followed lists whose contents are needed right now: the ones picked in the filter.
 function neededListIds(pointers = [], selectedIds = []) {
   const picked = new Set(selectedIds);
   return pointers
-    .filter(pointer => pointer.showOnMap === true || picked.has(sourceId('followed', pointer.id)))
+    .filter(pointer => picked.has(sourceId('followed', pointer.id)))
     .map(pointer => pointer.id);
 }
 

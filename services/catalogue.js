@@ -45,6 +45,11 @@ const isCustomSpot = isOwnSpot;
 
 const hasPin = ref => Number.isFinite(ref.lat) && Number.isFinite(ref.lng);
 
+// Somewhere the map can actually pin: real coordinates, and not the 0,0 a broken lookup leaves behind.
+// A public list may only hold spots that pass this (services/listsState.js assertOnTheMap).
+const validPin = point => !!point && hasPin(point)
+  && Math.abs(point.lat) <= 90 && Math.abs(point.lng) <= 180 && !(point.lat === 0 && point.lng === 0);
+
 // Where an own spot is, in words, for cards and for the "what people will see" review.
 function describeWhere(ref) {
   if (ref.address) return ref.address;
@@ -84,5 +89,5 @@ function resolveSpot(ref) {
 
 module.exports = {
   CITIES, DEFAULT_CITY, cityName, locality, catalogueSpots, catalogueSections,
-  findCatalogueSpot, seasonOf, catalogueRef, spotKey, isOwnSpot, isCustomSpot, hasPin, describeWhere, resolveSpot,
+  findCatalogueSpot, seasonOf, catalogueRef, spotKey, isOwnSpot, isCustomSpot, hasPin, validPin, describeWhere, resolveSpot,
 };

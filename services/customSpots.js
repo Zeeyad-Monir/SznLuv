@@ -5,11 +5,11 @@ import {
   collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, runTransaction, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { spotKey } from './catalogue';
+import { spotKey, validPin } from './catalogue';
 import { buildSearchTerms } from './listSearch';
 import { addSpot, publicFields } from './listsState';
 import {
-  migrateLegacy, mySpotIdsIn, removeRefFromList, removeRefFromTop4, replaceRefInList, replaceRefInTop4, savedEntry, savedKey,
+  migrateLegacy, mySpotIdsIn, needsPinMessage, removeRefFromList, removeRefFromTop4, replaceRefInList, replaceRefInTop4, savedEntry, savedKey,
   spotIdFor, thinChanged, toPublicSpot, toRef, top4Has,
 } from './customSpotsState';
 import { cleanOrphans } from './spotPhotos';
@@ -99,6 +99,8 @@ export async function updateSpot(uid, id, fields, { photos } = {}) {
       ownerUid, ...fields, photos: photos ?? before.photos ?? [], publicListIds, createdAt: createdAt ?? now,
       ...(legacyId ? { legacyId } : {}), updatedAt: now,
     };
+    // Edits reach the public copies at once, so a spot in a public list can't lose its place on the map.
+    if (publicListIds.length && !validPin(after)) throw spotError('spot/unpinned', needsPinMessage(false));
     const thin = thinChanged(before, after);
     const lists = thin ? await Promise.all(holding.map(listId => transaction.get(doc(db, 'lists', listId)))) : [];
     const favourites = thin ? await transaction.get(favouritesRef) : null;

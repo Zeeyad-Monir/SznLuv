@@ -36,13 +36,20 @@ const spotIdFor = (uid, suffix) => `${uid}_${suffix}`;
 const ownerOfSpotId = id => (typeof id === 'string' && id.includes('_') ? id.slice(0, id.indexOf('_')) : null);
 const savedKey = id => `x:${id}`;
 
-// Why the form can't be saved yet, or null when it can.
-function spotProblem({ name, mode, address, pin, description, tips, cost, hours, photos }) {
+// What to say when a spot in a public list would lose its place on the map. `lookup` is whether
+// "Find this address" is available in this build.
+const needsPinMessage = lookup => `This spot is in a public list, so it needs a place on the map. ${lookup
+  ? 'Drop a pin, or find the address and pick a match.' : 'Drop a pin on it instead.'}`;
+
+// Why the form can't be saved yet, or null when it can. `needsPin`: the spot is in a public list, so a
+// typed address only counts once a lookup has matched it (which gives it a pin).
+function spotProblem({ name, mode, address, pin, description, tips, cost, hours, photos, needsPin = false, lookup = false }) {
   const cleanName = clean(name);
   if (!cleanName) return 'Give the spot a name.';
   if (cleanName.length > SPOT_LIMITS.name) return `Names can be up to ${SPOT_LIMITS.name} characters.`;
   if (mode === 'pin' && !pin) return 'Move the map so the pin sits on your spot.';
   if (mode === 'address' && !clean(address)) return 'Type an address, or drop a pin instead.';
+  if (needsPin && mode === 'address' && !pin) return needsPinMessage(lookup);
   const tooLong = [['description', description, 'Descriptions'], ['tips', tips, 'Tips'], ['cost', cost, 'Cost'], ['hours', hours, 'Hours']]
     .find(([field, value]) => clean(value).length > SPOT_LIMITS[field]);
   if (tooLong) return `${tooLong[2]} can be up to ${SPOT_LIMITS[tooLong[0]]} characters.`;
@@ -185,7 +192,7 @@ function migrateLegacy({ uid, lists = [], top4 = null, existing = new Set(), now
 
 module.exports = {
   SPOT_LIMITS, SPOT_CATEGORIES, SPOT_SEASONS, REVIEWED_MOVE_LIMIT_KM,
-  mySpotIdsIn, spotIdFor, ownerOfSpotId, savedKey, spotProblem, spotFields, thinFields, thinChanged, toRef, linkRef, storedRef, isLegacyRef, isMine,
+  mySpotIdsIn, spotIdFor, ownerOfSpotId, savedKey, needsPinMessage, spotProblem, spotFields, thinFields, thinChanged, toRef, linkRef, storedRef, isLegacyRef, isMine,
   toPublicSpot, matchesSpot, findSameSpot, findListedSpot, withinReach,
   replaceRefInList, removeRefFromList, replaceRefInTop4, removeRefFromTop4, top4Has, savedEntry, savedCustomSpots, migrateLegacy,
 };

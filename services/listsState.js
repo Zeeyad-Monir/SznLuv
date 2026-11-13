@@ -1,6 +1,6 @@
 // What a list is and how it changes. Pure functions over plain objects, so every rule here is unit-tested
 // without Firestore. services/lists.js applies them inside transactions.
-const { DEFAULT_CITY, spotKey, isOwnSpot, describeWhere, catalogueRef } = require('./catalogue');
+const { DEFAULT_CITY, spotKey, isOwnSpot, describeWhere, catalogueRef, findCatalogueSpot, validPin } = require('./catalogue');
 const { buildSearchTerms } = require('./listSearch');
 
 const LIMITS = { title: 25, description: 120, note: 140, spots: 50, spotName: 60 };
@@ -149,6 +149,67 @@ function assertPublishable(list) {
   if (!list.items.length) throw listError('list/empty', 'Add a spot first.');
 }
 
+// ---------------------------------------------------------------- Every spot on the map
+
+// A public list may only hold spots the map can pin. A typed address that no lookup matched, one of
+// SznLuv's placeholder spots, or someone else's spot that is no longer shared all keep a list private
+// (or keep its changes from going public) until the spot is fixed or taken out.
+const OFF_MAP = {
+  address: 'Address not found on the map',
+  catalogue: 'SznLuv has no map location for it',
+  gone: 'This spot no longer exists',
+  unshared: 'No longer shared by its owner',
+};
+
+// `placeOf(ref)` says where a spot is: { lat, lng }, or { reason } (a key of OFF_MAP) when it is known
+// not to be anywhere, or undefined while it isn't known yet (those are not judged).
+function spotsOffTheMap(items = [], placeOf) {
+  return items.flatMap(({ spot }) => {
+    const place = placeOf(spot);
+    if (place === undefined || (!place?.reason && validPin(place))) return [];
+    const reason = place?.reason ?? (spot.k === 'c' ? 'catalogue' : 'address');
+    return [{ key: spotKey(spot), name: spot.name, reason, text: OFF_MAP[reason], ref: spot }];
+  });
+}
+
+function offTheMapMessage(off) {
+  const [first, ...rest] = off;
+  const who = rest.length ? `${first.name} and ${rest.length} more ${rest.length === 1 ? 'spot' : 'spots'} need` : `${first.name} needs`;
+  const them = off.length === 1 ? ['its', 'it'] : ['their', 'them'];
+  return `${who} a place on the map. Fix ${them[0]} location or remove ${them[1]} from the list.`;
+}
+
+function assertOnTheMap(items, placeOf) {
+  const off = spotsOffTheMap(items, placeOf);
+  if (off.length) throw Object.assign(listError('list/unpinned', offTheMapMessage(off)), { spots: off });
+}
+
+// Where each spot is, from what publishing read. `mine` and `shared` map spot IDs to my own record and to
+// someone else's public copy (null when there is none). The app's spots are looked up here.
+function placeFrom({ mine = {}, shared = {} } = {}) {
+  return ref => {
+    if (ref.k === 'c') {
+      const spot = findCatalogueSpot(ref.name);
+      return spot ? { lat: spot.latitude, lng: spot.longitude } : { reason: 'catalogue' };
+    }
+    if (ref.id in mine) return mine[ref.id] ?? { reason: 'gone' };
+    if (ref.id in shared) return shared[ref.id] ?? { reason: 'unshared' };
+    return ref; // From before spots had records: the reference itself is all there is
+  };
+}
+
+// The same answer from entries a screen has already resolved (hooks/useSpotEntries).
+function placeFromEntries(entries = []) {
+  const byKey = new Map(entries.map(entry => [entry.spot.key, entry]));
+  return ref => {
+    const entry = byKey.get(spotKey(ref));
+    if (!entry || entry.status === 'loading' || entry.status === 'error') return undefined;
+    if (entry.status === 'unavailable') return { reason: entry.mine ? 'gone' : 'unshared' };
+    if (entry.spot.missing) return { reason: 'catalogue' };
+    return { lat: entry.spot.latitude, lng: entry.spot.longitude };
+  };
+}
+
 // The document written to publicLists. `publishedAt` is kept across updates and reset when a private
 // list goes public again, which is what tells old followers the list was withdrawn in between.
 function toPublicSnapshot(draft, { ownerUsername, now, publishedAt }) {
@@ -195,5 +256,6 @@ module.exports = {
   LIMITS, COLOURS, SEASON_COVERS, DEFAULT_COVER, coverBackground,
   createList, editDetails, hasSpot, addSpot, removeSpot, insertSpot, moveSpot, setNote, copySpot,
   publicFields, hasUnpublishedChanges, exposure, newExposure, needsReview, assertPublishable,
+  OFF_MAP, spotsOffTheMap, offTheMapMessage, assertOnTheMap, placeFrom, placeFromEntries,
   toPublicSnapshot, revertToPublic, migratedListId, migrateCollections,
 };

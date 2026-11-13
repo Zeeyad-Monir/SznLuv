@@ -9,6 +9,8 @@ const { createList, addSpot, setNote, toPublicSnapshot } = require('../services/
 const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
 const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
+// My record of it: where publishing checks it is on the map.
+const stepsRecord = { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [] };
 // The same kind of place, made by Maya: visitors get it linked by ID and name, never copied.
 const mayaSteps = { k: 'x', id: 'maya-uid_steps1', owner: 'maya-uid', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const draft = (title, refs = [], extra = {}) => ({
@@ -30,7 +32,7 @@ const someoneElse = (title, refs, ownerUid, ownerUsername, now = 100) => publicC
 test('sharing: a private list shows exactly what going public reveals, then publishes', async () => {
   let list = draft('My Hottest Summer Spots', [farm, steps]);
   list = setNote(list, 'c:Aldor Family Farm', 'Go around 7 for the soft light.');
-  const h = createHarness({ documents: { ...base, 'lists/a': list } });
+  const h = createHarness({ documents: { ...base, 'lists/a': list, 'spots/audit_steps1': stepsRecord } });
   const sheet = await mount(h, 'screens/SharingSheet.js', { params: { listId: 'a' } });
   const shown = sheet.texts().join(' | ');
   assert.match(shown, /Only you can see this list\./);
@@ -186,49 +188,14 @@ test('visitor page: follow and unfollow, each naming where the list now lives', 
   assert.ok(h.documents.has('users/audit/followedLists/m'));
 });
 
-test('visitor page: "Show all spots on map" is offered once following, starts off, and never unfollows', async () => {
+test('visitor page: following offers no map switch, and a follow is never put on the map', async () => {
   const { h, screen } = await visit();
-  const toggle = () => screen.all('Switch').find(node => node.props.accessibilityLabel === 'Show all spots on map');
-  assert.equal(toggle(), undefined, 'nothing to switch before the list is followed');
-
+  const switches = () => screen.all('Switch');
+  assert.deepEqual(switches(), []);
   await screen.press('Follow list');
-  assert.equal(toggle().props.value, false);
-  assert.ok(screen.texts().includes('When enabled, spots from this collection will appear on your map.'));
-  assert.equal('showOnMap' in h.documents.get('users/audit/followedLists/m'), false, 'a new follow is off the map');
-
-  await act(async () => { await toggle().props.onValueChange(true); });
-  assert.equal(toggle().props.value, true);
-  assert.equal(h.documents.get('users/audit/followedLists/m').showOnMap, true);
-  await act(async () => { await toggle().props.onValueChange(false); });
-  assert.equal(h.documents.get('users/audit/followedLists/m').showOnMap, false);
-  assert.ok(screen.button('Following list. Unfollow'), 'switching it off keeps the list followed');
-  assert.ok(h.documents.has('users/audit/followedLists/m'));
-
-  // Unfollowing removes the follow and the preference with it; following again starts off.
-  await act(async () => { await toggle().props.onValueChange(true); });
-  await screen.press('Following list. Unfollow');
-  assert.equal(h.documents.has('users/audit/followedLists/m'), false);
-  assert.equal(toggle(), undefined);
-  await screen.press('Undo');
-  assert.equal(toggle().props.value, false);
+  assert.deepEqual(switches(), [], 'the Map tab filter is where a followed list is picked');
+  assert.equal(screen.texts().includes('Show all spots on map'), false);
   assert.equal('showOnMap' in h.documents.get('users/audit/followedLists/m'), false);
-});
-
-test('visitor page: the map switch remembers its answer, and a failed save is put back', async () => {
-  const pointer = { ownerUid: 'maya-uid', ownerUsername: 'maya', title: 'Golden Hour', publishedAt: 100, followedAt: 5, lastOpenedAt: 5 };
-  const { screen } = await visit({ 'users/audit/followedLists/m': { ...pointer, showOnMap: true } });
-  const find = view => view.all('Switch').find(node => node.props.accessibilityLabel === 'Show all spots on map');
-  assert.equal(find(screen).props.value, true);
-
-  // The follow is read, then every write fails: the switch goes back and says why.
-  const failing = createHarness({ documents: { ...base, 'publicLists/m': mayaList(), 'users/audit/followedLists/m': pointer }, writeError: 'unavailable' });
-  const broken = await quiet(() => mount(failing, 'screens/ListScreen.js', { params: { listId: 'm' } }));
-  assert.equal(find(broken).props.value, false);
-  await quiet(async () => { await act(async () => { await find(broken).props.onValueChange(true); }); });
-  await flush();
-  assert.equal(find(broken).props.value, false);
-  assert.deepEqual(broken.snackbar(), ['Couldn’t save. Check your connection.']);
-  assert.equal('showOnMap' in failing.documents.get('users/audit/followedLists/m'), false);
 });
 
 test('visitor page: opening a followed list clears its Updated mark; a failed follow is put back', async () => {

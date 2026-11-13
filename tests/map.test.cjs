@@ -65,22 +65,12 @@ async function openMap(documents = saved, { location = false, harness = {} } = {
 
 // ---------------------------------------------------------------- Pins
 
-test('map: hearts and my own lists are pinned once each; a followed list only once it is switched on', async () => {
-  const { h, pins, spreadOut, look, settle } = await openMap({ ...saved, ...following });
+test('map: hearts and my own lists are pinned once each; a followed list adds nothing by default', async () => {
+  // Even a follow that still carries the old "Show all spots on map" flag stays off the default map.
+  const { pins, spreadOut, look } = await openMap({ ...saved, ...following, 'users/audit/followedLists/m': { ...pointer, showOnMap: true } });
   await spreadOut();
   await look();
-  assert.deepEqual(pins(), MINE, 'a followed list adds nothing by default');
-  assert.equal(h.documents.has('publicSpots/sam-uid_pier'), true);
-
-  const follows = h.load('services/follows.js');
-  await act(async () => { await follows.setListOnMap('audit', 'm', true); });
-  await settle();
-  assert.deepEqual(pins(), [...MINE, ...MAYAS].sort(), 'its catalogue spot, the owner’s spot, and a linked spot read from its public copy');
-
-  await act(async () => { await follows.setListOnMap('audit', 'm', false); });
-  await settle();
-  assert.deepEqual(pins(), MINE);
-  assert.ok(h.documents.has('users/audit/followedLists/m'), 'switching it off keeps the list followed');
+  assert.deepEqual(pins(), MINE, 'a followed list is picked in the filter instead');
 });
 
 test('map: saving and unsaving while the map is open moves the pins without a refresh', async () => {
@@ -317,7 +307,7 @@ test('map search: narrows the pins with the app’s own search, and a result fli
   assert.deepEqual(pins(), MINE);
 });
 
-test('map filter: picking lists shows only their spots, even a followed list that is switched off', async () => {
+test('map filter: picking lists shows only their spots, including a followed list', async () => {
   const { h, screen, spreadOut, look, pins, settle } = await openMap({ ...saved, ...following, 'users/audit/savedCollections/vancouver-fall': { collectionId: 'vancouver-fall', cityId: 'vancouver', savedAt: 1 } });
   await spreadOut();
   await look();
@@ -334,8 +324,8 @@ test('map filter: picking lists shows only their spots, even a followed list tha
   assert.deepEqual(pins(), MINE, 'nothing changes until Apply');
   await screen.press('Apply Filters');
   await settle();
-  assert.deepEqual(pins(), MAYAS, 'only that list, and the single hearts wait until the filter is cleared');
-  assert.equal('showOnMap' in h.documents.get('users/audit/followedLists/m'), false, 'looking at it does not switch it on');
+  assert.deepEqual(pins(), MAYAS, 'its catalogue spot, the owner’s spot and a linked spot from its public copy; the single hearts wait until the filter is cleared');
+  assert.equal('showOnMap' in h.documents.get('users/audit/followedLists/m'), false, 'picking it writes nothing');
   assert.ok(screen.button('Filter spots, filters active'));
   assert.ok(screen.texts().includes('3 spots match your filters'));
 
@@ -416,28 +406,39 @@ test('map: an area with no saved spots says so and offers the way back to them',
 
 test('map: a list that can’t be read says so, keeps the other pins, and loads on Try again', async () => {
   const options = { readError: 'unavailable' };
-  const documents = { ...saved, ...following, 'users/audit/followedLists/m': { ...pointer, showOnMap: true } };
-  const { screen, spreadOut, look, pins, settle } = await quiet(() => openMap(documents, { harness: options }));
+  const { screen, spreadOut, look, pins, settle } = await quiet(() => openMap({ ...saved, ...following }, { harness: options }));
   await spreadOut();
   await look();
+  await screen.press('Filter spots');
+  const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox');
+  await act(async () => rows().find(node => node.props.accessibilityLabel.startsWith('Golden Hour')).props.onPress());
+  await rows().find(node => node.props.accessibilityLabel.startsWith('Weekend')).props.onPress();
+  await quiet(() => screen.press('Apply Filters'));
+  await quiet(settle);
   assert.ok(screen.texts().includes('Couldn’t load some saved spots'));
-  assert.deepEqual(pins(), MINE, 'what is already known is still shown');
+  assert.deepEqual(pins(), ['c:Maan Farms', 'x:audit_steps1'], 'what is already known is still shown');
 
   options.readError = undefined;
   await quiet(() => screen.press('Try again'));
   await settle();
   assert.equal(screen.texts().includes('Couldn’t load some saved spots'), false);
-  assert.deepEqual(pins(), [...MINE, ...MAYAS].sort());
+  assert.deepEqual(pins(), ['c:Maan Farms', 'x:audit_steps1', ...MAYAS].sort());
 });
 
 test('map: a followed list that was deleted or made private stops adding pins, with no error', async () => {
-  const gone = { ...saved, 'users/audit/followedLists/m': { ...pointer, showOnMap: true } };
-  const { screen, spreadOut, look, pins } = await openMap(gone);
+  const gone = { ...saved, 'users/audit/followedLists/m': pointer };
+  const { screen, spreadOut, look, pins, settle } = await openMap(gone);
   await spreadOut();
   await look();
   assert.deepEqual(pins(), MINE);
+  // It is only read once picked: then it is found gone, adds nothing, and the map goes back to the default set.
+  await screen.press('Filter spots');
+  const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox');
+  await act(async () => rows().find(node => node.props.accessibilityLabel.startsWith('Golden Hour')).props.onPress());
+  await screen.press('Apply Filters');
+  await settle();
+  assert.deepEqual(pins(), MINE);
   assert.equal(screen.texts().includes('Couldn’t load some saved spots'), false);
   await screen.press('Filter spots');
-  const labels = screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox').map(node => node.props.accessibilityLabel);
-  assert.deepEqual(labels, ['Weekend, 2 spots'], 'it is no longer offered in the filter');
+  assert.deepEqual(rows().map(node => node.props.accessibilityLabel), ['Weekend, 2 spots'], 'it is no longer offered in the filter');
 });
