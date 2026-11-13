@@ -280,11 +280,16 @@ test('following: people you follow are listed under the lists and open their pro
   assert.ok(empty.button('Find people'));
 });
 
-test('Vancouver page: shows Seasons without a community section even when public lists exist', async () => {
+test('Home: shows the city\'s collections without a community section even when public lists exist', async () => {
   const h = createHarness({ documents: { ...base, ...maya } });
-  const screen = await mount(h, 'screens/VancouverScreen.js');
-  assert.deepEqual(screen.texts(), ['Vancouver', 'Seasons']);
-  assert.deepEqual(labels(screen), ['Seasons - View Seasons']);
+  const screen = await mount(h, 'screens/HomeScreen.js');
+  assert.deepEqual(screen.texts(), [
+    'What sounds good?', 'A morning outdoors', 'Explore the Outdoors collection', 'Browse collections',
+    'Seasonal', 'Outdoors', 'Unique Food', 'Coming soon', 'Night Out', 'Coming soon', 'All Vancouver spots',
+  ]);
+  assert.deepEqual(labels(screen), [
+    'Featured: A morning outdoors. Explore the Outdoors collection', 'Seasonal collection', 'Outdoors collection', 'All Vancouver spots',
+  ]);
   await act(async () => screen.renderer.unmount());
 });
 

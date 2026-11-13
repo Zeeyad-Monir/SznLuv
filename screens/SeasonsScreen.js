@@ -1,6 +1,6 @@
 // SCREENS/SEASONSSCREEN.JS
 // Holds the four season cards (Fall, Winter, Spring, Summer) that used to live directly on the Home screen.
-// Home -> VancouverScreen -> SeasonsScreen -> the individual season screens.
+// Home -> SeasonsScreen (the Seasonal card) -> the individual season screens.
 
 // =========================
 // IMPORTS SECTION
@@ -29,7 +29,7 @@ import { GUTTER, text } from '../components/theme';
 import useEntrance from '../hooks/useEntrance';
 import { useCollectionHeart } from '../hooks/useSavedCollections';
 import CollectionCard from '../components/CollectionCard';
-import { DEFAULT_CITY } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { collectionsForCity } from '../services/collections';
 import { canNavigate } from '../services/venueNavigation';
 
@@ -70,7 +70,8 @@ export default function SeasonsScreen() {
   const [springCount, setSpringCount] = useState(4);
   const [summerCount, setSummerCount] = useState(3);
 
-  const collections = collectionsForCity(DEFAULT_CITY.id);
+  const { city } = useCity();
+  const collections = collectionsForCity(city.id);
   const counts = { fall: fallCount, winter: winterCount, spring: springCount, summer: summerCount };
   const entrance = useEntrance(collections.length);
   // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.

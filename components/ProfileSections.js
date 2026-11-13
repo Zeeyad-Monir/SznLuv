@@ -9,7 +9,7 @@ import { GUTTER, colors, text, tileWidth } from './theme';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
-import { DEFAULT_CITY } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { canNavigate } from '../services/venueNavigation';
 
 function ProfileIdentity({ uid, username, avatarColor, avatarPhotoId, bio, style }) {
@@ -57,6 +57,7 @@ export default function ProfileView({ identity, picks, lists, navigation, action
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
   const entrance = useEntrance(3);
+  const { city } = useCity();
 
   return (
     <SignedInScreen style={styles.container}>
@@ -66,7 +67,7 @@ export default function ProfileView({ identity, picks, lists, navigation, action
         <Animated.View style={entrance[2]}>
           {(onAdd || picks.length > 0) && (
             <>
-              <ProfileHeading title="Top 4" caption={DEFAULT_CITY.name} />
+              <ProfileHeading title="Top 4" caption={city.name} />
               <Top4Grid picks={picks} size={size} editable={!!onAdd} onPressPick={onPressPick} onAdd={onAdd} />
               {top4Controls}
             </>

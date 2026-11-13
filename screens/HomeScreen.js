@@ -1,235 +1,112 @@
-// SCREENS/HOMESCREEN.JS
-// Detailed comments are added by chatgpt.com to the existing code, this way it makes it easier for each other to know what we coded when the other looks at it. Aswell as helps remember everything going on.
-
-// =========================
-// IMPORTS SECTION
-// =========================
-
-// Importing necessary modules and hooks from React
-import React, { useRef } from 'react';
-
-// Importing React Native components and APIs
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Animated,
-  ImageBackground,
-} from 'react-native';
-
-// Importing navigation hook to navigate between screens
+// Home: the first page of the signed-in app, and where exploring a city starts.
+//
+// Top to bottom: the page's one large line, a featured collection, the collections to browse, and a way
+// into every spot in the city. All of it is read from services/collections.js for the chosen city, so a
+// new collection or city shows up here without this file changing. The city itself is shown, and changed,
+// in the header above (components/NavBar.js).
+import React, { useMemo, useRef } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import CollectionTile from '../components/CollectionTile';
+import EmptyCard from '../components/EmptyCard';
+import FeaturedCollectionCard from '../components/FeaturedCollectionCard';
+import PressableScale from '../components/PressableScale';
+import { CARD_RADIUS, GRID_GAP, GUTTER, colors, text, tileWidth } from '../components/theme';
+import { useCity } from '../contexts/CityContext';
+import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
-import { GUTTER, text } from '../components/theme';
-import useEntrance from '../hooks/useEntrance';
+import { citySpotSections, featuredForCity, homeCollections } from '../services/collections';
+import { canNavigate } from '../services/venueNavigation';
 
-// =========================
-// HELPER FUNCTIONS SECTION
-// =========================
+// Card heights follow the screen's width, so the illustrations keep their shape on every phone.
+const FEATURED_SHAPE = 0.5;
+const TILE_SHAPE = 0.62;
 
-/**
- * hexToRGBA Function
- *
- * Converts a hex color code to an RGBA color string with the specified alpha transparency.
- *
- * @param {string} hex - The hex color code (e.g., '#FF8657' or '#FFF').
- * @param {number} alpha - The alpha transparency value (0 to 1).
- * @returns {string} - The resulting RGBA color string.
- */
-const hexToRGBA = (hex, alpha) => {
-  let r = 0, g = 0, b = 0;
-
-  // Handling shorthand hex codes (e.g., '#FFF')
-  if (hex.length === 4) {
-    r = parseInt(hex[1] + hex[1], 16);
-    g = parseInt(hex[2] + hex[2], 16);
-    b = parseInt(hex[3] + hex[3], 16);
-  }
-  // Handling full hex codes (e.g., '#FFFFFF')
-  else if (hex.length === 7) {
-    r = parseInt(hex[1] + hex[2], 16);
-    g = parseInt(hex[3] + hex[4], 16);
-    b = parseInt(hex[5] + hex[6], 16);
-  }
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-// =========================
-// CONSTANTS SECTION
-// =========================
-
-// Defining base colors for each season
-const seasonalColors = {
-  fall: '#FF8657',
-  winter: '#B9CCEC',
-  spring: '#FF9FD2',
-  summer: '#F8DD74',
-};
-
-// Defining opacity levels for each season's overlay
-const seasonalOpacities = {
-  fall: 0.1,
-  winter: 0.3,
-  spring: 0.3,
-  summer: 0.3,
-};
-
-// Creating RGBA overlay colors for each season using the hexToRGBA helper function
-const seasonalOverlays = {
-  fall: hexToRGBA(seasonalColors.fall, seasonalOpacities.fall),
-  winter: hexToRGBA(seasonalColors.winter, seasonalOpacities.winter),
-  spring: hexToRGBA(seasonalColors.spring, seasonalOpacities.spring),
-  summer: hexToRGBA(seasonalColors.summer, seasonalOpacities.summer),
-};
-
-// Cover image for the Vancouver card, slightly faded (opacity 0.9) with a thin white wash on top
-const vancouverImage = require('../assets/cities/VancouverCoverIMG.png');
-const COVER_IMAGE_OPACITY = 0.9;
-
-// =========================
-// COMPONENT DEFINITION
-// =========================
-
-/**
- * HomeScreen Component
- *
- * This component serves as the main landing screen of the application.
- * It displays the location categories (currently just Vancouver).
- * Vancouver opens VancouverScreen, which leads to the seasons (Fall, Winter, Spring, Summer).
- * The component also includes animations for a dynamic and engaging user experience.
- */
 export default function HomeScreen() {
-  const floatingScrollStyle = useFloatingScrollStyle(styles.scrollContent);
-  // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
+  const { city } = useCity();
+  const { width } = useWindowDimensions();
+  const scrollStyle = useFloatingScrollStyle(styles.content);
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef); // Re-tapping this section scrolls back to the top
+  const entrance = useEntrance(4);
 
-  const entrance = useEntrance(2);
+  const featured = useMemo(() => featuredForCity(city.id), [city.id]);
+  const collections = useMemo(() => homeCollections(city.id), [city.id]);
+  const hasSpots = useMemo(() => citySpotSections(city.id).length > 0, [city.id]);
+  const tile = tileWidth(width);
 
-  // =========================
-  // RENDERING SECTION
-  // =========================
+  // Two quick taps on different cards must not push two pages
+  const open = ({ screen, params }) => {
+    if (!canNavigate(navigation)) return;
+    if (params) navigation.navigate(screen, params);
+    else navigation.navigate(screen);
+  };
 
   return (
     <SignedInScreen style={styles.container}>
-      {/* ScrollView to allow vertical scrolling of content */}
-      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
+      <ScrollView ref={scrollRef} contentContainerStyle={scrollStyle}>
         <Animated.View style={entrance[0]}>
-          <Text accessibilityRole="header" style={text.sectionLabel}>Locations</Text>
+          <Text style={text.heroTitle} accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+            What sounds good?
+          </Text>
         </Animated.View>
 
-        {/* Location Categories Container */}
-        <View>
-          {/* =========================
-              VANCOUVER CARD
-              ========================= */}
-          <Animated.View style={entrance[1]}>
-            <TouchableOpacity
-              style={styles.seasonTouchable} // Base styles for the touchable area
-              onPress={() => navigation.navigate('VancouverScreen')} // Navigates to VancouverScreen on press
-              accessible={true} // Enables accessibility
-              accessibilityRole="button"
-              accessibilityLabel="Vancouver - View Vancouver" // Accessibility label for screen readers
-            >
-              {/* Background image for the Vancouver card */}
-              <ImageBackground
-                source={vancouverImage}
-                style={styles.imageBackground}
-                imageStyle={{ borderRadius: 12, opacity: COVER_IMAGE_OPACITY }}
-              >
-                {/* Thin white layer over the image to wash out the colours a little */}
-                <View style={styles.imageWash} pointerEvents="none" />
-
-                {/* Text Container for the card title */}
-                <View style={styles.textContainer}>
-                  <Text style={styles.seasonTitle}>Vancouver</Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
+        {featured && (
+          <Animated.View style={[styles.featured, entrance[1]]}>
+            <FeaturedCollectionCard featured={featured} height={Math.round((width - 2 * GUTTER) * FEATURED_SHAPE)}
+              onPress={() => open(featured.target)} />
           </Animated.View>
+        )}
 
-          {/* Spacer at the bottom of the cards */}
-          <View style={{ height: 20 }} />
-        </View>
+        {hasSpots ? (
+          <>
+            <Animated.View style={entrance[2]}>
+              <Text style={[text.tileTitle, styles.heading]} accessibilityRole="header">Browse collections</Text>
+              <View style={styles.grid}>
+                {collections.map(collection => (
+                  <CollectionTile key={collection.key} collection={collection} width={tile}
+                    height={Math.round(tile * TILE_SHAPE)} onPress={() => open(collection.target)} />
+                ))}
+              </View>
+            </Animated.View>
+
+            <Animated.View style={entrance[3]}>
+              <PressableScale style={styles.allSpots} contentStyle={styles.allSpotsSurface}
+                onPress={() => open({ screen: 'CitySpots' })} accessibilityLabel={`All ${city.name} spots`}>
+                <Ionicons name="map-outline" size={22} color={colors.summary} />
+                <Text style={styles.allSpotsText}>All {city.name} spots</Text>
+                <Ionicons name="arrow-forward" size={20} color={colors.summary} />
+              </PressableScale>
+            </Animated.View>
+          </>
+        ) : (
+          // A city SznLuv has opened but not filled yet: say so, and offer the way to a city that has spots.
+          <Animated.View style={[styles.empty, entrance[2]]}>
+            <EmptyCard icon="explore" title={`Nothing in ${city.name} yet`}
+              text="We're still adding spots here. You can explore another city in the meantime."
+              actionLabel="Choose another city" onAction={() => open({ screen: 'CitySelection' })} />
+          </Animated.View>
+        )}
       </ScrollView>
     </SignedInScreen>
   );
 }
 
-// =========================
-// STYLESHEET SECTION
-// =========================
-
-/**
- * Styles for HomeScreen components
- *
- * This stylesheet defines the visual appearance of the HomeScreen, including layout, colors, fonts, and spacing.
- */
 const styles = StyleSheet.create({
-  // Main container covering the entire screen
-  container: {
-    flex: 1, // Takes up the full available space
-    backgroundColor: '#FFF5E4', // Light background color for a welcoming feel
+  container: { flex: 1, backgroundColor: colors.page },
+  content: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 20 },
+  featured: { marginTop: 14 },
+  heading: { marginTop: 26, marginBottom: 14 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  empty: { marginTop: 24 },
+  allSpots: { marginTop: GRID_GAP + 4 },
+  allSpotsSurface: {
+    minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 14,
+    borderRadius: CARD_RADIUS, backgroundColor: colors.segmentTrack,
+    borderWidth: 1, borderColor: colors.surfaceBorder,
   },
-
-  // Styling for the ScrollView content container
-  scrollContent: {
-    paddingHorizontal: GUTTER,
-    paddingTop: SCREEN_CONTENT_TOP_GAP,
-    paddingBottom: 20, // Padding at the bottom to prevent content cutoff
-    rowGap: 12,
-  },
-
-  // Touchable Area for Each Card
-  seasonTouchable: {
-    width: '100%', // Full width of the container
-    height: 160, // Fixed height for consistency
-    borderRadius: 12, // Rounded corners for aesthetics
-    marginBottom: 24, // Space below each card
-    overflow: 'hidden', // Clips any child content outside the container
-  },
-
-  // Image background inside cards
-  imageBackground: {
-    flex: 1, // Takes up the full available space
-    justifyContent: 'flex-start', // Aligns children at the top
-  },
-
-  // Thin white layer over the cover image
-  imageWash: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-
-  // Text Container within Cards
-  textContainer: {
-    paddingHorizontal: 20, // Horizontal padding inside the container
-    paddingTop: 20, // Top padding for spacing
-  },
-
-  // Card Title Text Style
-  seasonTitle: {
-    fontSize: 35, // Large font size for the card title
-    fontWeight: 'bold', // Bold font weight for emphasis
-    color: '#FFFFFF', // White color for contrast against the card image
-    textShadowColor: 'rgba(0, 0, 0, 0.55)', // Soft shadow keeps the title readable on light parts of the image
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-
-  // Loading Container for ActivityIndicator
-  loadingContainer: {
-    flex: 1, // Takes up the full available space
-    justifyContent: 'center', // Centers children vertically
-    alignItems: 'center', // Centers children horizontally
-  },
+  allSpotsText: { flex: 1, fontSize: 17, lineHeight: 22, fontWeight: '700', color: colors.summary },
 });

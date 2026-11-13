@@ -14,7 +14,7 @@ import { GUTTER, colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
-import { DEFAULT_CITY } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { followPerson, isFollowingPerson, unfollowPerson } from '../services/follows';
 import { getPublicListsBy } from '../services/lists';
 import { blockUser, getBlocked } from '../services/moderation';
@@ -31,6 +31,7 @@ export default function PersonScreen({ navigation, route }) {
 }
 
 function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
+  const { city } = useCity();
   const snackbar = useSnackbar();
 
   // undefined: loading. null: not available (no public profile, or blocked).
@@ -139,7 +140,7 @@ function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
   }
 
   const isMe = person.uid === uid;
-  const picks = person.top4?.[DEFAULT_CITY.id] ?? [];
+  const picks = person.top4?.[city.id] ?? [];
 
   return (
     <ProfileView identity={person} navigation={navigation} picks={picks} lists={lists}

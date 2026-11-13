@@ -12,14 +12,14 @@ import { GUTTER, colors, controls, text } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
 import { showMenu } from '../services/actionMenu';
-import { DEFAULT_CITY, isOwnSpot, spotKey } from '../services/catalogue';
+import { isOwnSpot, spotKey } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { linkPath } from '../services/links';
 import { getPublicListsBy } from '../services/lists';
 import { getMyTop4, getProfile, mutateTop4 } from '../services/profiles';
 import { MAX_PICKS, addPick, cityTop4, exposedLocations, movePick, removePick, setPublic } from '../services/top4State';
 import { canNavigate, openSpot } from '../services/venueNavigation';
 
-const CITY = DEFAULT_CITY;
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 
 export default function ProfileScreen({ navigation }) {
@@ -28,6 +28,8 @@ export default function ProfileScreen({ navigation }) {
 }
 
 function OwnProfile({ navigation, uid, username }) {
+  // Top 4 is kept per city: this is the chosen city's, and another city's picks are untouched by it.
+  const cityId = useCity().city.id;
   const snackbar = useSnackbar();
   const { spots: mySpots } = useMySpots();
 
@@ -54,7 +56,7 @@ function OwnProfile({ navigation, uid, username }) {
     return () => { active = false; };
   }, [uid, attempt]));
 
-  const city = cityTop4(top4, CITY.id);
+  const city = cityTop4(top4, cityId);
 
   // Shows the change at once, saves it, and puts Top 4 back if the save fails.
   const change = async update => {
@@ -63,7 +65,7 @@ function OwnProfile({ navigation, uid, username }) {
     try {
       const saved = await mutateTop4(uid, username, update);
       setTop4(saved);
-      if (cityTop4(saved, CITY.id).public) setProfile(current => current ?? { uid, username });
+      if (cityTop4(saved, cityId).public) setProfile(current => current ?? { uid, username });
     } catch (error) {
       console.error('Error updating Top 4:', { code: error?.code });
       setTop4(before);
@@ -84,12 +86,12 @@ function OwnProfile({ navigation, uid, username }) {
   };
 
   const togglePublic = value => {
-    if (!value) return change(current => setPublic(current, CITY.id, false));
-    return confirmExposure(city.picks, () => change(current => setPublic(current, CITY.id, true)));
+    if (!value) return change(current => setPublic(current, cityId, false));
+    return confirmExposure(city.picks, () => change(current => setPublic(current, cityId, true)));
   };
 
   const add = ref => {
-    const save = () => change(current => addPick(current, CITY.id, ref));
+    const save = () => change(current => addPick(current, cityId, ref));
     if (city.public && isOwnSpot(ref)) confirmExposure([ref], save);
     else save();
   };
@@ -98,9 +100,9 @@ function OwnProfile({ navigation, uid, username }) {
     title: ref.name,
     options: [
       { label: 'Open', onPress: () => openSpot(navigation, ref) },
-      index > 0 && { label: 'Move earlier', onPress: () => change(current => movePick(current, CITY.id, spotKey(ref), -1)) },
-      index < city.picks.length - 1 && { label: 'Move later', onPress: () => change(current => movePick(current, CITY.id, spotKey(ref), 1)) },
-      { label: 'Remove', destructive: true, onPress: () => change(current => removePick(current, CITY.id, spotKey(ref))) },
+      index > 0 && { label: 'Move earlier', onPress: () => change(current => movePick(current, cityId, spotKey(ref), -1)) },
+      index < city.picks.length - 1 && { label: 'Move later', onPress: () => change(current => movePick(current, cityId, spotKey(ref), 1)) },
+      { label: 'Remove', destructive: true, onPress: () => change(current => removePick(current, cityId, spotKey(ref))) },
     ].filter(Boolean),
   });
 

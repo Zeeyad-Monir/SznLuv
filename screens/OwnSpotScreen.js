@@ -18,7 +18,8 @@ import useDeleteSpot from '../hooks/useDeleteSpot';
 import useMySpots from '../hooks/useMySpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
-import { DEFAULT_CITY, catalogueRef } from '../services/catalogue';
+import { catalogueRef } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { addExistingSpot, createSpot, newSpotId, updateSpot } from '../services/customSpots';
 import {
   SPOT_CATEGORIES, SPOT_LIMITS, SPOT_SEASONS, findListedSpot, findSameSpot, spotFields, spotProblem, toRef, withinReach,
@@ -32,7 +33,8 @@ import { customLocationAvailable, findCustomOrigins } from '../services/spotLoca
 import { SettingsContext } from './SettingsContext';
 
 const MODES = [{ value: 'pin', label: 'Drop a pin' }, { value: 'address', label: 'Type an address' }];
-const START = { latitude: DEFAULT_CITY.latitude, longitude: DEFAULT_CITY.longitude, latitudeDelta: 0.12, longitudeDelta: 0.12 };
+// Where the map opens for a new pin: the middle of the chosen city.
+const startRegion = city => ({ latitude: city.latitude, longitude: city.longitude, latitudeDelta: 0.12, longitudeDelta: 0.12 });
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 const PLACEHOLDER = '#8A8178';
 
@@ -64,6 +66,7 @@ export default function OwnSpotScreen({ navigation, route }) {
   const { spotId, listId, name: typedName = '' } = route.params ?? {};
   const editing = !!spotId;
   const { user } = useContext(AuthContext);
+  const { city } = useCity();
   const uid = user?.uid;
   const snackbar = useSnackbar();
   const { spots: mySpots, byId, status } = useMySpots();
@@ -250,7 +253,7 @@ export default function OwnSpotScreen({ navigation, route }) {
               <View style={styles.mapFrame}>
                 {mapReady && (
                   <MapView style={styles.fill}
-                    initialRegion={form.pin ? { ...form.pin, latitudeDelta: 0.03, longitudeDelta: 0.03 } : START}
+                    initialRegion={form.pin ? { ...form.pin, latitudeDelta: 0.03, longitudeDelta: 0.03 } : startRegion(city)}
                     showsUserLocation={isLocationEnabled}
                     onRegionChangeComplete={(region, details) => {
                       // Only a move by hand counts: the first report is just the map settling.

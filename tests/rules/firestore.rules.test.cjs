@@ -60,6 +60,11 @@ test('favourites and private user data belong to their owner only', async () => 
   await assertSucceeds(getDoc(doc(maya, 'users/maya')));
   await assertFails(getDoc(doc(alex, 'users/maya')));
   await assertFails(updateDoc(doc(alex, 'users/maya'), { username: 'alex' }));
+  // The chosen city is one more private field on the profile: its owner sets it, and it disturbs nothing else.
+  await assertSucceeds(setDoc(doc(maya, 'users/maya'), { selectedCityId: 'vancouver' }, { merge: true }));
+  assert.equal((await getDoc(doc(maya, 'users/maya'))).data().username, 'maya');
+  await assertFails(setDoc(doc(alex, 'users/maya'), { selectedCityId: 'vancouver' }, { merge: true }));
+  await assertFails(setDoc(doc(guest, 'users/maya'), { selectedCityId: 'vancouver' }, { merge: true }));
 
   for (const sub of ['votes/r1', 'followedPeople/alex']) {
     await assertSucceeds(setDoc(doc(maya, `users/maya/${sub}`), { followedAt: 1 }));

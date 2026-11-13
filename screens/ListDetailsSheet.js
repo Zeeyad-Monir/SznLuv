@@ -8,6 +8,7 @@ import SheetHeader from '../components/SheetHeader';
 import { SEASON_ART } from '../components/covers';
 import { colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
+import { useCity } from '../contexts/CityContext';
 import useMyLists from '../hooks/useMyLists';
 import { storedRef } from '../services/customSpotsState';
 import { createNewList, mutateList } from '../services/lists';
@@ -40,6 +41,7 @@ export default function ListDetailsSheet({ navigation, route }) {
 
 function DetailsForm({ navigation, listId, addSpot, editing, heading }) {
   const { user } = useContext(AuthContext);
+  const { city } = useCity();
   const insets = useSafeAreaInsets();
   // Seven colours stay on one row: full size on current phones, a little smaller on narrow ones.
   const { width } = useWindowDimensions();
@@ -65,7 +67,8 @@ function DetailsForm({ navigation, listId, addSpot, editing, heading }) {
         navigation.goBack();
       } else {
         const created = await createNewList(user?.uid, {
-          title, description, cover, items: addSpot ? [{ spot: storedRef(addSpot, user?.uid), note: '' }] : [],
+          title, description, cover, cityId: city.id,
+          items: addSpot ? [{ spot: storedRef(addSpot, user?.uid), note: '' }] : [],
         });
         track(EVENTS.listStarted, { entry: addSpot ? 'save' : 'library' });
         if (addSpot) track(EVENTS.firstSpotAdded, { entry: 'save' });

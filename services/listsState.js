@@ -51,6 +51,8 @@ function cleanDetails({ title, description = '', cover = DEFAULT_COVER }, keepTi
   return { title: cleanTitle, description: cleanDescription, cover: validCover(cover) ? cover : DEFAULT_COVER };
 }
 
+// `cityId` is the city the list was made in. Only lists carried over from before cities existed leave it
+// out, and those were all made in the first city.
 function createList({ ownerUid, title, description, cover, cityId = DEFAULT_CITY.id, items = [], now }) {
   if (!ownerUid) throw listError('list/signed-out', 'You must be logged in.');
   return {

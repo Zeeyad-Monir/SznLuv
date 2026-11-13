@@ -3,10 +3,20 @@
 const { fallCategories } = require('./spots');
 const { winterCategories, springCategories, summerCategories } = require('./seasonSpots');
 
-// Lists and Top 4 are keyed by city so a second city needs no data change.
-const CITIES = [{ id: 'vancouver', name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 }];
+// Every city SznLuv covers, the one place a city is defined. Lists and Top 4 are keyed by city, and each
+// person's chosen city is saved by `id` (services/cityPreference.js), so an id must never change.
+// `active: false` takes a city out of the picker without losing what people saved under it.
+// A city's cover art is in components/covers.js (CITY_ART): this file is also copied into Cloud Functions.
+const CITIES = [{ id: 'vancouver', name: 'Vancouver', latitude: 49.2827, longitude: -123.1207, active: true }];
 const DEFAULT_CITY = CITIES[0];
-const cityName = cityId => CITIES.find(city => city.id === cityId)?.name ?? DEFAULT_CITY.name;
+const findCity = cityId => CITIES.find(city => city.id === cityId);
+const cityName = cityId => findCity(cityId)?.name ?? DEFAULT_CITY.name;
+const activeCities = () => CITIES.filter(city => city.active);
+// A city someone can be in right now: it exists and is switched on.
+const isSelectableCity = cityId => typeof cityId === 'string' && !!findCity(cityId)?.active;
+
+// The city every spot bundled in services/spots.js and services/seasonSpots.js belongs to.
+const CATALOGUE_CITY_ID = 'vancouver';
 
 const SEASONS = [
   { season: 'Fall', categories: fallCategories },
@@ -22,7 +32,9 @@ function locality(address) {
 }
 
 const catalogueSpots = SEASONS.flatMap(({ season, categories }) => categories.flatMap(category => (
-  category.spots.map(spot => ({ ...spot, season, category: category.title, locality: locality(spot.address) }))
+  category.spots.map(spot => ({
+    ...spot, cityId: CATALOGUE_CITY_ID, season, category: category.title, locality: locality(spot.address),
+  }))
 )));
 const byName = new Map(catalogueSpots.map(spot => [spot.name, spot]));
 
@@ -88,6 +100,6 @@ function resolveSpot(ref) {
 }
 
 module.exports = {
-  CITIES, DEFAULT_CITY, cityName, locality, catalogueSpots, catalogueSections,
+  CITIES, DEFAULT_CITY, findCity, cityName, activeCities, isSelectableCity, locality, catalogueSpots, catalogueSections,
   findCatalogueSpot, seasonOf, catalogueRef, spotKey, isOwnSpot, isCustomSpot, hasPin, validPin, describeWhere, resolveSpot,
 };

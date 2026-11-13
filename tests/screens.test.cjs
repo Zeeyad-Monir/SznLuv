@@ -8,7 +8,7 @@ const { CommonActions, StackRouter } = require('@react-navigation/routers');
 const { detailedFallSpots, legacyFallSpots, fallSpotNames, fallCategories } = require('../services/spots');
 const spotProps = name => ({ route: { params: { spot: { k: 'c', name } } } });
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'CitySpotsScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -16,11 +16,11 @@ for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'VancouverScr
     await act(async () => renderer.unmount());
   });
 }
-test('home hierarchy: Home > Vancouver > Seasons > the four season screens', async () => {
+test('home hierarchy: Home > its collections and all spots; Seasonal > the four season screens', async () => {
   async function pressCards(file) {
     const h = createHarness();
     const renderer = await h.render('screens/' + file + '.js');
-    const cards = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityLabel?.includes(' - View '));
+    const cards = renderer.root.findAllByType('TouchableOpacity').filter(node => !/collection (to|from) My lists$/.test(node.props.accessibilityLabel));
     const results = {};
     for (const card of cards) {
       h.navigations.length = 0;
@@ -30,8 +30,13 @@ test('home hierarchy: Home > Vancouver > Seasons > the four season screens', asy
     await act(async () => renderer.unmount());
     return results;
   }
-  assert.deepEqual(await pressCards('HomeScreen'), { 'Vancouver - View Vancouver': ['VancouverScreen'] });
-  assert.deepEqual(await pressCards('VancouverScreen'), { 'Seasons - View Seasons': ['SeasonsScreen'] });
+  // Unique Food and Night Out have no spots yet: they are on the page, but there is nothing to press.
+  assert.deepEqual(await pressCards('HomeScreen'), {
+    'Featured: A morning outdoors. Explore the Outdoors collection': ['CollectionSpots', { collectionId: 'vancouver-outdoors' }],
+    'Seasonal collection': ['SeasonsScreen'],
+    'Outdoors collection': ['CollectionSpots', { collectionId: 'vancouver-outdoors' }],
+    'All Vancouver spots': ['CitySpots'],
+  });
   assert.deepEqual(await pressCards('SeasonsScreen'), {
     'Fall Season - View Active Date Ideas': ['FallDatesScreen'],
     'Winter Season - View Active Date Ideas': ['WinterDatesScreen'],
@@ -40,8 +45,8 @@ test('home hierarchy: Home > Vancouver > Seasons > the four season screens', asy
   });
 });
 
-test('home hierarchy: the Locations, Vancouver and Seasons headings share the same content inset', async () => {
-  for (const [file, title] of [['HomeScreen', 'Locations'], ['VancouverScreen', 'Vancouver'], ['SeasonsScreen', 'Seasons']]) {
+test('home hierarchy: the Home and Seasons headings share the same content inset', async () => {
+  for (const [file, title] of [['HomeScreen', 'What sounds good?'], ['SeasonsScreen', 'Seasons']]) {
     const h = createHarness();
     const renderer = await h.render(`screens/${file}.js`);
     const scroll = renderer.root.findByType('ScrollView');
@@ -169,7 +174,7 @@ function textOf(node) {
 
 // ---- top bar and sections
 // The Map tab sits where Spin the Wheel was; the wheel's own screen is still tested below.
-const SECTIONS = ['HomeTab', 'ExploreTab', 'FavouritesTab', 'MapTab', 'ProfileTab'];
+const SECTIONS = ['HomeTab', 'ExploreTab', 'MapTab', 'FavouritesTab', 'ProfileTab'];
 const tabState = (index, nested) => ({ index, routes: SECTIONS.map((name, i) => ({ key: `${name}-key`, name, state: i === index ? nested : undefined })) });
 const homeStack = names => ({ key: 'home-stack', index: names.length - 1, routes: names.map(name => ({ key: name, name })) });
 async function renderTopBar(state, top = 62) {
@@ -196,7 +201,7 @@ test('top bar: section starts have no back button, deeper pages do', async () =>
   }
 });
 test('top bar: back names the previous page, pops the current section only, and ignores a double tap', async () => {
-  const { renderer, log, control } = await renderTopBar(tabState(0, homeStack(['Home', 'VancouverScreen', 'SeasonsScreen', 'FallDatesScreen'])));
+  const { renderer, log, control } = await renderTopBar(tabState(0, homeStack(['Home', 'SeasonsScreen', 'FallDatesScreen'])));
   const back = control('Back to Seasons');
   assert.ok(back, 'labelled with the page it returns to');
   await act(async () => { back.props.onPress(); back.props.onPress(); });
@@ -220,7 +225,7 @@ test('Settings is a signed-in root page: back preserves the active tab and link 
   const router = StackRouter({ initialRouteName: 'Main' });
   const config = { routeNames: ['Main', 'Settings'], routeParamList: {}, routeGetIdList: {} };
   const main = router.getInitialState(config);
-  main.routes[0].state = tabState(2, homeStack(['Favourites', 'ListScreen']));
+  main.routes[0].state = tabState(3, homeStack(['Favourites', 'ListScreen']));
   const root = router.getStateForAction(main, CommonActions.navigate('Settings'), config);
   const h = createHarness({ rootState: root, initialUrl: 'sznluv://u/maya', reduceMotion: true });
   const app = await h.render('App.js', { app: true });
@@ -348,7 +353,7 @@ test('floating bar: five named slots fit narrow phones, and Profile comes last',
     const h = createHarness({ window: { width } });
     const { renderer, control } = await renderFloatingNav(h, 4);
     const tabs = renderer.root.findAllByType('TouchableOpacity').filter(node => node.props.accessibilityRole === 'tab');
-    assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Favorites', 'Map', 'Profile']);
+    assert.deepEqual(tabs.map(node => node.props.accessibilityLabel), ['Home', 'Explore', 'Map', 'Favorites', 'Profile']);
     assert.deepEqual(control('Profile').props.accessibilityState, { selected: true });
     assert.equal(control('Explore').props.accessibilityHint, 'Search lists from other people');
     assert.equal(control('Map').props.accessibilityHint, 'Shows your saved spots on a map');
@@ -371,7 +376,7 @@ test('floating bar: Profile opens its root after leaving the tab on a detail', a
 
 test('floating bar: Favorites and Map keep their route keys and only a real switch triggers a haptic', async () => {
   const h = createHarness();
-  const { renderer, log, control } = await renderFloatingNav(h, 2);
+  const { renderer, log, control } = await renderFloatingNav(h, 3);
   assert.deepEqual(control('Favorites').props.accessibilityState, { selected: true });
   assert.deepEqual(control('Map').props.accessibilityState, { selected: false });
   await act(async () => control('Favorites').props.onPress());
@@ -421,7 +426,7 @@ test('floating bar: respects Reduce Transparency and uses the opaque treatment o
   await act(async () => renderer.unmount());
 
   const android = createHarness({ platform: 'android' });
-  const androidNav = await renderFloatingNav(android, 3);
+  const androidNav = await renderFloatingNav(android, 2);
   assert.equal(androidNav.renderer.root.findAllByType('BlurView').length, 0);
   assert.deepEqual(androidNav.control('Map').props.accessibilityState, { selected: true });
   await act(async () => androidNav.control('Favorites').props.onPress());
@@ -535,7 +540,7 @@ test('main tabs: five sections with shared navigation; venue and list pages reac
   assert.equal(navigator.props.backBehavior, 'none', 'VoiceOver back cannot jump between sections');
   const tabs = renderer.root.findAllByType(h.Screen);
   assert.deepEqual(tabs.map(node => node.props.name), SECTIONS);
-  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Favourites'], [3, 'Map'], [4, 'Profile']]) {
+  for (const [index, root] of [[0, 'Home'], [1, 'Explore'], [2, 'Map'], [3, 'Favourites'], [4, 'Profile']]) {
     let section;
     await act(async () => { section = Renderer.create(React.createElement(tabs[index].props.component)); });
     const names = section.root.findAllByType(h.Screen).map(node => node.props.name);
@@ -651,18 +656,23 @@ for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
   });
 }
 
-test('the Vancouver and Seasons cards use the cover images from the assets folder', async () => {
-  for (const [file, image] of [['HomeScreen', 'cities/VancouverCoverIMG.png'], ['VancouverScreen', 'Seasonal/SeasonalCoverIMG.png']]) {
-    const h = createHarness();
-    const renderer = await h.render(`screens/${file}.js`);
-    const backgrounds = renderer.root.findAllByType('ImageBackground');
-    assert.equal(backgrounds.length, 1, `${file} has one image card`);
-    assert.ok(String(backgrounds[0].props.source).endsWith(`assets/${image}`), `${file} uses ${image}`);
-    assert.equal(backgrounds[0].props.imageStyle.opacity, 0.9, `${file} image opacity is 10% lower`);
-    const washes = renderer.root.findAll(node => node.type === 'View' && node.props.pointerEvents === 'none' && node.props.style && node.props.style.backgroundColor === 'rgba(255, 255, 255, 0.2)');
-    assert.equal(washes.length, 1, `${file} has a thin white layer over the image`);
-    await act(async () => renderer.unmount());
-  }
+test('the city and Seasonal cards use the cover images from the assets folder', async () => {
+  const h = createHarness();
+  const picker = await h.render('screens/CitySelectionScreen.js', { props: { route: { name: 'ChooseCity' } } });
+  const [cover, ...others] = picker.root.findAllByType('ImageBackground');
+  assert.equal(others.length, 0, 'one card per city');
+  assert.ok(String(cover.props.source).endsWith('assets/cities/VancouverCoverIMG.png'));
+  assert.equal(cover.props.imageStyle.opacity, 0.9, 'the city image opacity is 10% lower');
+  const washes = picker.root.findAll(node => node.type === 'View' && node.props.pointerEvents === 'none' && node.props.style && node.props.style.backgroundColor === 'rgba(255, 255, 255, 0.2)');
+  assert.equal(washes.length, 1, 'the city card has a thin white layer over the image');
+  await act(async () => picker.unmount());
+
+  const home = await h.render('screens/HomeScreen.js');
+  const sources = home.root.findAllByType('ImageBackground').map(node => String(node.props.source));
+  assert.equal(sources.length, 5, 'the featured card and the four collections');
+  assert.ok(sources[1].endsWith('assets/Seasonal/SeasonalCoverIMG.png'), 'Seasonal keeps its own illustration');
+  assert.equal(new Set(sources).size, sources.length, 'no two cards share an illustration');
+  await act(async () => home.unmount());
 });
 
 // Keep the original farm forecast coordinates as well as the catalogue venues.

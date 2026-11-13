@@ -6,8 +6,10 @@ import { StackActions } from '@react-navigation/native';
 import BackButton from './BackButton';
 import useReduceMotion from '../hooks/useReduceMotion';
 import pressTab from '../navigation/pressTab';
+import { useCity } from '../contexts/CityContext';
 
 const CHARCOAL = '#333333';
+const CITY_INK = '#62584E';
 const ROW_HEIGHT = 44;
 const BOTTOM_PADDING = 8;
 const getTopPadding = topInset => Math.max(65, topInset + 3);
@@ -16,8 +18,9 @@ export const getMinimumNavBarHeight = topInset => getTopPadding(topInset) + ROW_
 // What the back button names for VoiceOver. Only pages that can have a page above them are listed.
 const PARENT_TITLES = {
   Home: 'Home',
-  VancouverScreen: 'Vancouver',
   SeasonsScreen: 'Seasons',
+  CollectionSpots: 'Collection',
+  CitySpots: 'All spots',
   FallDatesScreen: 'Fall Dates',
   WinterDatesScreen: 'Winter Dates',
   SpringDatesScreen: 'Spring Dates',
@@ -67,6 +70,9 @@ export default function NavBar({ state, navigation, insets, onLayout }) {
   };
 
   const activeRoute = state.routes[state.index].name;
+  // The city is Home's to show: it sits beside the gear on Home's first page and steps aside on the pages under it.
+  const { city } = useCity();
+  const showCity = activeRoute === 'HomeTab' && !!city;
 
   return (
     <View pointerEvents="box-none" onLayout={onLayout} style={[styles.bar, {
@@ -100,16 +106,40 @@ export default function NavBar({ state, navigation, insets, onLayout }) {
           </TouchableOpacity>
         </Animated.View>
 
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => { Keyboard.dismiss(); navigation.navigate('Settings'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-        >
-          <View style={styles.settingsBadge}>
-            <Ionicons name="settings-outline" size={24} color={CHARCOAL} />
-          </View>
-        </TouchableOpacity>
+        <View pointerEvents="box-none" style={styles.actions}>
+          {showCity && (
+            <Animated.View
+              style={[styles.city, { opacity: backProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}
+              pointerEvents={canGoBack ? 'none' : 'auto'}
+              accessibilityElementsHidden={canGoBack}
+              importantForAccessibility={canGoBack ? 'no-hide-descendants' : 'auto'}
+            >
+              <TouchableOpacity
+                style={styles.cityButton}
+                onPress={() => { Keyboard.dismiss(); navigation.navigate('CitySelection'); }}
+                disabled={canGoBack}
+                hitSlop={{ top: 4, bottom: 4, left: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`City: ${city.name}`}
+                accessibilityHint="Opens the list of cities so you can explore another one"
+              >
+                <Ionicons name="location-outline" size={20} color={CITY_INK} />
+                <Text style={styles.cityName} numberOfLines={1}>{city.name}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => { Keyboard.dismiss(); navigation.navigate('Settings'); }}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <View style={styles.settingsBadge}>
+              <Ionicons name="settings-outline" size={24} color={CHARCOAL} />
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -144,6 +174,30 @@ const styles = StyleSheet.create({
     color: CHARCOAL,
     fontSize: 29,
     fontWeight: 'bold',
+  },
+  // The city and the gear share the right side. A long city name gives way before the title does.
+  actions: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginLeft: 12,
+  },
+  city: {
+    flexShrink: 1,
+  },
+  cityButton: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+  },
+  cityName: {
+    flexShrink: 1,
+    color: CITY_INK,
+    fontSize: 17,
+    fontWeight: '700',
   },
   settingsButton: {
     width: 44,

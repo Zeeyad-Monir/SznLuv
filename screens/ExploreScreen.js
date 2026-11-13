@@ -25,7 +25,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
-import { cityName, DEFAULT_CITY } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import { getCommunityCandidates, getNewestPublicLists, getPublicListsBy, searchPublicLists } from '../services/lists';
 import {
   SEASON_NAMES, currentSeason, listSeason, mostFollowed, parseQuery, rankLists, sortLists, visibleLists,
@@ -107,6 +107,7 @@ const toggled = (ids, id, on) => {
 
 export default function ExploreScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { city } = useCity();
   const uid = user?.uid;
   const snackbar = useSnackbar();
   const floatingScrollStyle = useFloatingScrollStyle(styles.content);
@@ -214,7 +215,7 @@ export default function ExploreScreen({ navigation }) {
       setLoadedFollowedIds(new Set(ids));
     }
     const ranked = await getExploreFeed(uid, {
-      followed: pointers.value ?? [], blocked: blockedNow.value ?? view.current.blocked, refresh: pull,
+      followed: pointers.value ?? [], blocked: blockedNow.value ?? view.current.blocked, refresh: pull, cityId: city.id,
     });
     if (!current()) return true;
     setRecs(previous => (ranked
@@ -362,7 +363,7 @@ export default function ExploreScreen({ navigation }) {
     : chip !== FOR_YOU ? `${chip} lists`
       : recs.status === 'loading' ? null
         : usingRecs ? 'Picked for you'
-        : byFollowers ? 'Most followed' : `New in ${cityName(DEFAULT_CITY.id)}`;
+        : byFollowers ? 'Most followed' : `New in ${city.name}`;
 
   // ---------------------------------------------------------------- Which cards were seen
 

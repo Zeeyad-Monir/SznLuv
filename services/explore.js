@@ -4,7 +4,6 @@
 import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebaseConfig';
-import { DEFAULT_CITY } from './catalogue';
 import { recentOpens, setEventsAlgo } from './events';
 import { buildSignals } from './exploreState';
 import { loadFollowedPeople } from './follows';
@@ -31,16 +30,17 @@ async function loadSignals(uid, { followed, blocked }) {
 // Resolves to { lists, algo }, or null when the recommendations aren't available right now.
 //  followed: [{ id, followedAt }] and blocked: [uid], which Explore has loaded anyway
 //  refresh:  true after a pull to refresh: ask again, and let the order change
-export async function getExploreFeed(uid, { followed = [], blocked = [], refresh = false } = {}) {
+//  cityId:   the city the person is exploring, which the ranking favours
+export async function getExploreFeed(uid, { followed = [], blocked = [], refresh = false, cityId } = {}) {
   const now = Date.now();
-  if (!refresh && kept?.uid === uid && now - kept.at < KEEP_MS) return kept.feed;
+  if (!refresh && kept?.uid === uid && kept.cityId === cityId && now - kept.at < KEEP_MS) return kept.feed;
   if (!refresh && now - failedAt < RETRY_AFTER_MS) return null;
   try {
     const signals = await loadSignals(uid, { followed, blocked });
-    const { data } = await call({ signals, cityId: DEFAULT_CITY.id, nonce: refresh ? now.toString(36) : '' });
+    const { data } = await call({ signals, cityId, nonce: refresh ? now.toString(36) : '' });
     if (!Array.isArray(data?.lists)) throw new Error('Unexpected feed');
     const feed = { lists: data.lists, algo: data.algo ?? 'unknown' };
-    kept = { uid, at: now, feed };
+    kept = { uid, cityId, at: now, feed };
     failedAt = 0;
     setEventsAlgo(feed.algo);
     return feed;
@@ -51,7 +51,7 @@ export async function getExploreFeed(uid, { followed = [], blocked = [], refresh
   }
 }
 
-// Sign-out, and tests.
+// Sign-out, a change of city, and tests.
 export function forgetExploreFeed() {
   kept = null;
   failedAt = 0;

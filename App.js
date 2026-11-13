@@ -1,6 +1,6 @@
 // App.js
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, ActivityIndicator, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer, DefaultTheme, StackActions, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,9 +9,12 @@ import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-c
 // Firebase imports
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { AuthContext } from './contexts/AuthContext';
+import { CityContext } from './contexts/CityContext';
+import { findCity } from './services/catalogue';
+import { CITY_FIELD, selectedCityFrom, unavailableCityFrom, withTimeout } from './services/cityPreference';
 import AccountAccessScreen from './screens/AccountAccessScreen';
 import { sessionAccess } from './services/sessionAccess';
 import { firebaseErrorMessage } from './services/firebaseErrors';
@@ -30,6 +33,7 @@ import SharingSheet from './screens/SharingSheet';
 import ReportSheet from './screens/ReportSheet';
 import EditProfileSheet from './screens/EditProfileSheet';
 import SettingsScreen from './screens/SettingsScreen';
+import CitySelectionScreen from './screens/CitySelectionScreen';
 import { MyListsProvider } from './hooks/useMyLists';
 import { SavedCollectionsProvider } from './hooks/useSavedCollections';
 import { MySpotsProvider } from './hooks/useMySpots';
@@ -105,7 +109,13 @@ export default function App() {
     let cancelled = false;
     setProfile({ status: 'checking' });
     getDoc(doc(db, 'users', user.uid)).then((snapshot) => {
-      if (!cancelled) setProfile({ status: snapshot.exists() && snapshot.data().username ? 'ready' : 'missing', username: snapshot.data()?.username });
+      if (cancelled) return;
+      const data = snapshot.data();
+      // The city rides on this same read, so asking for it costs nothing extra.
+      setProfile({
+        status: snapshot.exists() && data.username ? 'ready' : 'missing', username: data?.username,
+        cityId: selectedCityFrom(data), unavailableCity: unavailableCityFrom(data),
+      });
     }).catch((error) => {
       console.error('Profile access failed:', { code: error.code });
       if (!cancelled) setProfile({ status: 'error', message: firebaseErrorMessage(error, 'signup') });
@@ -123,6 +133,31 @@ export default function App() {
     const subscription = AppState.addEventListener('change', state => { if (state !== 'active') flushEvents(); });
     return () => subscription.remove();
   }, []);
+
+  // Saves the chosen city to the profile, then lets the app use it. Rejects if the save did not go through,
+  // so a failed save is never shown as a chosen city. Choosing the current city again writes nothing.
+  const uid = user?.uid;
+  const currentCityId = profile.cityId;
+  const changeCity = useCallback(async cityId => {
+    if (!uid) throw new Error('You must be logged in.');
+    if (!findCity(cityId)?.active) throw new Error('That city is not available.');
+    if (cityId === currentCityId) return;
+    // A merge only ever touches this one field: nothing else on the profile is rewritten.
+    await withTimeout(setDoc(doc(db, 'users', uid), { [CITY_FIELD]: cityId }, { merge: true }));
+    // Someone else may have signed in while the save was out: their profile is not this one's to change.
+    if (auth.currentUser?.uid !== uid) return;
+    forgetExploreFeed();
+    setProfile(previous => (previous.status === 'ready' ? { ...previous, cityId, unavailableCity: null } : previous));
+  }, [uid, currentCityId]);
+
+  // Signing out fades the app away rather than cutting it, so its pages still draw for a moment after the
+  // profile is gone. They keep the last city until then; `chosen` says whether this person has one.
+  const city = findCity(profile.cityId) ?? null;
+  const lastCity = useRef(null);
+  if (city) lastCity.current = city;
+  const cityValue = useMemo(() => ({
+    city: city ?? lastCity.current, chosen: !!city, unavailableCity: profile.unavailableCity ?? null, changeCity,
+  }), [city, profile.unavailableCity, changeCity]);
 
   const access = sessionAccess({ initializing, user, registering, registrationError, profile });
 
@@ -167,7 +202,7 @@ export default function App() {
         {shown === 'blocked' ? (
           <AccountAccessScreen status={registrationError ? 'error' : profile.status} message={registrationError || profile.message}
             onRetry={() => { setRegistrationError(null); setRetry(value => value + 1); }} />
-        ) : <MyListsProvider><MySpotsProvider><SavedCollectionsProvider><View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={() => { if (signedIn) openPendingLink(); }}>
+        ) : <CityContext.Provider value={cityValue}><MyListsProvider><MySpotsProvider><SavedCollectionsProvider><View style={styles.app} onAccessibilityEscape={escapeBack}><NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={() => { if (signedIn) openPendingLink(); }}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {shown === 'home' ? (
               <>
@@ -179,7 +214,11 @@ export default function App() {
                 <Stack.Screen name="Sharing" component={SharingSheet} options={bottomSheet} />
                 <Stack.Screen name="Report" component={ReportSheet} options={bottomSheet} />
                 <Stack.Screen name="EditProfile" component={EditProfileSheet} options={bottomSheet} />
+                <Stack.Screen name="CitySelection" component={CitySelectionScreen} options={{ animation: reduceMotion ? 'none' : 'default' }} />
               </>
+            ) : shown === 'city' ? (
+              // Signed in but no city yet: this is the only screen there is, so no tab, gesture or link reaches the app.
+              <Stack.Screen name="ChooseCity" component={CitySelectionScreen} options={crossDissolve} />
             ) : (
               <>
                 <Stack.Screen name="Login" component={LoginScreen} options={crossDissolve} />
@@ -187,7 +226,7 @@ export default function App() {
               </>
             )}
           </Stack.Navigator>
-        </NavigationContainer></View></SavedCollectionsProvider></MySpotsProvider></MyListsProvider>}
+        </NavigationContainer></View></SavedCollectionsProvider></MySpotsProvider></MyListsProvider></CityContext.Provider>}
       </SettingsProvider>
     </AuthContext.Provider>
     </SafeAreaProvider>

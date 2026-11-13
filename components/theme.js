@@ -48,7 +48,18 @@ const cardShadow = {
   elevation: 2,
 };
 
+// The dark fade under white words on an illustration: clear at the top, darkest behind the words at the bottom.
+const artFade = { colors: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0.6)'], locations: [0, 0.45, 1] };
+// White words on an illustration, with a soft shadow so they hold on its light parts.
+const onArt = {
+  color: colors.white, textShadowColor: 'rgba(0, 0, 0, 0.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+};
+// Corners of the illustrated cards on Home, Explore and the city picker.
+const CARD_RADIUS = 16;
+
 const text = StyleSheet.create({
+  // The one large line a page opens with ("What sounds good?").
+  heroTitle: { fontSize: 37, lineHeight: 43, fontWeight: '800', letterSpacing: -0.6, color: colors.ink },
   pageTitle: { fontSize: 48, fontWeight: '700', color: colors.ink },
   worldTitle: { fontSize: 34, fontWeight: '700', color: colors.ink, textAlign: 'center' },
   sectionLabel: { fontSize: 18, fontWeight: '700', color: colors.label },
@@ -91,4 +102,4 @@ const spot = StyleSheet.create({
   meta: { fontSize: 14, fontWeight: '500', color: colors.spotMeta },
 });
 
-module.exports = { colors, GUTTER, GRID_GAP, tileWidth, cardShadow, text, controls, spot };
+module.exports = { colors, GUTTER, GRID_GAP, CARD_RADIUS, tileWidth, cardShadow, artFade, onArt, text, controls, spot };

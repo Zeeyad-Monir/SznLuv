@@ -10,7 +10,8 @@ import NavBar, { getMinimumNavBarHeight } from '../components/NavBar';
 import FloatingTabBar from '../components/FloatingTabBar';
 import { SnackbarProvider } from '../components/Snackbar';
 import HomeScreen from '../screens/HomeScreen';
-import VancouverScreen from '../screens/VancouverScreen';
+import CollectionSpotsScreen from '../screens/CollectionSpotsScreen';
+import CitySpotsScreen from '../screens/CitySpotsScreen';
 import SeasonsScreen from '../screens/SeasonsScreen';
 import FallDatesScreen from '../screens/FallDatesScreen';
 import WinterDatesScreen from '../screens/WinterDatesScreen';
@@ -30,6 +31,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PersonScreen from '../screens/PersonScreen';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
 import { AuthContext } from '../contexts/AuthContext';
+import { useCity } from '../contexts/CityContext';
 import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
 import useReduceMotion from '../hooks/useReduceMotion';
 import { FloatingNavigationLayoutProvider } from './floatingNavigationLayout';
@@ -72,8 +74,9 @@ function HomeSection() {
   return (
     <HomeStack.Navigator screenOptions={stackOptions}>
       <HomeStack.Screen name="Home" component={HomeScreen} />
-      <HomeStack.Screen name="VancouverScreen" component={VancouverScreen} />
       <HomeStack.Screen name="SeasonsScreen" component={SeasonsScreen} />
+      <HomeStack.Screen name="CollectionSpots" component={CollectionSpotsScreen} />
+      <HomeStack.Screen name="CitySpots" component={CitySpotsScreen} />
       {renderCollections(HomeStack)}
       {renderVenues(HomeStack)}
     </HomeStack.Navigator>
@@ -191,9 +194,11 @@ const renderBottomBar = props => <FloatingTabBar {...props} items={bottomItems} 
 
 export default function MainTabs() {
   const { user } = useContext(AuthContext);
+  const { city } = useCity();
   const reduceMotion = useReduceMotion();
   return (
-    <SpotDiscoveryProvider key={user?.uid}>
+    // Search text and filters belong to one person in one city: neither carries over to another.
+    <SpotDiscoveryProvider key={`${user?.uid}:${city?.id}`}>
       <FloatingNavigationLayoutProvider>
         <SnackbarProvider>
         <Tabs.Navigator

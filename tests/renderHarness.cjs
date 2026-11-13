@@ -5,6 +5,7 @@ const fs = require('fs');
 const Module = require('module');
 const babel = require('@babel/core');
 const repo = path.resolve(__dirname, '..');
+const { findCity } = require('../services/catalogue');
 const { act } = TestRenderer;
 
 global.requestAnimationFrame ??= callback => setTimeout(callback, 0);
@@ -12,7 +13,7 @@ global.cancelAnimationFrame ??= clearTimeout;
 
 function createHarness(options = {}) {
   const cache = new Map(), listeners = new Set();
-  const documents = new Map(Object.entries(options.documents || { 'users/audit': { username: 'audit' }, 'favourites/audit': { collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }] } }));
+  const documents = new Map(Object.entries(options.documents || { 'users/audit': { username: 'audit', selectedCityId: 'vancouver' }, 'favourites/audit': { collections: [{ title: 'Weekend', color: '#A7C8FF', dates: ['Aldor Family Farm'] }] } }));
   const alerts = [], navigations = [], calls = [], dispatches = [], timings = [], menus = [];
   const navigation = {
     navigate: (...args) => navigations.push(args),
@@ -221,7 +222,11 @@ function createHarness(options = {}) {
     SectionList: ({ sections = [], renderItem, ...props }) => React.createElement('SectionList', props, sections.flatMap(section => section.data.map((item, index) => React.createElement(React.Fragment, { key: section.title + index }, renderItem({ item, index, section }))))),
     FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
-  function Screen() { return null; }
+  // A navigator's screens are only listed, not drawn, unless a test names them in `renderScreens`.
+  function Screen({ name, component }) {
+    if (!options.renderScreens?.includes(name)) return null;
+    return React.createElement(component, { navigation, route: { name, params: {} } });
+  }
   // usePreventRemove: the latest screen to ask holds the guard; leave() tries to go back past it.
   const preventRemove = { prevent: false, callback: null };
   const leave = () => {
@@ -239,7 +244,7 @@ function createHarness(options = {}) {
     DefaultTheme: { dark: false, colors: {} },
     StackActions: { pop: count => ({ type: 'POP', payload: { count } }), popToTop: () => ({ type: 'POP_TO_TOP' }),
       popTo: (name, params) => ({ type: 'POP_TO', payload: { name, params } }) },
-    CommonActions: { navigate: (...args) => ({ type: 'NAVIGATE', payload: args }) },
+    CommonActions: { navigate: (...args) => ({ type: 'NAVIGATE', payload: args }), reset: state => ({ type: 'RESET', payload: state }) },
   };
   const navigator = () => ({ Navigator: ({ children }) => React.createElement('Navigator', null, children), Screen });
   const storage = new Map(Object.entries(options.storage || {}));
@@ -320,6 +325,18 @@ function createHarness(options = {}) {
     const { AuthContext } = load('contexts/AuthContext.js');
     const { SettingsContext } = load('screens/SettingsContext.js');
     const { SpotDiscoveryProvider } = load('hooks/useSpotDiscovery.js');
+    // Screens are rendered as the signed-in app shows them: with a chosen city. `city`, `cityChosen`,
+    // `unavailableCity` and `changeCityError` set up the other cases.
+    const { CityContext } = load('contexts/CityContext.js');
+    const cityValue = {
+      city: options.city === undefined ? findCity('vancouver') : options.city,
+      chosen: options.cityChosen ?? true,
+      unavailableCity: options.unavailableCity ?? null,
+      changeCity: async cityId => {
+        calls.push(['changeCity', cityId]);
+        if (options.changeCityError) throw Object.assign(new Error('City save failed'), { code: options.changeCityError });
+      },
+    };
     function LocationSettings({ children }) {
       const [isLocationEnabled, setIsLocationEnabled] = React.useState(location);
       return React.createElement(SettingsContext.Provider, {
@@ -330,7 +347,7 @@ function createHarness(options = {}) {
     await act(async () => {
       renderer = TestRenderer.create(app ? element : React.createElement(AuthContext.Provider, {
         value: { user: contextUser, setRegistering: value => calls.push(['setRegistering', value]), setRegistrationError: () => {} },
-      }, React.createElement(LocationSettings, null, element)), {
+      }, React.createElement(CityContext.Provider, { value: cityValue }, React.createElement(LocationSettings, null, element))), {
         createNodeMock: node => {
           if (node.type === 'ScrollView') return { scrollTo() {} };
           if (node.type === 'MapView') return {

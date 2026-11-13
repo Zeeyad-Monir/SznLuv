@@ -80,8 +80,11 @@ test('explicit removal does not accidentally toggle an absent favourite back on'
 });
 
 test('provisioning and incomplete profiles never grant Home access', () => {
-  const state = { initializing: false, user: { uid: 'audit' }, registering: false, profile: { status: 'ready' } };
+  const state = { initializing: false, user: { uid: 'audit' }, registering: false, profile: { status: 'ready', cityId: 'vancouver' } };
   assert.equal(sessionAccess(state), 'home');
+  // A complete profile with no city chosen opens the city picker, never the app.
+  for (const cityId of [undefined, null]) assert.equal(sessionAccess({ ...state, profile: { status: 'ready', cityId } }), 'city');
+  assert.equal(sessionAccess({ ...state, profile: { status: 'missing', cityId: 'vancouver' } }), 'blocked');
   assert.equal(sessionAccess({ ...state, registering: true }), 'auth');
   assert.equal(sessionAccess({ ...state, profile: { status: 'checking' } }), 'loading');
   for (const status of ['missing', 'error']) assert.equal(sessionAccess({ ...state, profile: { status } }), 'blocked');

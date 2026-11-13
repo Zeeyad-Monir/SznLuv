@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { AuthContext } from '../contexts/AuthContext';
+import { useCity } from '../contexts/CityContext';
 import useMyLists from '../hooks/useMyLists';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useMySpots from '../hooks/useMySpots';
@@ -93,6 +94,7 @@ export default function Favourites({ route }) {
 // Removing one from here offers Undo, and never deletes a spot the user made.
 function Saved({ onExplore }) {
   const navigation = useNavigation();
+  const { city } = useCity();
   const [favourites, setFavourites] = useFavouriteSpots();
   const { toggleFavouriteSpot, toggleCustomSpot } = useSaveSpot(favourites, setFavourites);
   const privateSpots = useMySpots();
@@ -125,7 +127,7 @@ function Saved({ onExplore }) {
       <>
         {addOwn}
         <EmptyCard icon="favorite-border" title="Nothing saved yet" style={styles.afterAction}
-          text="Tap the heart on any spot to keep it here, or add a place of your own." actionLabel="Explore Vancouver" onAction={onExplore} />
+          text="Tap the heart on any spot to keep it here, or add a place of your own." actionLabel={`Explore ${city.name}`} onAction={onExplore} />
       </>
     );
   }

@@ -25,7 +25,7 @@ import { getReduceMotion } from '../hooks/useReduceMotion';
 import { useDiscoveryState } from '../hooks/useSpotDiscovery';
 import { useFloatingNavClearance } from '../navigation/floatingNavigationLayout';
 import { SignedInScreen } from '../navigation/topNavigationLayout';
-import { DEFAULT_CITY } from '../services/catalogue';
+import { useCity } from '../contexts/CityContext';
 import {
   clusterSpots, nudgeIntoFrame, regionAround, regionFor, shiftRegion, spotsInRegion, validRegion,
 } from '../services/mapGeometry';
@@ -54,6 +54,7 @@ const countOf = total => `${total} ${total === 1 ? 'spot' : 'spots'}`;
 
 export default function MapScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { city } = useCity();
   const uid = user?.uid;
   const screen = useWindowDimensions();
   const clearance = useFloatingNavClearance();
@@ -111,8 +112,8 @@ export default function MapScreen({ navigation }) {
   useEffect(() => {
     if (opening || remembered === undefined) return;
     if (location.coords) setOpening(regionAround(location.coords, OPENING_RADIUS_KM, aspect));
-    else if (location.status === 'off' || waited) setOpening(remembered ?? regionAround(DEFAULT_CITY, OPENING_RADIUS_KM, aspect));
-  }, [opening, remembered, location.status, location.coords, waited, aspect]);
+    else if (location.status === 'off' || waited) setOpening(remembered ?? regionAround(city, OPENING_RADIUS_KM, aspect));
+  }, [opening, remembered, location.status, location.coords, waited, aspect, city]);
 
   const wanted = useRef(null); // Where the map was last asked to go
   const move = useCallback(next => {

@@ -9,9 +9,8 @@ import { coverBackground } from '../services/listsState';
 import { seasonArt } from './covers';
 import HeartButton from './HeartButton';
 import { spotCount } from './ListTile';
-import { cardShadow, colors } from './theme';
+import { artFade, cardShadow, colors, onArt } from './theme';
 
-const ART_FADE = ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0.6)'];
 const COLOUR_WASH = ['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)'];
 
 export const exploreCardLabel = list => {
@@ -27,7 +26,7 @@ export default function ExploreCard({ list, variant = 'tile', width, height, fol
   const words = (
     <>
       <LinearGradient pointerEvents="none" style={StyleSheet.absoluteFill}
-        colors={art ? ART_FADE : COLOUR_WASH} locations={art ? [0, 0.45, 1] : [0, 1]} />
+        colors={art ? artFade.colors : COLOUR_WASH} locations={art ? artFade.locations : [0, 1]} />
       {hero && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Featured list</Text>
@@ -67,9 +66,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: colors.ink },
   heroTitle: { fontSize: 26, fontWeight: '700', color: colors.ink },
   caption: { marginTop: 3, fontSize: 13, fontWeight: '600', color: colors.summary },
-  onArt: {
-    color: colors.white, textShadowColor: 'rgba(0, 0, 0, 0.45)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
-  },
+  onArt,
   badge: {
     position: 'absolute', top: 14, left: 14, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
