@@ -68,11 +68,12 @@ test('spot page, my shared spot: says where it is public and shows reviews I can
   const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: sunset } });
   const texts = screen.texts();
   assert.ok(texts.includes('Public in “Golden Hour”. People can see it and review it.'), texts.join(' | '));
-  for (const line of ['Beaches', 'Always open', 'Free', 'Fall, Summer', 'Good to know', 'Bring a jacket.', 'Worth the climb', 'User Ratings: 4.0/5 ★']) {
+  for (const line of ['Beaches', 'Always open', 'Free', 'Fall, Summer', 'Good to know', 'Bring a jacket.', 'Worth the climb', '4.0', '1 review']) {
     assert.ok(texts.includes(line), line);
   }
   assert.ok(texts.includes('Reviews from people who find this spot in your public lists appear here.'), 'no review form for the creator');
   assert.equal(screen.all('TextInput').length, 0);
+  assert.ok(!texts.includes('Rate this spot'));
 
   // The creator can remove a review from their own page.
   await screen.press('More options for maya’s review');
@@ -99,13 +100,22 @@ test('spot page, someone else\'s shared spot: everything they wrote, and a revie
   assert.ok(screen.button('Directions'));
   assert.ok(!texts.some(line => line.startsWith('Only you can see')));
 
+  // Tapping a star in "Rate this spot" opens the review sheet with that rating; Post waits for words.
+  assert.ok(texts.includes('Rate this spot'));
   await screen.press('5 stars');
+  assert.ok(screen.texts().includes('Loved it'));
+  assert.equal(screen.button('Post').props.disabled, true);
   await act(async () => screen.all('TextInput')[0].props.onChangeText('Lovely at sunset'));
-  await screen.press('Submit');
+  await screen.press('Post');
   const review = h.documents.get('publicSpots/maya_sunset/reviews/audit');
-  assert.deepEqual([review.uid, review.username, review.placeID, review.starRating, review.comment, review.thumbsUpCount],
-    ['audit', 'audit', 'x:maya_sunset', 5, 'Lovely at sunset', 0]);
-  assert.ok(screen.texts().includes('Lovely at sunset'));
+  assert.deepEqual([review.uid, review.username, review.placeID, review.starRating, review.comment, review.thumbsUpCount, review.profileColor],
+    ['audit', 'audit', 'x:maya_sunset', 5, 'Lovely at sunset', 0, '#D24B3A']);
+  // The sheet closes, and the review shows as mine in place of "Rate this spot": one review each.
+  const after = screen.texts();
+  assert.ok(after.includes('Lovely at sunset') && after.includes('You'), after.join(' | '));
+  assert.ok(!after.includes('Rate this spot'));
+  assert.equal(screen.all('TextInput').length, 0);
+  assert.equal(screen.button('Helpful'), undefined, 'no Helpful on my own review');
 
   // My own review can be deleted, not reported; someone else's spot can be reported.
   await screen.press('More options for audit’s review');
@@ -143,7 +153,7 @@ test('reviews from someone the reader blocked are hidden', async () => {
   await flush();
   assert.ok(screen.texts().includes('Kind words'));
   assert.ok(!screen.texts().includes('Rude words'));
-  assert.ok(screen.texts().includes('User Ratings: 5.0/5 ★'));
+  assert.ok(screen.texts().includes('5.0') && screen.texts().includes('1 review'), 'the summary leaves them out too');
 });
 
 // ---------------------------------------------------------------- Deleting, deliberately
@@ -282,9 +292,86 @@ test('a SznLuv spot page takes reviews through the same section, now with the re
   const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: catalogueRef('Maan Farms') } });
   await screen.press('4 stars');
   await act(async () => screen.all('TextInput').at(-1).props.onChangeText('Great corn maze'));
-  await screen.press('Submit');
+  await screen.press('Post');
   const review = h.documents.get('reviews/audit');
   assert.deepEqual([review.placeID, review.uid, review.username, review.starRating, review.comment], ['maan_farms', 'audit', 'audit', 4, 'Great corn maze']);
   assert.ok(screen.texts().includes('Great corn maze'));
-  assert.ok(screen.texts().includes('User Ratings: 4.0/5 ★'));
+  assert.ok(screen.texts().includes('4.0'));
+});
+
+// ---------------------------------------------------------------- The review section
+
+test('review helpers sort, filter and count on the device, and say when in a few words', () => {
+  const h = createHarness({ documents: base });
+  const { sortReviews, filterReviews, ratingCounts, relativeTime, averageRating } = h.load('services/reviews.js');
+  const list = [
+    { id: 'a', starRating: 5, thumbsUpCount: 1, timestamp: 1000 },
+    { id: 'b', starRating: 2, thumbsUpCount: 4, timestamp: 3000 },
+    { id: 'c', starRating: 5, thumbsUpCount: 0, timestamp: 2000 },
+  ];
+  const ids = reviews => reviews.map(review => review.id).join('');
+  assert.equal(ids(sortReviews(list, 'mostRecent')), 'bca');
+  assert.equal(ids(sortReviews(list, 'mostPopular')), 'bac');
+  assert.equal(ids(sortReviews(list, 'highestRated')), 'cab', 'ties go to the newest');
+  assert.equal(ids(sortReviews(list, 'lowestRated')), 'bca');
+  assert.equal(ids(filterReviews(list, 5)), 'ac', 'exactly five stars');
+  assert.equal(ids(filterReviews(list, 0)), 'abc');
+  assert.deepEqual(ratingCounts(list), { 5: 2, 4: 0, 3: 0, 2: 1, 1: 0 });
+  assert.equal(averageRating([...list, { id: 'd', starRating: 0 }, { id: 'e' }]), '4.0', 'early reviews without a rating are left out');
+
+  const now = new Date(2026, 10, 13, 12).getTime();
+  const ago = ms => now - ms;
+  assert.equal(relativeTime(ago(20 * 1000), now), 'Just now');
+  assert.equal(relativeTime(ago(5 * 60000), now), '5m ago');
+  assert.equal(relativeTime(ago(3 * 3600000), now), '3h ago');
+  assert.equal(relativeTime({ toDate: () => new Date(ago(4 * 86400000)) }, now), '4d ago');
+  assert.equal(relativeTime(new Date(ago(15 * 86400000)), now), '2w ago');
+  assert.equal(relativeTime(new Date(2026, 2, 4).getTime(), now), 'Mar 4');
+  assert.equal(relativeTime(new Date(2024, 2, 4).getTime(), now), 'Mar 4, 2024');
+  assert.equal(relativeTime(null, now), '');
+});
+
+test('review section: the summary bars and the sort and filter sheet, and Helpful once', async () => {
+  const h = createHarness({ documents: {
+    ...base,
+    'profiles/sam': { username: 'sam', avatarColor: '#A7C8FF' },
+    'publicSpots/maya_sunset': { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint' },
+    'publicSpots/maya_sunset/reviews/r1': { uid: 'sam', username: 'sam', comment: 'Golden light', starRating: 5, timestamp: 1, thumbsUpCount: 0, profileColor: '#00FF00' },
+    'publicSpots/maya_sunset/reviews/r2': { uid: 'kai', username: 'kai', comment: 'Too windy', starRating: 2, timestamp: 2, thumbsUpCount: 3 },
+    'publicSpots/maya_sunset/reviews/r3': { uid: 'lee', username: 'lee', comment: 'Lovely', starRating: 5, timestamp: 3, thumbsUpCount: 1 },
+  } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: mayaSunset } });
+  const shown = () => screen.texts().filter(line => ['Golden light', 'Too windy', 'Lovely'].includes(line));
+  assert.ok(screen.texts().includes('4.0') && screen.texts().includes('3 reviews'));
+  assert.deepEqual(shown(), ['Lovely', 'Too windy', 'Golden light'], 'newest first');
+  assert.ok(!screen.texts().includes('Filter Reviews'), 'no more inline dropdowns');
+
+  // Each reviewer's avatar comes from their profile; old picker colours are not used.
+  const avatars = screen.renderer.root.findAll(node => node.props.username === 'sam' && node.props.color);
+  assert.equal(avatars[0].props.color, '#A7C8FF');
+
+  // Tapping the 2-star bar shows only those; tapping it again shows them all.
+  await screen.press('2 stars: 1 review');
+  assert.deepEqual(shown(), ['Too windy']);
+  assert.ok(screen.texts().includes('2 stars'), 'the active filter is shown');
+  await screen.press('2 stars: 1 review');
+  assert.equal(shown().length, 3);
+
+  // The filter button opens the sheet; nothing changes until Apply.
+  await screen.press('Sort and filter reviews');
+  assert.ok(screen.texts().includes('Sort & filter'));
+  await screen.press('Most helpful');
+  await screen.press('5 stars (2)');
+  assert.deepEqual(shown(), ['Lovely', 'Too windy', 'Golden light']);
+  await screen.press('Apply');
+  assert.deepEqual(shown(), ['Lovely', 'Golden light']);
+  assert.ok(screen.button('Sort and filter reviews, filters on'));
+  await screen.press('Showing 5 stars · Most helpful. Clear');
+  assert.deepEqual(shown(), ['Lovely', 'Too windy', 'Golden light']);
+
+  // Helpful counts once, quietly.
+  await screen.press('Helpful, 1 person');
+  assert.equal(h.documents.get('publicSpots/maya_sunset/reviews/r3').thumbsUpCount, 2);
+  assert.equal(screen.button('Helpful, 2 people').props.disabled, true);
+  assert.equal(h.alerts.length, 0, 'no pop-up');
 });

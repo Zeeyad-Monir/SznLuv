@@ -758,8 +758,8 @@ test('Fall screen lists every spot in category order and opens the right venue p
 });
 test('catalogue spots without a bundled photo show the placeholder on the card and detail', async () => {
   const h = createHarness();
-  const name = 'Glacier Rink';
-  const list = await h.render('screens/WinterDatesScreen.js');
+  const name = 'Blossom Garden';
+  const list = await h.render('screens/SpringDatesScreen.js');
   const card = list.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
   assert.ok(card);
   assert.equal(card.findAllByType('Image').length, 0);

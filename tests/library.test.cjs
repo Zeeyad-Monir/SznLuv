@@ -146,8 +146,8 @@ test('heart: saves with a snackbar instead of an alert, and offers Add to list',
 test('heart: a failed save puts the heart back and says so', async () => {
   const h = createHarness({ writeError: 'unavailable' });
   const screen = await mount(h, 'screens/WinterDatesScreen.js');
-  await quiet(() => screen.press('Save Glacier Rink'));
-  assert.equal(h.documents.get('favourites/audit')['Glacier Rink'], undefined);
+  await quiet(() => screen.press('Save Robson Square Ice Rink'));
+  assert.equal(h.documents.get('favourites/audit')['Robson Square Ice Rink'], undefined);
   assert.deepEqual(screen.snackbar(), ['Couldn’t save. Check your connection.']);
   assert.equal(h.alerts.length, 0);
 });
@@ -362,7 +362,7 @@ test('list page: add a spot searches every season, adds in place, and hands off 
   await flush();
   assert.ok(screen.button('Aldor Family Farm added'));
   assert.ok(screen.button('Add Waterfront steps'), 'own spots from other lists are offered');
-  assert.ok(screen.button('Add Glacier Rink') && screen.button('Add Sunset Beach'), 'all seasons are searched');
+  assert.ok(screen.button('Add Robson Square Ice Rink') && screen.button('Add Sunset Beach'), 'all seasons are searched');
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('maan'));
   await screen.press('Add Maan Farms');

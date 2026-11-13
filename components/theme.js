@@ -57,6 +57,9 @@ const honey = {
   meta: '#6B5A48',
   frame: '#E7D9BE',
   dot: '#D9C6A3',
+  // Rating stars: filled amber, and the outline of a star you can tap (both at least 3:1 on cream and inset).
+  star: '#B97616',
+  starIdle: '#9A8468',
 };
 
 const GUTTER = 20;

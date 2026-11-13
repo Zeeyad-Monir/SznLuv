@@ -435,8 +435,8 @@ test('map: says so kindly when nothing is saved, and when the saved spots have n
   await empty.screen.press('Explore spots');
   assert.deepEqual(empty.h.navigations.at(-1), ['HomeTab', { screen: 'SeasonsScreen', initial: false }]);
 
-  // Winter's spots have no coordinates yet: no pin is guessed for them.
-  const unplaced = await openMap({ 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1, 'Glacier Rink': heart('Winter') } });
+  // A placeholder from Spring still has no map coordinates.
+  const unplaced = await openMap({ 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1, 'Blossom Garden': heart('Spring') } });
   await unplaced.spreadOut();
   await unplaced.look();
   assert.deepEqual(unplaced.pins(), []);

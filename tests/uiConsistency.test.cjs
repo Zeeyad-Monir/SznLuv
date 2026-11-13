@@ -154,8 +154,8 @@ test('the shared detail layout orders venue and personal content and offers addr
   assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=12%20Main%20St']);
   await personal.press('Add photos');
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { spotId: 'audit_cafe' }]);
-  const sparse = await open(catalogueRef('Glacier Rink'));
-  assert.ok(sparse.texts().includes('Glacier Rink'));
+  const sparse = await open(catalogueRef('Blossom Garden'));
+  assert.ok(sparse.texts().includes('Blossom Garden'));
   assert.equal(sparse.button('Directions'), undefined);
   await act(async () => { venue.renderer.unmount(); personal.renderer.unmount(); sparse.renderer.unmount(); });
 });

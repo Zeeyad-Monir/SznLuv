@@ -23,6 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import { db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { fallSpotNames } from '../services/spots';
+import { winterSpotNames } from '../services/seasonSpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { GUTTER, text } from '../components/theme';
@@ -66,13 +67,12 @@ export default function SeasonsScreen() {
 
   // Counts start from the local defaults so the cards are complete the moment the page arrives
   const [fallCount, setFallCount] = useState(fallSpotNames.length);
-  const [winterCount, setWinterCount] = useState(4);
   const [springCount, setSpringCount] = useState(4);
   const [summerCount, setSummerCount] = useState(3);
 
   const { city } = useCity();
   const collections = collectionsForCity(city.id);
-  const counts = { fall: fallCount, winter: winterCount, spring: springCount, summer: summerCount };
+  const counts = { fall: fallCount, winter: winterSpotNames.length, spring: springCount, summer: summerCount };
   const entrance = useEntrance(collections.length);
   // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.
   const { isSaved, toggleHeart } = useCollectionHeart();
@@ -97,11 +97,6 @@ export default function SeasonsScreen() {
       // Fall count comes from the spot list itself (services/spots.js) so it always matches the Fall screen
       setFallCount(fallSpotNames.length);
 
-      // Fetching Winter date count
-      const winterDatesRef = doc(db, 'dateCounts', 'winter');
-      const winterDatesSnap = await getDoc(winterDatesRef);
-      setWinterCount(winterDatesSnap.exists() ? winterDatesSnap.data().count : 4);
-
       // Fetching Spring date count
       const springDatesRef = doc(db, 'dateCounts', 'spring');
       const springDatesSnap = await getDoc(springDatesRef);
@@ -115,7 +110,6 @@ export default function SeasonsScreen() {
       console.error('Error fetching date counts:', error); // Logging any errors
       // Setting default counts in case of error
       setFallCount(fallSpotNames.length);
-      setWinterCount(0);
       setSpringCount(0);
       setSummerCount(0);
     }

@@ -331,7 +331,7 @@ test('reviews of a shared spot: one set across lists, gone from view once no pub
   await denied(alex.reviews.submitReview(source, { ...review, username: 'maya' }));
   await maya.lists.publishList('maya', 'maya', second.id);
 
-  const read = () => firstSnapshot((next, fail) => alex.reviews.subscribeReviews(source, {}, next, fail));
+  const read = () => firstSnapshot((next, fail) => alex.reviews.subscribeReviews(source, next, fail));
   assert.deepEqual((await read()).map(entry => entry.comment), ['Worth it']);
 
   await maya.lists.unpublishList(first.id);

@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { fallSpotNames } from "../services/spots";
+import { winterSpotNames } from "../services/seasonSpots";
 
 /* ================================ ASYNC STORAGE ================================ */
 // Importing AsyncStorage for persistent storage.
@@ -63,13 +64,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 // Season-specific date ideas categorized by season.
 const seasonDateOptions = {
   Fall: fallSpotNames, // every spot on the Fall screen (services/spots.js)
-  Winter: [
-    "Glacier Rink",
-    "Frosty Pond",
-    "Evergreen Acres",
-    "Snowy Pines",
-    "Science World",
-  ],
+  Winter: winterSpotNames,
   Spring: [
     "Blossom Garden",
     "VanDusen Botanical Garden",

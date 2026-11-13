@@ -1,47 +1,70 @@
 // A spot's reviews, live, with the sort and star filter the review section offers, and what a reader can
 // do: submit, upvote, and (on a spot someone made) report or delete. `source` comes from
 // services/reviews.js reviewSource; null keeps everything idle (a spot that isn't shared).
-import { useCallback, useContext, useEffect, useState } from 'react';
+// One subscription per spot: sorting and the star filter happen here, so the summary (average and star
+// bars) always counts every review and changing the filter reads nothing more.
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { auth } from '../firebaseConfig';
-import { averageRating, subscribeReviews, submitReview, upvoteReview } from '../services/reviews';
+import { DEFAULT_AVATAR_COLOUR, getProfileCached } from '../services/profiles';
+import {
+  averageRating, DEFAULT_SORT, filterReviews, ratingCounts, sortReviews, subscribeReviews, submitReview, upvoteReview,
+} from '../services/reviews';
 
 export default function useSpotReviews(source, { hiddenUids } = {}) {
   const { user, username } = useContext(AuthContext);
-  const [reviews, setReviews] = useState([]);
+  const [all, setAll] = useState([]);
   const [error, setError] = useState(null);
-  const [sort, setSort] = useState('mostRecent');
-  const [minStars, setMinStars] = useState(0);
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const [starFilter, setStarFilter] = useState(0);
   const key = source?.key;
+  const reviewer = user ?? auth.currentUser;
+  const myUid = reviewer?.uid ?? null;
 
   useEffect(() => {
-    if (!source) { setReviews([]); return undefined; }
-    return subscribeReviews(source, { sort, minStars }, next => {
-      setReviews(next);
+    if (!source) { setAll([]); return undefined; }
+    return subscribeReviews(source, next => {
+      setAll(next);
       setError(null);
     }, failure => {
       console.error('Reviews subscription failed:', { code: failure.code, message: failure.message });
-      setReviews([]);
-      setError('Reviews could not be loaded. Please try another filter or reopen this page.');
+      setAll([]);
+      setError('Reviews could not be loaded. Please reopen this page.');
     });
-  }, [key, sort, minStars]);
+  }, [key]);
 
   // Reviews by someone the reader blocked are left out, like the rest of what that person shares.
-  const shown = hiddenUids?.size ? reviews.filter(review => !review.uid || !hiddenUids.has(review.uid)) : reviews;
+  const visible = useMemo(
+    () => (hiddenUids?.size ? all.filter(review => !review.uid || !hiddenUids.has(review.uid)) : all),
+    [all, hiddenUids],
+  );
+  // One review each: the reader's own is pinned first, whatever the sort or filter.
+  const mine = myUid ? visible.find(review => review.uid === myUid) ?? null : null;
+  const reviews = useMemo(() => {
+    const shown = filterReviews(sortReviews(visible, sort), starFilter);
+    return mine ? [mine, ...shown.filter(review => review !== mine)] : shown;
+  }, [visible, sort, starFilter, mine]);
 
   // Resolves to true once sent. The username is the one the account chose; older accounts without one
-  // fall back to the start of their email, as reviews always have.
-  const submit = useCallback(async ({ comment, starRating, profileColor }) => {
-    const reviewer = user ?? auth.currentUser;
+  // fall back to the start of their email, as reviews always have. The profile colour goes with it so
+  // people who can't read profiles (signed out) still see the reviewer's colour.
+  const submit = useCallback(async ({ comment, starRating }) => {
+    if (mine) throw Object.assign(new Error('You have already reviewed this spot.'), { code: 'review/already-reviewed' });
+    const profile = reviewer?.uid ? await getProfileCached(reviewer.uid).catch(() => null) : null;
     await submitReview(source, {
       uid: reviewer?.uid,
       username: username || reviewer?.displayName || reviewer?.email?.split('@')[0],
-      profileColor, comment, starRating,
+      profileColor: profile?.avatarColor || DEFAULT_AVATAR_COLOUR,
+      comment: comment.trim(), starRating,
     });
     return true;
-  }, [key, user, username]);
+  }, [key, reviewer, username, mine]);
 
-  const upvote = useCallback(review => upvoteReview((user ?? auth.currentUser)?.uid, review), [user]);
+  const upvote = useCallback(review => upvoteReview(myUid, review), [myUid]);
 
-  return { reviews: shown, error, sort, setSort, minStars, setMinStars, average: averageRating(shown), submit, upvote, signedIn: !!(user ?? auth.currentUser) };
+  return {
+    reviews, all: visible, counts: ratingCounts(visible), average: averageRating(visible),
+    sort, setSort, starFilter, setStarFilter, myUid, myName: username || reviewer?.displayName || reviewer?.email?.split('@')[0] || '',
+    mine, submit, upvote, signedIn: !!reviewer, error,
+  };
 }

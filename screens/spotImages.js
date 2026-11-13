@@ -50,6 +50,16 @@ const spotImages = {
   'Trout Lake': require('../assets/Seasonal/fall/trout-lake.jpg'),
   'Burnaby Mountain Park': require('../assets/Seasonal/fall/burnaby-mountain-park.jpg'),
   'Hadden Park': require('../assets/Seasonal/fall/hadden-park.jpg'),
+  'Robson Square Ice Rink': require('../assets/Seasonal/winter/robson-square-ice-rink.jpg'),
+  'Mt Seymour Ski & Snowboard': require('../assets/Seasonal/winter/mt-seymour-ski-and-snowboard.jpg'),
+  'Lights at Lafarge': require('../assets/Seasonal/winter/lights-at-lafarge.jpg'),
+  'VanDusen Festival of Lights': require('../assets/Seasonal/winter/vandusen-festival-of-lights.jpg'),
+  'Chinatown Spring Festival Parade': require('../assets/Seasonal/winter/chinatown-spring-festival-parade.jpg'),
+  'Bloedel Conservatory': require('../assets/Seasonal/winter/bloedel-conservatory.jpg'),
+  'Museum of Anthropology at UBC': require('../assets/Seasonal/winter/museum-of-anthropology-at-ubc.jpg'),
+  'Gulf of Georgia Cannery': require('../assets/Seasonal/winter/gulf-of-georgia-cannery.jpg'),
+  'Maplewood Flats': require('../assets/Seasonal/winter/maplewood-flats.jpg'),
+  'Lynn Canyon Park': require('../assets/Seasonal/winter/lynn-canyon-park.jpg'),
 };
 
 const goToVanCredit = (photoId, changes) => ({
@@ -60,7 +70,35 @@ const goToVanCredit = (photoId, changes) => ({
   changes,
 });
 
+const commonsWinterCredit = (author, file, license, version) => ({
+  author,
+  sourceUrl: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(file)}`,
+  license: `CC ${license.toUpperCase()} ${version}`,
+  licenseUrl: `https://creativecommons.org/licenses/${license}/${version}/`,
+  changes: 'Cropped and resized',
+});
+
 export const spotPhotoCredits = {
+  'Robson Square Ice Rink': commonsWinterCredit('Edna Winti',
+    '2016_366_346_Night_Skate_(30778735873).jpg', 'by', '2.0'),
+  'Mt Seymour Ski & Snowboard': commonsWinterCredit('Weixi Zeng',
+    'Mt._Seymour_cable_cars_-_panoramio.jpg', 'by-sa', '3.0'),
+  'Lights at Lafarge': commonsWinterCredit('GoToVan',
+    'Lights_at_Lafarge_in_Coquitlam,_Canada.jpg', 'by', '2.0'),
+  'VanDusen Festival of Lights': commonsWinterCredit('Mike from Vancouver, Canada',
+    'Festival_of_Lights_(15889844060).jpg', 'by-sa', '2.0'),
+  'Chinatown Spring Festival Parade': commonsWinterCredit('Hubert Figuière',
+    'Vancouver_Chinese_New_Year_parade_(5203217582).jpg', 'by-sa', '2.0'),
+  'Bloedel Conservatory': commonsWinterCredit('Kyle Pearce',
+    'Ara_ararauna_-Bloedel_Conservatory_-Vancouver-8a.jpg', 'by-sa', '2.0'),
+  'Museum of Anthropology at UBC': commonsWinterCredit('Wikipedia user Wpcpey',
+    'UBC_Museum_of_Anthropology_Great_Hall_2018.jpg', 'by', '4.0'),
+  'Gulf of Georgia Cannery': commonsWinterCredit('Kennethdong',
+    'Gulf_of_Georgia_Cannery_museum_with_statues_in_Richmond_BC.jpg', 'by-sa', '3.0'),
+  'Maplewood Flats': commonsWinterCredit('Bosancich123',
+    'Maplewood_flats_bridge.JPG', 'by-sa', '4.0'),
+  'Lynn Canyon Park': commonsWinterCredit('kallerna',
+    'Lynn_Canyon_Park_Suspension_Bridge_2016.jpg', 'by-sa', '4.0'),
   'Richmond Country Farms': goToVanCredit('30144361371', 'Resized and cropped to fit'),
   'Westham Island Herb Farm': {
     author: 'FernShade',

@@ -24,7 +24,7 @@ const base = (extra = {}) => lists.createList({ ownerUid: 'maya', title: 'Golden
 test('catalogue: one entry per spot across all four seasons, each knowing its season and town', () => {
   assert.equal(new Set(catalogueSpots.map(spot => spot.name)).size, catalogueSpots.length);
   assert.ok(fallSpotNames.every(name => seasonOf(name) === 'Fall'));
-  assert.equal(seasonOf('Glacier Rink'), 'Winter');
+  assert.equal(seasonOf('Robson Square Ice Rink'), 'Winter');
   assert.equal(seasonOf('Blossom Garden'), 'Spring');
   assert.equal(seasonOf('Sunset Beach'), 'Summer');
   assert.equal(findCatalogueSpot('Aldor Family Farm').locality, 'Langley');
@@ -38,7 +38,7 @@ test('catalogue: the season sections feed the existing ranked search', () => {
   const index = createSpotIndex(catalogueSections, { rankSearch: true });
   const names = query => findMatchingSpots(index, query, DEFAULT_FILTERS).sections.flatMap(section => section.spots.map(spot => spot.name));
   assert.equal(names('aldor')[0], 'Aldor Family Farm');
-  assert.ok(names('glacier').includes('Glacier Rink'));
+  assert.ok(names('skate rentals').includes('Robson Square Ice Rink'));
   assert.deepEqual(names('zzzz'), []);
 });
 
@@ -47,7 +47,7 @@ test('spot references resolve for cards, including own spots and spots no longer
     key: 'c:Aldor Family Farm', name: 'Aldor Family Farm', meta: 'Langley · Fall', season: 'Fall', locality: 'Langley',
     latitude: 49.15467, longitude: -122.53112, missing: false, own: false,
   });
-  assert.equal(resolveSpot(catalogueRef('Glacier Rink')).meta, 'Winter');
+  assert.equal(resolveSpot(catalogueRef('Robson Square Ice Rink')).meta, 'Vancouver · Winter');
   const gone = resolveSpot(catalogueRef('Closed Farm'));
   assert.equal(gone.missing, true);
   assert.equal(gone.meta, 'No longer listed');
@@ -274,7 +274,7 @@ test('results must match every word, rank title over creator over spot, and hide
 test('explore seasons: the current season by month, a list’s season from its spots, and sorting by followers', () => {
   assert.deepEqual([8, 10, 11, 1, 2, 4, 5, 7].map(month => search.currentSeason(new Date(2026, month, 15))),
     ['Fall', 'Fall', 'Winter', 'Winter', 'Spring', 'Spring', 'Summer', 'Summer']);
-  const rink = catalogueRef('Glacier Rink');
+  const rink = catalogueRef('Robson Square Ice Rink');
   const items = refs => refs.map(spot => ({ spot, note: '' }));
   assert.equal(search.listSeason({ items: items([rink, farm, farm]) }), 'Fall', 'most spots win');
   assert.equal(search.listSeason({ items: items([rink, farm]) }), 'Winter', 'a tie goes to the first spot');
@@ -302,14 +302,14 @@ test('a username search accepts only text that could be the start of a username'
 
 test('Top 4 holds four distinct picks per city and keeps other cities untouched', () => {
   let state = {};
-  for (const ref of [farm, maan, steps, cafe, catalogueRef('Glacier Rink'), farm]) state = top4.addPick(state, 'vancouver', ref);
+  for (const ref of [farm, maan, steps, cafe, catalogueRef('Robson Square Ice Rink'), farm]) state = top4.addPick(state, 'vancouver', ref);
   assert.deepEqual(top4.cityTop4(state, 'vancouver').picks.map(spotKey), ['c:Aldor Family Farm', 'c:Maan Farms', 'x:steps1', 'x:cafe1']);
   assert.deepEqual(top4.cityTop4(state, 'brooklyn'), { picks: [], public: false });
   const moved = top4.movePick(state, 'vancouver', 'x:cafe1', -1);
   assert.deepEqual(top4.cityTop4(moved, 'vancouver').picks.map(spotKey).slice(2), ['x:cafe1', 'x:steps1']);
   assert.equal(top4.movePick(state, 'vancouver', 'c:Aldor Family Farm', -1), state);
-  const replaced = top4.replacePick(state, 'vancouver', 'c:Maan Farms', catalogueRef('Glacier Rink'));
-  assert.equal(top4.cityTop4(replaced, 'vancouver').picks[1].name, 'Glacier Rink');
+  const replaced = top4.replacePick(state, 'vancouver', 'c:Maan Farms', catalogueRef('Robson Square Ice Rink'));
+  assert.equal(top4.cityTop4(replaced, 'vancouver').picks[1].name, 'Robson Square Ice Rink');
   assert.equal(top4.replacePick(state, 'vancouver', 'c:Maan Farms', farm), state);
   assert.equal(top4.MAX_PICKS, 4);
 });

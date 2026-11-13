@@ -335,7 +335,7 @@ test('explore: loads twenty at a time', async () => {
 });
 
 test('explore: the most followed list is featured; season chips filter the rest; the sort sheet orders by followers', async () => {
-  const rink = catalogueRef('Glacier Rink');
+  const rink = catalogueRef('Robson Square Ice Rink');
   const h = createHarness({
     documents: {
       ...base,

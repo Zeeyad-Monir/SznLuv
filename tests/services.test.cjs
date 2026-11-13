@@ -103,7 +103,8 @@ test('spot navigation uses one route and passes identity and optional list attri
   assert.equal(navigated.length, 1, 'a second tap after navigation starts is ignored');
 });
 
-const otherSeasonSpotNames = ['Glacier Rink', 'Frosty Pond', 'Evergreen Acres', 'Snowy Pines', 'Science World', 'Blossom Garden', 'VanDusen Botanical Garden', 'Spring Haven', 'River Trail', 'Meadow Path', 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
+const { winterSpotNames } = require('../services/seasonSpots');
+const otherSeasonSpotNames = [...winterSpotNames, 'Blossom Garden', 'VanDusen Botanical Garden', 'Spring Haven', 'River Trail', 'Meadow Path', 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
 test('fall spots: every detailed spot has the complete, consistently formatted record the venue page needs', () => {
   assert.equal(detailedFallSpots.length, 47);
   const placeIDs = new Set(), names = new Set();
@@ -137,7 +138,7 @@ test('fall spots: names are unique across seasons and the list matches the origi
   assert.ok(fallCategories.every(category => category.spots.every(spot => spot.name && spot.address)));
 });
 test('all catalogue spots open the shared details route, including sparse entries', () => {
-  for (const name of [...fallSpotNames, 'Glacier Rink', 'Blossom Garden', 'Sunset Beach']) {
+  for (const name of [...fallSpotNames, ...winterSpotNames, 'Blossom Garden', 'Sunset Beach']) {
     const navigated = [];
     const spot = { k: 'c', name };
     openSpot({ navigate: (...args) => navigated.push(args) }, spot);

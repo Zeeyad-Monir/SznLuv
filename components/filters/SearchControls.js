@@ -34,15 +34,19 @@ export const SpotSearchBar = SearchBar;
 
 // The button beside a search bar that opens its filter or sort sheet. It fills with ink, with a dot,
 // while anything is changed from the default.
+// `size` makes a smaller one (it keeps a 44pt touch area), e.g. beside a section heading.
 export const FilterButton = forwardRef(function FilterButton({
-  active, expanded, onPress, style, label = 'Filter spots', activeLabel = `${label}, filters active`,
+  active, expanded, onPress, style, size = 48, label = 'Filter spots', activeLabel = `${label}, filters active`,
 }, ref) {
+  const compact = size < 48;
+  const slop = Math.max(0, (44 - size) / 2);
   return (
-    <TouchableOpacity ref={ref} style={[controlStyles.filterButton, style, active && controlStyles.filterActive]}
+    <TouchableOpacity ref={ref} hitSlop={slop ? { top: slop, bottom: slop, left: slop, right: slop } : undefined}
+      style={[controlStyles.filterButton, compact && { width: size, minHeight: size, borderRadius: size / 2 }, style, active && controlStyles.filterActive]}
       accessibilityRole="button" accessibilityState={{ expanded }}
       accessibilityLabel={active ? activeLabel : label} onPress={onPress}>
-      <Ionicons name="options-outline" size={24} color={active ? colors.white : colors.ink} />
-      {active && <View pointerEvents="none" style={controlStyles.activeDot} />}
+      <Ionicons name="options-outline" size={compact ? Math.round(size * 0.5) : 24} color={active ? colors.white : colors.ink} />
+      {active && <View pointerEvents="none" style={[controlStyles.activeDot, compact && controlStyles.activeDotCompact]} />}
     </TouchableOpacity>
   );
 });
@@ -61,4 +65,5 @@ const controlStyles = StyleSheet.create({
   },
   filterActive: { backgroundColor: colors.ink, borderColor: colors.ink },
   activeDot: { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.snackbarAction },
+  activeDotCompact: { top: 5, right: 5, width: 6, height: 6, borderRadius: 3 },
 });

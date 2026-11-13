@@ -126,7 +126,7 @@ const close = renderer => press(labelled(renderer, 'Close filters'));
 
 for (const [season, search, expected] of [
   ['Fall', 'maple ridge laity', 'Laity Pumpkin Patch'],
-  ['Winter', 'ice lane', 'Glacier Rink'],
+  ['Winter', 'winter birding', 'Maplewood Flats'],
   ['Spring', 'bike meadow', 'Meadow Path'],
   ['Summer', 'ocean drive', 'Sunset Beach'],
 ]) {
@@ -166,37 +166,37 @@ test('draft filters discard on dismiss and applied state survives a season remou
   const initialAnimations = h.timings.length;
   await openSheet(renderer);
   assert.equal(h.timings.length, initialAnimations, 'reduced motion skips the sheet animation');
-  assert.match(output(renderer), /Distance filters are unavailable for this season/);
-  await press(button(renderer, 'Christmas Tree Farms'));
-  assert.equal(cards(renderer).length, 4, 'editing the draft leaves the applied list alone');
+  assert.ok(button(renderer, 'Nearest'));
+  await press(button(renderer, 'Winter Walks & Wildlife'));
+  assert.equal(cards(renderer).length, 10, 'editing the draft leaves the applied list alone');
   await press(renderer.root.findByProps({ testID: 'spot-filter-backdrop' }));
-  assert.equal(cards(renderer).length, 4);
+  assert.equal(cards(renderer).length, 10);
   await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
   assert.deepEqual(h.calls.filter(([action]) => action === 'focusAccessibility'), [
     ['focusAccessibility', 'Filter spots'], ['focusAccessibility', 'Filter spots'],
   ]);
 
   await openSheet(renderer);
-  await press(button(renderer, 'Christmas Tree Farms'));
+  await press(button(renderer, 'Winter Walks & Wildlife'));
   await press(button(renderer, 'A–Z'));
   await apply(renderer);
-  await change(input(renderer), 'road');
-  assert.deepEqual(cards(renderer), ['Evergreen Acres']);
+  await change(input(renderer), 'waterfalls');
+  assert.deepEqual(cards(renderer), ['Lynn Canyon Park']);
   await act(async () => selectSeason(() => Fall));
   assert.equal(input(renderer).props.value, '');
   assert.equal(cards(renderer).length, fallSpotNames.length);
   await act(async () => selectSeason(() => Winter));
-  assert.equal(input(renderer).props.value, 'road');
-  assert.deepEqual(cards(renderer), ['Evergreen Acres']);
+  assert.equal(input(renderer).props.value, 'waterfalls');
+  assert.deepEqual(cards(renderer), ['Lynn Canyon Park']);
 
   await openSheet(renderer);
-  assert.ok(button(renderer, 'Christmas Tree Farms').props.accessibilityState.selected);
+  assert.ok(button(renderer, 'Winter Walks & Wildlife').props.accessibilityState.selected);
   await press(button(renderer, 'Reset Filters'));
   assert.ok(button(renderer, 'All categories').props.accessibilityState.selected);
   await close(renderer);
   assert.ok(labelled(renderer, 'Filter spots, filters active'));
   await press(button(renderer, 'Clear filters'));
-  assert.equal(input(renderer).props.value, 'road');
+  assert.equal(input(renderer).props.value, 'waterfalls');
   assert.ok(labelled(renderer, 'Filter spots'));
   await act(async () => renderer.unmount());
 });

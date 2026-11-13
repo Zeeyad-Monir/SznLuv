@@ -15,6 +15,7 @@ const seasons = {
   Winter: {
     categories: winterCategories, backgroundColor: '#B9CCEC', ink: '#FFFFFF',
     animation: require('../assets/snowFalling.json'), speed: 0.3, scale: 1.65, opacity: 0.6,
+    search: { rankSearch: true },
   },
   Spring: {
     categories: springCategories, backgroundColor: '#FFB6C1', ink: '#FFFFFF',

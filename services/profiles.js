@@ -20,6 +20,20 @@ export async function getProfile(uid) {
   return snapshot.exists() ? withUid(snapshot) : null;
 }
 
+// The same lookup, read once per app session per person: for showing many people's avatars at once (reviews).
+// Saving a profile forgets the cached copy so the owner's new photo or colour shows straight away.
+const profileCache = new Map();
+export function getProfileCached(uid) {
+  if (!profileCache.has(uid)) {
+    profileCache.set(uid, getProfile(uid).catch(error => {
+      profileCache.delete(uid);
+      throw error;
+    }));
+  }
+  return profileCache.get(uid);
+}
+export const forgetProfile = uid => profileCache.delete(uid);
+
 export async function findProfileByUsername(username) {
   const snapshot = await getDocs(query(profiles(), where('username', '==', username.toLowerCase()), limit(1)));
   return snapshot.empty ? null : withUid(snapshot.docs[0]);
@@ -39,12 +53,16 @@ export async function saveProfileDetails(uid, username, { bio = '', avatarColor 
   if (clean.length > BIO_LIMIT) throw new Error(`Bios can be up to ${BIO_LIMIT} characters.`);
   const profileRef = doc(profiles(), uid);
   const details = { username, bio: clean, avatarColor };
-  if (avatarPhotoId === undefined) return setDoc(profileRef, details, { merge: true });
-  return runTransaction(db, async transaction => {
-    const before = await transaction.get(profileRef);
-    transaction.set(profileRef, { ...details, avatarPhotoId: avatarPhotoId ?? deleteField() }, { merge: true });
-    return before.data()?.avatarPhotoId;
-  });
+  try {
+    if (avatarPhotoId === undefined) return await setDoc(profileRef, details, { merge: true });
+    return await runTransaction(db, async transaction => {
+      const before = await transaction.get(profileRef);
+      transaction.set(profileRef, { ...details, avatarPhotoId: avatarPhotoId ?? deleteField() }, { merge: true });
+      return before.data()?.avatarPhotoId;
+    });
+  } finally {
+    forgetProfile(uid);
+  }
 }
 
 // The owner's own picks, public or not.

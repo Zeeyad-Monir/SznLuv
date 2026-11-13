@@ -16,8 +16,11 @@ const { distanceKm } = require('./spotDiscovery');
 
 const SPOT_LIMITS = { name: 60, description: 500, tips: 300, cost: 60, hours: 120, photos: 3 };
 
-// The categories SznLuv already sorts its spots into, then a catch-all.
-const SPOT_CATEGORIES = [...new Set(catalogueSpots.map(spot => spot.category).filter(Boolean)), 'Other'];
+// Keep categories people could save on custom spots before the Winter catalogue was curated.
+const SPOT_CATEGORIES = [
+  ...new Set([...catalogueSpots.map(spot => spot.category).filter(Boolean), 'Ice Skating', 'Christmas Tree Farms']),
+  'Other',
+];
 const SPOT_SEASONS = [
   { value: 'fall', label: 'Fall' },
   { value: 'winter', label: 'Winter' },

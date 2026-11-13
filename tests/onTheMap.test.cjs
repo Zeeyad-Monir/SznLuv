@@ -9,7 +9,7 @@ const L = require('../services/listsState');
 const S = require('../services/customSpotsState');
 
 const farm = catalogueRef('Aldor Family Farm');
-const placeholder = catalogueRef('Glacier Rink'); // One of SznLuv's spots with a made-up address
+const placeholder = catalogueRef('Blossom Garden'); // One of SznLuv's spots with a made-up address
 const pinned = { k: 'x', id: 'audit_steps', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const typed = { k: 'x', id: 'audit_typed', owner: 'audit', name: 'Dog walking spot', address: '3836 Carrigan Ct, Burnaby' };
 const theirs = { k: 'x', id: 'maya_pier', owner: 'maya', name: 'Old pier' };
@@ -50,7 +50,7 @@ test('on the map: each kind of spot is found where it lives, and the ones off th
     shared: { maya_pier: { ownerUid: 'maya', lat: 49.31, lng: -123.2 }, sam_gone: null },
   });
   assert.deepEqual(L.spotsOffTheMap(items, placeOf).map(off => [off.name, off.text]), [
-    ['Glacier Rink', 'SznLuv has no map location for it'],
+    ['Blossom Garden', 'SznLuv has no map location for it'],
     ['Dog walking spot', 'Address not found on the map'],
     ['Gone', 'No longer shared by its owner'],
     ['Not a real spot', 'SznLuv has no map location for it'],
@@ -112,7 +112,7 @@ test('publishing: someone else\'s spot needs its shared copy to have a pin; SznL
   await lists.publishList('audit', 'audit', 'a');
   assert.equal(h.documents.get('publicLists/a').spotCount, 2);
   await assert.rejects(lists.publishList('audit', 'audit', 'b'), { code: 'list/unpinned', message: /Old pier needs a place on the map/ });
-  await assert.rejects(lists.publishList('audit', 'audit', 'c'), { code: 'list/unpinned', message: /Glacier Rink/ });
+  await assert.rejects(lists.publishList('audit', 'audit', 'c'), { code: 'list/unpinned', message: /Blossom Garden/ });
 });
 
 test('publishing: a public list that gains a spot off the map keeps its public copy until it is fixed', async () => {
@@ -132,7 +132,7 @@ test('sharing: a private list names the spots off the map, and Make public waits
   const shown = sheet.texts().join(' | ');
   assert.match(shown, /Needs a place on the map/);
   assert.match(shown, /Dog walking spot: Address not found on the map/);
-  assert.match(shown, /Glacier Rink: SznLuv has no map location for it/);
+  assert.match(shown, /Blossom Garden: SznLuv has no map location for it/);
   const section = shown.slice(shown.indexOf('Needs a place on the map'));
   assert.doesNotMatch(section, /Waterfront steps|Aldor Family Farm/, 'spots on the map are not listed');
   assert.ok(sheet.texts().includes(OFF_MAP_HINT));

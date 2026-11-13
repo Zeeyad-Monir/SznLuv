@@ -9,7 +9,7 @@ const { createList, addSpot, toPublicSnapshot } = require('../services/listsStat
 
 const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
-const rink = catalogueRef('Glacier Rink');
+const rink = catalogueRef('Robson Square Ice Rink');
 const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
 const draft = (title, refs = [], ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid, title, now: 1 }));
@@ -72,12 +72,12 @@ test('profile: Top 4 starts as four open slots, fills from the search sheet, and
   await flush();
   assert.equal(screen.all('TouchableOpacity').some(node => (node.props.accessibilityLabel ?? '').includes('Add your own spot')), false);
   await screen.press('Add Aldor Family Farm');
-  await screen.press('Add Glacier Rink');
+  await screen.press('Add Robson Square Ice Rink');
   await screen.press('Add Waterfront steps');
   assert.deepEqual(h.documents.get('users/audit').top4.vancouver.picks, [farm, rink, steps]);
   assert.equal(h.documents.get('users/audit').username, 'audit', 'the rest of the user document is kept');
   assert.equal(h.documents.has('profiles/audit'), false, 'private picks do not create a public profile');
-  assert.ok(screen.button('Number 2: Glacier Rink, Winter'));
+  assert.ok(screen.button('Number 2: Robson Square Ice Rink, Vancouver · Winter'));
   assert.equal(labels(screen).filter(label => label === 'Add a pick').length, 1);
 });
 
@@ -180,7 +180,7 @@ test('edit profile: a full Top 4 can be reordered, swapped and trimmed, and only
   assert.equal(sheet.button('Add a pick'), undefined, 'four picks leave nothing to add');
   assert.equal(sheet.button('Move Aldor Family Farm up'), undefined);
   assert.equal(sheet.button('Move Waterfront steps down'), undefined);
-  await sheet.press('Move Glacier Rink up');
+  await sheet.press('Move Robson Square Ice Rink up');
   await sheet.press('Replace Aldor Family Farm');
   await flush();
   await sheet.press(`Add ${cafe.name}`);
@@ -276,8 +276,8 @@ test('person: the header shows free stats and a backdrop from their #1 pick, fal
 
 test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Share is a round glass button', async () => {
   const h = createHarness({ documents: {
-    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, rink], public: true } } },
-    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, rink] } },
+    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, catalogueRef('Blossom Garden')], public: true } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, catalogueRef('Blossom Garden')] } },
   } });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.ok(screen.texts().includes('Anyone on SznLuv can see these.'));
@@ -295,7 +295,7 @@ test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Shar
   const tileImages = label => screen.button(label).findAllByType('Image').map(node => String(node.props.source));
   assert.equal(tileImages('Number 1: Aldor Family Farm, Langley · Fall').length, 1);
   assert.match(tileImages('Number 1: Aldor Family Farm, Langley · Fall')[0], /FamilyFarm\.jpg$/);
-  assert.deepEqual(tileImages('Number 2: Glacier Rink, Winter'), []);
+  assert.deepEqual(tileImages('Number 2: Blossom Garden, Spring'), []);
   // The photo is sized to the square tile, so "cover" crops it around the centre instead of showing a corner.
   const photo = flatStyle(screen.button('Number 1: Aldor Family Farm, Langley · Fall').findAllByType('Image')[0]);
   assert.equal(typeof photo.width, 'number');
@@ -490,8 +490,8 @@ test('explore: Following with nobody followed points to search', async () => {
 test('list page: Spots and Map handle zero, one and multiple pins in spot order', async () => {
   const h = createHarness({ documents: {
     ...base, ...maya,
-    'publicLists/one': publicCopy('One pin', [rink, farm], 'maya-uid', 'maya'),
-    'publicLists/zero': publicCopy('No pins', [rink], 'maya-uid', 'maya'),
+    'publicLists/one': publicCopy('One pin', [catalogueRef('Blossom Garden'), farm], 'maya-uid', 'maya'),
+    'publicLists/zero': publicCopy('No pins', [catalogueRef('Blossom Garden')], 'maya-uid', 'maya'),
   } });
   const open = listId => mount(h, 'screens/ListScreen.js', { params: { listId } });
   const screen = await open('m1');
@@ -525,7 +525,7 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   assert.equal(zero.all('MapView').length, 0);
   assert.ok(zero.texts().includes('No locations to map'));
   await zero.press('Back to Spots');
-  assert.ok(zero.button('View details for Glacier Rink'));
+  assert.ok(zero.button('View details for Blossom Garden'));
   await act(async () => zero.renderer.unmount());
 });
 

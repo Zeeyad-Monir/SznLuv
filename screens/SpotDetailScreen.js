@@ -58,6 +58,7 @@ export default function SpotDetailScreen({ navigation, route }) {
       category={details?.category} creator="By SznLuv" tagline={details?.tagline}
       description={about.filter(paragraph => !paragraph.startsWith('Good to know:')).join('\n\n')}
       tips={about.find(paragraph => paragraph.startsWith('Good to know:'))?.slice('Good to know:'.length).trim()}
+      hours={details?.hours} cost={details?.cost} websiteUrl={details?.websiteUrl} bookingUrl={details?.bookingUrl}
       bestSeason={details?.season} photos={photo ? [{ id: details.name, source: photo, credit: spotPhotoCredits[details.name] }] : []}
       latitude={details?.latitude} longitude={details?.longitude} venue
       source={details?.placeID ? reviewSource({ placeID: details.placeID }) : null} />
@@ -147,7 +148,8 @@ function CustomSpotDetails({ given, navigation, sourceListId }) {
 
 function SpotPage({
   navigation, sourceListId, reference, status, retry, name, address, directionsAddress, category, creator, distance, visibility,
-  photos, onAddPhotos, onMenu, tagline, description, hours, cost, bestSeason, tips, latitude, longitude, venue,
+  photos, onAddPhotos, onMenu, tagline, description, hours, cost, bestSeason, tips, websiteUrl, bookingUrl,
+  latitude, longitude, venue,
   source, hiddenUids, canReview = true, onReviewMenu, unavailableCopy, allowNameOnlyActions,
 }) {
   const snackbar = useSnackbar();
@@ -161,6 +163,7 @@ function SpotPage({
   const url = ready ? directionsUrl({ latitude, longitude, address: directionsAddress }, Platform.OS) : null;
   const saved = reference && isSaved(reference);
   const facts = [['Hours', hours], ['Cost', cost], ['Best season', bestSeason]].filter(([, value]) => value);
+  const visitLinks = [['Official website', websiteUrl], ['Tickets & booking', bookingUrl]].filter(([, value]) => value);
 
   return (
     <SignedInScreen style={styles.container}>
@@ -246,13 +249,24 @@ function SpotPage({
                 <Text style={spotStyle.body}>{tips}</Text>
               </View>
             )}
+            {visitLinks.length > 0 && (
+              <View style={spotStyle.section}>
+                {visitLinks.map(([label, link]) => (
+                  <TouchableOpacity key={label} style={styles.visitLink} accessibilityRole="link"
+                    onPress={() => Linking.openURL(link).catch(() => snackbar.show({ message: 'Couldn’t open this link.' }))}>
+                    <Text style={spotStyle.label}>{label}</Text>
+                    <Ionicons name="open-outline" size={16} color={honey.ink} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             {(hasPin || !!address) && <SpotLocation name={name} address={address} latitude={latitude} longitude={longitude} previewRoute={venue} />}
             {hasPin && <SpotWeather key={`${latitude},${longitude}`} latitude={latitude} longitude={longitude} />}
           </Animated.View>
         )}
         {!!source && (
           <Animated.View style={entrance[2]}>
-            <ReviewSection reviews={reviews} tone="theme" title="Reviews" style={styles.reviews} canReview={canReview}
+            <ReviewSection reviews={reviews} title="Reviews" style={styles.reviews} canReview={canReview}
               cannotReviewText="Reviews from people who find this spot in your public lists appear here."
               emptyText={canReview ? 'No reviews yet. Be the first.' : 'No reviews yet.'} onReviewMenu={onReviewMenu} />
           </Animated.View>
@@ -283,6 +297,7 @@ const styles = StyleSheet.create({
   action: { flexGrow: 1, flexBasis: 98, flexDirection: 'row', gap: 5, paddingHorizontal: 8, paddingVertical: 8 },
   actionText: { flexShrink: 1 },
   fact: { paddingVertical: 2, gap: 2 },
+  visitLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 },
   reviews: { marginTop: 16 },
   status: { marginTop: 16 },
 });

@@ -4,24 +4,19 @@
 //   so a spot in several public lists has one set. The rules let others read them only while the spot
 //   has a public copy; making it private keeps them, unseen.
 import {
-  addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, where,
+  addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, runTransaction, where,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 export const SORT_OPTIONS = [
-  { label: 'Most Recent', value: 'mostRecent' },
-  { label: 'Most Popular', value: 'mostPopular' },
-  { label: 'Highest Rated', value: 'highestRated' },
-  { label: 'Lowest Rated', value: 'lowestRated' },
+  { label: 'Most recent', value: 'mostRecent' },
+  { label: 'Most helpful', value: 'mostPopular' },
+  { label: 'Highest rated', value: 'highestRated' },
+  { label: 'Lowest rated', value: 'lowestRated' },
 ];
-export const FILTER_OPTIONS = [
-  { label: 'All Reviews', value: '0' },
-  { label: '5 Stars', value: '5' },
-  { label: '4 Stars', value: '4' },
-  { label: '3 Stars', value: '3' },
-  { label: '2 Stars', value: '2' },
-  { label: '1 Star', value: '1' },
-];
+export const DEFAULT_SORT = 'mostRecent';
+// 0 is every review; otherwise only reviews with exactly that many stars.
+export const STAR_FILTERS = [0, 5, 4, 3, 2, 1];
 
 // Where a spot's reviews live. `{ placeID }` for one of SznLuv's, `{ spotId }` for one someone made.
 export function reviewSource({ placeID, spotId }) {
@@ -32,16 +27,61 @@ export function reviewSource({ placeID, spotId }) {
 const reviewsOf = source => collection(db, ...source.path);
 const reviewPath = (source, id) => [...source.path, id].join('/');
 
-export function subscribeReviews(source, { sort = 'mostRecent', minStars = 0 } = {}, onReviews, onError) {
-  const constraints = [...source.filter];
-  if (minStars > 0) constraints.push(where('starRating', '>=', minStars));
-  if (sort === 'mostPopular') constraints.push(orderBy('thumbsUpCount', 'desc'));
-  else if (sort === 'highestRated') constraints.push(orderBy('starRating', 'desc'));
-  else if (sort === 'lowestRated') constraints.push(orderBy('starRating', 'asc'));
-  else constraints.push(orderBy('timestamp', 'desc'));
-  return onSnapshot(query(reviewsOf(source), ...constraints), snapshot => {
+// Every review of the spot, live. Sorting and the star filter happen on the device (sortReviews,
+// filterReviews), so changing them reads nothing more and the summary always sees every review.
+export function subscribeReviews(source, onReviews, onError) {
+  return onSnapshot(query(reviewsOf(source), ...source.filter), snapshot => {
     onReviews(snapshot.docs.map(entry => ({ id: entry.id, path: reviewPath(source, entry.id), ...entry.data() })));
   }, onError);
+}
+
+// A review's time in milliseconds, whether it is a Firestore Timestamp, a Date or a number.
+export function reviewTime(timestamp) {
+  if (!timestamp) return 0;
+  if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
+  if (typeof timestamp.toDate === 'function') return timestamp.toDate().getTime();
+  const time = new Date(timestamp).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+const stars = review => Number(review.starRating) || 0;
+const newestFirst = (a, b) => reviewTime(b.timestamp) - reviewTime(a.timestamp);
+const SORTS = {
+  mostRecent: newestFirst,
+  mostPopular: (a, b) => (b.thumbsUpCount || 0) - (a.thumbsUpCount || 0) || newestFirst(a, b),
+  highestRated: (a, b) => stars(b) - stars(a) || newestFirst(a, b),
+  lowestRated: (a, b) => stars(a) - stars(b) || newestFirst(a, b),
+};
+
+export const sortReviews = (reviews, sort = DEFAULT_SORT) => [...reviews].sort(SORTS[sort] || newestFirst);
+export const filterReviews = (reviews, starFilter = 0) => (starFilter ? reviews.filter(review => stars(review) === starFilter) : reviews);
+
+// How many reviews gave each number of stars: { 5: n, 4: n, 3: n, 2: n, 1: n }.
+export function ratingCounts(reviews) {
+  const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const review of reviews) {
+    const rating = Math.round(stars(review));
+    if (counts[rating] !== undefined) counts[rating] += 1;
+  }
+  return counts;
+}
+
+// "Just now", "5m ago", "3h ago", "4d ago", "2w ago", then the date ("Mar 4", or "Mar 4, 2024" in another year).
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export function relativeTime(timestamp, now = Date.now()) {
+  const time = reviewTime(timestamp);
+  if (!time) return '';
+  const minutes = Math.floor(Math.max(0, now - time) / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  if (days < 56) return `${Math.floor(days / 7)}w ago`;
+  const date = new Date(time);
+  const label = `${MONTHS[date.getMonth()]} ${date.getDate()}`;
+  return date.getFullYear() === new Date(now).getFullYear() ? label : `${label}, ${date.getFullYear()}`;
 }
 
 // The reviewer's uid and username go with every new review, so it can be deleted, reported, or hidden
@@ -79,10 +119,9 @@ export async function spotHasReviews(spotId) {
   return !snapshot.empty;
 }
 
+// The average of the reviews that carry a rating of 1 to 5; some early reviews have none and aren't counted.
 export function averageRating(reviews) {
-  if (!reviews.length) return 0;
-  return (reviews.reduce((sum, review) => {
-    const rating = review.starRating ? Number(review.starRating) : 0;
-    return sum + (Number.isNaN(rating) ? 0 : rating);
-  }, 0) / reviews.length).toFixed(1);
+  const ratings = reviews.map(stars).filter(rating => rating >= 1 && rating <= 5);
+  if (!ratings.length) return 0;
+  return (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1);
 }
