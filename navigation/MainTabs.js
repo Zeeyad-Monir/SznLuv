@@ -137,19 +137,19 @@ const bottomItems = [
     ),
   },
   {
-    route: 'FavouritesTab',
-    label: 'Favorites',
-    renderIcon: ({ selected, color }) => (
-      <Ionicons name={selected ? 'heart' : 'heart-outline'} size={27} color={color} />
-    ),
-  },
-  {
     route: 'MapTab',
     label: 'Map',
     hint: 'Shows your saved spots on a map',
     returnToRoot: true,
     renderIcon: ({ selected, color }) => (
       <Ionicons name={selected ? 'map' : 'map-outline'} size={26} color={color} />
+    ),
+  },
+  {
+    route: 'FavouritesTab',
+    label: 'Favorites',
+    renderIcon: ({ selected, color }) => (
+      <Ionicons name={selected ? 'heart' : 'heart-outline'} size={27} color={color} />
     ),
   },
   // Spin the Wheel, parked (see the note at the import):
@@ -209,8 +209,8 @@ export default function MainTabs() {
         >
           <Tabs.Screen name="HomeTab" component={HomeSection} />
           <Tabs.Screen name="ExploreTab" component={ExploreSection} />
-          <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
           <Tabs.Screen name="MapTab" component={MapSection} />
+          <Tabs.Screen name="FavouritesTab" component={FavouritesSection} />
           {/* Spin the Wheel, parked (see the note at the import):
           <Tabs.Screen name="SpinTab" component={SpinTheWheel} /> */}
           <Tabs.Screen name="ProfileTab" component={ProfileSection} />
