@@ -23,6 +23,8 @@ const colors = {
   segmentTrack: '#FAECD9',
   segmentHighlight: 'rgba(255, 252, 247, 0.83)',
   segmentRim: 'rgba(157, 118, 77, 0.26)',
+  // The switch on the library page: segmentTrack 10% darker, as segmentTrack is lighter than `library`.
+  librarySegmentTrack: '#E1D4C3',
   white: '#FFFFFF',
   // Spot pages: white cards on the cream page, so sections stand apart instead of blending in.
   surface: '#FFFFFF',

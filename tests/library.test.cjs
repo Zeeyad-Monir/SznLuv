@@ -64,6 +64,26 @@ test('library: Saved with nothing hearted invites the user to explore', async ()
   assert.deepEqual(h.navigations.at(-1), ['HomeTab', { screen: 'SeasonsScreen', initial: false }]);
 });
 
+test('library: the Saved / My lists / Following switch opens the page, where the other tabs start, on a darker track', async () => {
+  const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
+  const screen = await mount(h, 'screens/Favourites.js');
+  const { colors } = h.load('components/theme.js');
+  assert.deepEqual(screen.texts().slice(0, 3), ['Saved', 'My lists', 'Following'], 'no title or subtitle above the switch');
+  assert.ok(!screen.texts().includes('Favourites') && !screen.texts().some(text => /where these take you/.test(text)));
+  const scroll = screen.all('ScrollView')[0];
+  const tabs = screen.renderer.root.findAll(node => node.type === 'View' && node.props.accessibilityRole === 'tablist')[0];
+  assert.equal(scroll.props.contentContainerStyle.paddingTop, 20, 'the same top gap as Home, Explore and Profile');
+  for (let node = tabs; node !== scroll; node = node.parent) {
+    const style = Object.assign({}, ...[node.props.style].flat(Infinity));
+    assert.equal(style.marginTop ?? style.marginVertical ?? style.margin ?? 0, 0);
+    // The track's own inset is inside the switch, so only what wraps it must add no space.
+    if (node !== tabs) assert.equal(style.paddingTop ?? style.paddingVertical ?? style.padding ?? 0, 0);
+  }
+  const track = Object.assign({}, ...[tabs.props.style].flat(Infinity));
+  assert.equal(track.backgroundColor, colors.librarySegmentTrack);
+  assert.notEqual(colors.librarySegmentTrack, colors.segmentTrack, 'only this page darkens the shared track');
+});
+
 test('library: My lists turns old collections into lists once, and offers New list', async () => {
   const h = createHarness();
   const screen = await mount(h, 'screens/Favourites.js');

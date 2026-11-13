@@ -48,8 +48,8 @@ export default function Favourites({ route }) {
   const [segment, setSegment] = useState(lastSegment);
   const size = tileWidth(width);
 
-  // Title, subtitle and the switch ease in once; tiles animate only as they first appear.
-  const entrance = useEntrance(3);
+  // The switch eases in once; tiles animate only as they first appear.
+  const entrance = useEntrance(1);
 
   const choose = next => {
     lastSegment = next;
@@ -70,12 +70,6 @@ export default function Favourites({ route }) {
     <SignedInScreen style={styles.container}>
       <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
         <Animated.View style={entrance[0]}>
-          <Text style={styles.title} accessibilityRole="header">Favourites</Text>
-        </Animated.View>
-        <Animated.View style={entrance[1]}>
-          <Text style={styles.subtitle}>Can’t wait to see where these take you!</Text>
-        </Animated.View>
-        <Animated.View style={entrance[2]}>
           <SegmentPill options={SEGMENTS} value={segment} onChange={choose} style={styles.segments} />
         </Animated.View>
 
@@ -323,9 +317,8 @@ const styles = StyleSheet.create({
   notice: { marginBottom: 12, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.muted, textAlign: 'center' },
   container: { flex: 1, backgroundColor: colors.library },
   content: { paddingTop: SCREEN_CONTENT_TOP_GAP, paddingHorizontal: GUTTER, paddingBottom: 24 },
-  title: { fontSize: 48, fontWeight: '700', color: '#4A4A4A', textAlign: 'center', marginBottom: 12 },
-  subtitle: { fontSize: 14, color: '#707070', textAlign: 'center', marginBottom: 24 },
-  segments: { marginBottom: 24 },
+  // The switch opens the page, with the same gap below it as above it.
+  segments: { marginBottom: SCREEN_CONTENT_TOP_GAP, backgroundColor: colors.librarySegmentTrack },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
   tileHeart: {
     position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16,
