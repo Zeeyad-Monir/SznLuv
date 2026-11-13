@@ -375,3 +375,27 @@ test('review section: the summary bars and the sort and filter sheet, and Helpfu
   assert.equal(screen.button('Helpful, 2 people').props.disabled, true);
   assert.equal(h.alerts.length, 0, 'no pop-up');
 });
+
+test('review section: five reviews at a time, with Show more beneath them', async () => {
+  const many = Object.fromEntries(Array.from({ length: 12 }, (_, index) => [
+    `publicSpots/maya_sunset/reviews/r${index}`,
+    { uid: `u${index}`, username: `user${index}`, comment: `Review ${index}`, starRating: index % 2 ? 5 : 4, timestamp: index, thumbsUpCount: 0 },
+  ]));
+  const h = createHarness({ documents: {
+    ...base, ...many, 'publicSpots/maya_sunset': { ownerUid: 'maya', ownerUsername: 'maya', name: 'Hidden Sunset Viewpoint' },
+  } });
+  const screen = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: mayaSunset } });
+  const shown = () => screen.texts().filter(line => /^Review \d+$/.test(line));
+  assert.deepEqual(shown(), ['Review 11', 'Review 10', 'Review 9', 'Review 8', 'Review 7'], 'newest five');
+  assert.ok(screen.texts().includes('5 of 12'));
+  await screen.press('Show more reviews, 7 more');
+  assert.equal(shown().length, 10);
+  await screen.press('Show more reviews, 2 more');
+  assert.equal(shown().length, 12);
+  assert.ok(!screen.texts().includes('Show more reviews'), 'gone once every review shows');
+
+  // A new filter starts again from the first five.
+  await screen.press('5 stars: 6 reviews');
+  assert.deepEqual(shown(), ['Review 11', 'Review 9', 'Review 7', 'Review 5', 'Review 3']);
+  assert.ok(screen.button('Show more reviews, 1 more'));
+});

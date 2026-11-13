@@ -1,6 +1,7 @@
 // The review section of a spot page: the average and star bars, "Rate this spot", a filter button that opens
 // the sort and filter sheet, and the reviews. Data comes from hooks/useSpotReviews.js.
 // Each person has one review per spot; once they've written it, it shows first, marked "You".
+// Reviews come five at a time, with "Show more" beneath them.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import ReviewItem from './ReviewItem';
 
 // `canReview`: false for the spot's own creator, who reads reviews but doesn't write one.
 // `onReviewMenu(review)`: adds a "More options" button to each review (report, delete).
+export const REVIEWS_PER_PAGE = 5;
+
 export default function ReviewSection({
   reviews, title = 'Reviews', canReview = true, cannotReviewText,
   emptyText = 'No reviews yet. Be the first to review!', onReviewMenu, style,
@@ -28,6 +31,9 @@ export default function ReviewSection({
   const [composerRating, setComposerRating] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [voted, setVoted] = useState(() => new Set());
+  const [shownCount, setShownCount] = useState(REVIEWS_PER_PAGE);
+  // A new sort or filter starts again from the first five.
+  useEffect(() => setShownCount(REVIEWS_PER_PAGE), [sort, starFilter]);
   const filterButton = useRef(null);
   const focusFrame = useRef(null);
   useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
@@ -56,6 +62,10 @@ export default function ReviewSection({
       Alert.alert('Couldn’t mark as helpful', 'Please try again.');
     }
   };
+
+  const listed = reviews.reviews;
+  const visible = listed.slice(0, shownCount);
+  const remaining = listed.length - visible.length;
 
   const activeSummary = [starFilter ? starFilterLabel(starFilter) : null,
     sort !== DEFAULT_SORT ? SORT_OPTIONS.find(option => option.value === sort)?.label : null].filter(Boolean).join(' · ');
@@ -93,13 +103,21 @@ export default function ReviewSection({
       )}
 
       {!!reviews.error && <Text style={styles.note} accessibilityRole="alert">{reviews.error}</Text>}
-      {reviews.reviews.length > 0 ? (
+      {listed.length > 0 ? (
         <View>
-          {reviews.reviews.map((review, index) => (
+          {visible.map((review, index) => (
             <ReviewItem key={review.id} review={review} profile={review.uid ? profiles[review.uid] : null}
               mine={review === mine} first={index === 0} voted={voted.has(review.id)} canVote={signedIn}
               onHelpful={() => markHelpful(review)} onMenu={onReviewMenu ? () => onReviewMenu(review) : undefined} />
           ))}
+          {remaining > 0 && (
+            <TouchableOpacity style={styles.more} onPress={() => setShownCount(count => count + REVIEWS_PER_PAGE)}
+              accessibilityRole="button" accessibilityLabel={`Show more reviews, ${remaining} more`}>
+              <Text style={styles.moreText}>Show more reviews</Text>
+              <Text style={styles.moreCount}>{`${visible.length} of ${listed.length}`}</Text>
+              <Ionicons name="chevron-down" size={16} color={honey.accent} />
+            </TouchableOpacity>
+          )}
         </View>
       ) : total > 0 ? (
         <Text style={styles.note}>{`No ${starFilter}-star reviews yet.`}</Text>
@@ -129,4 +147,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, borderRadius: 16, backgroundColor: honey.inset, borderWidth: 1, borderColor: honey.insetBorder,
   },
   activeChipText: { fontSize: 13, fontWeight: '600', color: honey.accent },
+  more: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46, marginTop: 6,
+    borderRadius: 23, backgroundColor: honey.inset, borderWidth: 1, borderColor: honey.insetBorder,
+  },
+  moreText: { fontSize: 15, fontWeight: '700', color: honey.accent },
+  moreCount: { fontSize: 13, fontWeight: '500', color: honey.meta },
 });
