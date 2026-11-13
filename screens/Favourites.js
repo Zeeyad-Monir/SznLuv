@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   sectionLabel: { marginTop: 20, marginBottom: 12, fontSize: 18, fontWeight: '700', color: colors.label },
   firstLabel: { marginTop: 0 },
   notice: { marginBottom: 12, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.muted, textAlign: 'center' },
-  container: { flex: 1, backgroundColor: colors.library },
+  container: { flex: 1, backgroundColor: colors.page },
   content: { paddingTop: SCREEN_CONTENT_TOP_GAP, paddingHorizontal: GUTTER, paddingBottom: 24 },
   // The switch opens the page, with the same gap below it as above it.
   segments: { marginBottom: SCREEN_CONTENT_TOP_GAP, backgroundColor: colors.librarySegmentTrack },

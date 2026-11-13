@@ -49,7 +49,7 @@ export default function HomeScreen() {
     <SignedInScreen style={styles.container}>
       <ScrollView ref={scrollRef} contentContainerStyle={scrollStyle}>
         <Animated.View style={entrance[0]}>
-          <Text style={text.heroTitle} accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <Text style={[text.heroTitle, styles.heroTitle]} accessibilityRole="header" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
             What sounds good?
           </Text>
         </Animated.View>
@@ -97,6 +97,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
+  // 20% smaller than the shared hero size (37 / 43), which the city picker keeps.
+  heroTitle: { fontSize: 29.6, lineHeight: 34.4, letterSpacing: -0.48 },
   content: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 20 },
   featured: { marginTop: 14 },
   heading: { marginTop: 26, marginBottom: 14 },
