@@ -33,6 +33,14 @@ const colors = {
   spotInk: '#2B2420',
   spotBody: '#3A3028',
   spotMeta: '#6B5E52',
+  // Search and filter controls, shared by every search bar and filter sheet.
+  heading: '#323232',
+  optionBorder: '#DDD5CC',
+  optionText: '#36322E',
+  placeholder: '#6B635A',
+  inputText: '#262321',
+  disabledInk: '#6F6963',
+  track: '#E9DFD2',
 };
 
 const GUTTER = 20;

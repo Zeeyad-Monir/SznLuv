@@ -15,8 +15,11 @@ const PLAIN = '#B98A5E';
 export default function CollectionTile({ collection, width, height, onPress }) {
   const art = collectionArt(collection.art);
   const soon = !collection.available;
+  // The Seasonal cover gets the same faded look as the city covers (see CityCard).
+  const faded = collection.art === 'seasonal' && !!art;
   const face = (
     <>
+      {faded && <View pointerEvents="none" style={styles.wash} />}
       <LinearGradient pointerEvents="none" style={StyleSheet.absoluteFill} colors={TITLE_FADE} locations={[0, 0.55, 1]} />
       {soon && <View pointerEvents="none" style={styles.veil} />}
       <Text style={styles.title} numberOfLines={2}>{collection.title}</Text>
@@ -28,19 +31,19 @@ export default function CollectionTile({ collection, width, height, onPress }) {
     </>
   );
   const picture = art ? (
-    <ImageBackground source={art} style={styles.fill} imageStyle={styles.image}>{face}</ImageBackground>
+    <ImageBackground source={art} style={styles.fill} imageStyle={faded ? styles.fadedImage : styles.image}>{face}</ImageBackground>
   ) : <View style={styles.fill}>{face}</View>;
 
   if (soon) {
     return (
-      <View style={[styles.card, styles.surface, { width, minHeight: height }]} accessible accessibilityRole="text"
+      <View style={[styles.card, styles.surface, faded && styles.fadedSurface, { width, minHeight: height }]} accessible accessibilityRole="text"
         accessibilityLabel={`${collection.title}, coming soon`}>
         {picture}
       </View>
     );
   }
   return (
-    <PressableScale style={[styles.card, cardShadow, { width, minHeight: height }]} contentStyle={styles.surface}
+    <PressableScale style={[styles.card, cardShadow, { width, minHeight: height }]} contentStyle={[styles.surface, faded && styles.fadedSurface]}
       onPress={onPress} accessibilityLabel={`${collection.title} collection`}>
       {picture}
     </PressableScale>
@@ -53,6 +56,10 @@ const styles = StyleSheet.create({
   surface: { borderRadius: CARD_RADIUS, overflow: 'hidden', backgroundColor: PLAIN },
   fill: { flexGrow: 1, justifyContent: 'space-between', padding: 14 },
   image: { borderRadius: CARD_RADIUS },
+  fadedImage: { borderRadius: CARD_RADIUS, opacity: 0.9 },
+  fadedSurface: { backgroundColor: colors.library },
+  // Thin white layer over the image to wash out the colours a little, as on the city covers.
+  wash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 255, 255, 0.2)' },
   title: { fontSize: 22, lineHeight: 26, fontWeight: '800', letterSpacing: -0.2, ...onArt },
   // A cream wash that sets the card back from the ones that open.
   veil: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 245, 228, 0.5)' },

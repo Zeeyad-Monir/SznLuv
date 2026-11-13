@@ -1,10 +1,11 @@
 // Bottom sheet for filing a spot into your lists. Each row toggles that list; the sheet stays open
 // so one spot can go into several. Opened with { spot } (a spot reference).
 import React, { useContext, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SheetHeader from '../components/SheetHeader';
+import ListPicker from '../components/filters/ListPicker';
 import { spotCount } from '../components/ListTile';
 import { colors, controls } from '../components/theme';
 import useMyLists from '../hooks/useMyLists';
@@ -15,7 +16,7 @@ import { mutateList } from '../services/lists';
 import { addSpot, coverBackground, hasSpot, removeSpot } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
 
-const ROW_HEIGHT = 64; // 56pt row + 8pt gap; the list shows four rows, then scrolls
+const ROW_HEIGHT = 64; // 56pt row + 8pt gap; past five rows the list scrolls inside the sheet
 
 export default function AddToListSheet({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -65,27 +66,11 @@ export default function AddToListSheet({ navigation, route }) {
       ) : lists.length === 0 ? (
         <Text style={[styles.hint, styles.message]}>You don’t have any lists yet. Start one with this spot.</Text>
       ) : (
-        <View style={{ height: Math.min(lists.length, 4) * ROW_HEIGHT }}>
-          <ScrollView>
-            {lists.map(list => {
-              const included = hasSpot(list, spot);
-              return (
-                <TouchableOpacity key={list.id} onPress={() => toggle(list)}
-                  style={[styles.row, { backgroundColor: coverBackground(list.cover) }]}
-                  accessibilityRole="checkbox" accessibilityState={{ checked: included }}
-                  accessibilityLabel={`${list.title}, ${spotCount(list.items.length)}`}>
-                  <View style={styles.rowWords}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>{list.title}</Text>
-                    <Text style={styles.rowMeta}>{spotCount(list.items.length)}</Text>
-                  </View>
-                  <View style={[styles.check, included && styles.checked]}>
-                    {included && <Ionicons name="checkmark" size={18} color={colors.white} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <ListPicker first title="Your lists" searchLabel="Search your lists" maxHeight={5 * ROW_HEIGHT}
+          items={lists.map(list => ({ id: list.id, title: list.title, caption: spotCount(list.items.length), list }))}
+          isChecked={id => hasSpot(lists.find(list => list.id === id), spot)}
+          onToggle={item => toggle(item.list)}
+          rowStyle={item => ({ backgroundColor: coverBackground(item.list.cover), borderColor: 'transparent' })} />
       )}
 
       {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
@@ -103,15 +88,6 @@ const styles = StyleSheet.create({
   newList: { flexDirection: 'row', gap: 6, marginBottom: 12 },
   message: { minHeight: 56, justifyContent: 'center', marginBottom: 4 },
   hint: { fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
-  row: { height: 56, marginBottom: 8, borderRadius: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' },
-  rowWords: { flex: 1 },
-  rowTitle: { fontSize: 17, fontWeight: '700', color: colors.ink },
-  rowMeta: { fontSize: 13, fontWeight: '600', color: colors.summary },
-  check: {
-    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.ink, backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  checked: { backgroundColor: colors.ink },
   error: { marginTop: 4, fontSize: 14, lineHeight: 20, color: colors.error },
   done: { marginTop: 8 },
 });

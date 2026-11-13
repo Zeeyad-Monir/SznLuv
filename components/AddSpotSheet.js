@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DiscoveryBottomSheet from './DiscoveryBottomSheet';
 import SegmentPill from './SegmentPill';
-import { SpotSearchBar } from './SpotDiscoveryControls';
+import { SearchBar } from './filters/SearchControls';
 import { colors, text } from './theme';
 import { catalogueRef, catalogueSections, resolveSpot } from '../services/catalogue';
 import { matchesSpot, toRef } from '../services/customSpotsState';
@@ -50,7 +50,7 @@ export default function AddSpotSheet({ title = 'Add a spot', addedKeys, mySpots 
     <DiscoveryBottomSheet title={title} closeLabel={`Close ${title}`} testID="add-spot" onDismiss={onDismiss}>
       {dismiss => (
         <>
-          <View style={styles.searchRow}><SpotSearchBar value={query} onChangeText={setQuery} /></View>
+          <View style={styles.searchRow}><SearchBar value={query} onChangeText={setQuery} /></View>
           <SegmentPill options={SCOPES} value={scope} onChange={setScope} style={styles.scopes} />
           {full && <Text style={styles.full} accessibilityRole="alert">{fullHint}</Text>}
           <ScrollView style={styles.results} contentContainerStyle={styles.resultsContent}
@@ -115,7 +115,11 @@ const styles = StyleSheet.create({
   addedText: { color: colors.ink },
   addDisabled: { color: '#B9B1A7' },
   full: { marginTop: 8, fontSize: 14, lineHeight: 20, color: colors.error },
-  none: { marginTop: 24, fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
+  // The same soft card as a spot page's empty state.
+  none: {
+    marginTop: 16, padding: 24, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.field,
+    fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center',
+  },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline, paddingTop: 6,
     flexDirection: 'row', alignItems: 'center', gap: 8,

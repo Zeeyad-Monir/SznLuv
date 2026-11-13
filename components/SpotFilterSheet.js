@@ -1,50 +1,31 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Keyboard, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Keyboard, Linking, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { SettingsContext } from '../screens/SettingsContext';
-import { DEFAULT_FILTERS, DISTANCE_OPTIONS, hasCoordinates, usesOrigin, withoutCurrentLocation } from '../services/spotDiscovery';
+import {
+  DEFAULT_FILTERS, RADIUS_DEFAULT, hasCoordinates, usesOrigin, withoutCurrentLocation,
+} from '../services/spotDiscovery';
 import { customLocationAvailable, findCustomOrigins, getCurrentOrigin } from '../services/spotLocation';
 import { getReduceMotion } from '../hooks/useReduceMotion';
 import DiscoveryBottomSheet from './DiscoveryBottomSheet';
+import FilterOption from './filters/FilterOption';
+import FilterSection from './filters/FilterSection';
+import ListPicker from './filters/ListPicker';
+import RadiusSlider from './filters/RadiusSlider';
+import SheetFooter from './filters/SheetFooter';
+import shared from './filters/styles';
+import { colors } from './theme';
 
 const EMPTY_LOOKUP = { pending: false, matches: [], error: null };
 
-function Option({ label, selected, onPress }) {
-  return (
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress}
-      style={[styles.option, selected && styles.optionSelected]}>
-      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-// A list that can be picked on the Map tab, shown as a row with a tick.
-function ListOption({ title, caption, checked, onPress }) {
-  return (
-    <TouchableOpacity style={styles.listRow} onPress={onPress} accessibilityRole="checkbox"
-      accessibilityState={{ checked }} accessibilityLabel={[title, caption].filter(Boolean).join(', ')}>
-      <View style={styles.listWords}>
-        <Text style={styles.listTitle} numberOfLines={1}>{title}</Text>
-        {!!caption && <Text style={styles.listCaption} numberOfLines={1}>{caption}</Text>}
-      </View>
-      <View style={[styles.check, checked && styles.checked]}>
-        {checked && <Ionicons name="checkmark" size={18} color="#FFF" />}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// The Map tab adds to the same sheet: `collections` ([{ id, title, caption }]) puts "Select a List /
-// Collection" first and keeps the picks in `filters.listIds`; `showSort={false}` drops sorting, which a map
+// The Map tab adds to the same sheet: `collections` ([{ id, title, caption }]) puts "Lists & collections"
+// first and keeps the picks in `filters.listIds`; `showSort={false}` drops sorting, which a map
 // has no use for; `defaults` is what Reset goes back to.
 export default function SpotFilterSheet({
   filters, index, onApply, onDismiss, collections = null, showSort = true, defaults = DEFAULT_FILTERS,
   distanceUnavailable = 'Distance filters are unavailable for this season.',
 }) {
-  const { bottom } = useSafeAreaInsets();
   const { isLocationEnabled, setIsLocationEnabled } = useContext(SettingsContext);
   const [draft, setDraft] = useState(filters);
   const [source, setSource] = useState(filters.origin?.source ?? null);
@@ -54,6 +35,11 @@ export default function SpotFilterSheet({
   const scroll = useRef(null);
   const layout = useRef({ sectionY: 0, inputY: 0 });
   const appliedOrigin = useRef(filters.origin);
+  // Turning the distance limit off and on again brings back the last distance chosen.
+  const lastRadius = useRef(filters.radiusKm ?? RADIUS_DEFAULT);
+  // When the limit was turned on. For a moment after, the sheet follows its growing content down, so the
+  // slider, and the location lines that appear above it as the fix arrives, end up in view.
+  const revealSlider = useRef(0);
 
   const cancelLookup = useCallback(() => {
     request.current?.abort();
@@ -143,10 +129,31 @@ export default function SpotFilterSheet({
   }));
 
   const pickedLists = draft.listIds ?? [];
-  const toggleList = id => setDraft(previous => {
+  const toggleList = ({ id }) => setDraft(previous => {
     const picked = previous.listIds ?? [];
     return { ...previous, listIds: picked.includes(id) ? picked.filter(other => other !== id) : [...picked, id] };
   });
+
+  const chooseCurrent = () => {
+    selectSource('current');
+    if (isLocationEnabled && (source !== 'current' || (!lookup.pending && !draft.origin))) useCurrent();
+  };
+
+  // On, with no place chosen yet, it starts from where you are (asking first if location is off).
+  const limitDistance = on => {
+    if (!on) {
+      lastRadius.current = draft.radiusKm ?? lastRadius.current;
+      update({ radiusKm: null });
+      return;
+    }
+    update({ radiusKm: lastRadius.current });
+    revealSlider.current = Date.now();
+    if (!source) chooseCurrent();
+  };
+  const setRadius = radiusKm => {
+    lastRadius.current = radiusKm;
+    update({ radiusKm });
+  };
 
   const needsOrigin = usesOrigin(draft) && !hasCoordinates(draft.origin);
   const canApply = !lookup.pending && !needsOrigin;
@@ -154,89 +161,67 @@ export default function SpotFilterSheet({
   if (index.alphabetical) sortOptions.push({ value: 'alphabetical', label: 'A–Z' });
   if (index.supportsDistance) sortOptions.push({ value: 'nearest', label: 'Nearest' });
 
+  const limited = draft.radiusKm !== null;
+
   return (
     <DiscoveryBottomSheet title="Filter spots" onClosing={cancelLookup} onDismiss={onDismiss}>
       {dismiss => (
         <>
-          <ScrollView ref={scroll} style={styles.body} contentContainerStyle={styles.bodyContent}
-            keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView ref={scroll} style={shared.body} contentContainerStyle={shared.bodyContent}
+            keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+            onContentSizeChange={() => {
+              if (Date.now() - revealSlider.current > 1500) return;
+              scroll.current?.scrollToEnd?.({ animated: !getReduceMotion() });
+            }}>
             {!!collections && (
-              <View style={styles.section}>
-                <View style={styles.labelRow}>
-                  <Text accessibilityRole="header" style={[styles.label, styles.labelGrow]}>Select a List / Collection</Text>
-                  {pickedLists.length > 0 && (
-                    <Text style={styles.hint} accessibilityLiveRegion="polite">{pickedLists.length} selected</Text>
-                  )}
-                </View>
-                {collections.length > 0 ? (
-                  <>
-                    <Text style={styles.hint}>Show only the spots in the lists you pick. With none picked, the map shows everything you’ve saved.</Text>
-                    {collections.map(({ id, title, caption }) => (
-                      <ListOption key={id} title={title} caption={caption} checked={pickedLists.includes(id)}
-                        onPress={() => toggleList(id)} />
-                    ))}
-                    {pickedLists.length > 0 && (
-                      <TouchableOpacity accessibilityRole="button" style={styles.inlineAction}
-                        onPress={() => update({ listIds: [] })}>
-                        <Text style={styles.actionText}>Clear selection</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                ) : (
-                  <Text style={styles.hint}>You don’t have any lists yet. Lists you make, follow or keep with a heart can be picked here.</Text>
-                )}
-              </View>
+              <ListPicker first title="Lists & collections" items={collections} selectedIds={pickedLists}
+                onToggle={toggleList} onClear={() => update({ listIds: [] })}
+                emptyText="No saved lists yet. Lists you make, follow or keep with a heart show up here." />
             )}
             {index.categoryOptions.length > 0 && (
-              <View style={styles.section}>
-                <Text accessibilityRole="header" style={styles.label}>Categories</Text>
-                <View style={styles.options}>
-                  <Option label="All categories" selected={!draft.categories.length}
+              <FilterSection title="Categories" first={!collections}>
+                <View style={shared.options}>
+                  <FilterOption label="All categories" selected={!draft.categories.length}
                     onPress={() => update({ categories: [] })} />
                   {index.categoryOptions.map(title => (
-                    <Option key={title} label={title} selected={draft.categories.includes(title)}
+                    <FilterOption key={title} label={title} selected={draft.categories.includes(title)}
                       onPress={() => toggleCategory(title)} />
                   ))}
                 </View>
-              </View>
+              </FilterSection>
             )}
             {showSort && sortOptions.length > 1 && (
-              <View style={styles.section}>
-                <Text accessibilityRole="header" style={styles.label}>Sort by</Text>
-                <View style={styles.options}>
+              <FilterSection title="Sort by">
+                <View style={shared.options}>
                   {sortOptions.map(({ value, label }) => (
-                    <Option key={value} label={label} selected={draft.sort === value}
+                    <FilterOption key={value} label={label} selected={draft.sort === value}
                       onPress={() => update({ sort: value })} />
                   ))}
                 </View>
-              </View>
+              </FilterSection>
             )}
-            <View style={styles.section}
+            <FilterSection title="Location & distance" first={!collections && !index.categoryOptions.length && !(showSort && sortOptions.length > 1)}
               onLayout={event => { layout.current.sectionY = event.nativeEvent.layout.y; }}>
-              <Text accessibilityRole="header" style={styles.label}>Location &amp; distance</Text>
               {index.supportsDistance ? (
                 <>
-                  <View style={styles.options}>
-                    <Option label="Current location" selected={source === 'current'} onPress={() => {
-                      selectSource('current');
-                      if (isLocationEnabled && (source !== 'current' || (!lookup.pending && !draft.origin))) useCurrent();
-                    }} />
-                    <Option label="Custom location" selected={source === 'custom'}
+                  <View style={shared.options}>
+                    <FilterOption label="Current location" selected={source === 'current'} onPress={chooseCurrent} />
+                    <FilterOption label="Custom location" selected={source === 'custom'}
                       onPress={() => selectSource('custom')} />
                   </View>
                   {source === 'current' && !lookup.pending && (
                     <>
-                      {!isLocationEnabled && <Text style={styles.hint}>This also turns on Allow Location Services in Profile.</Text>}
-                      <TouchableOpacity accessibilityRole="button" style={styles.inlineAction} onPress={useCurrent}>
-                        <Text style={styles.actionText}>{!isLocationEnabled ? 'Enable and use current location'
+                      {!isLocationEnabled && <Text style={shared.hint}>This also turns on Allow Location Services in Profile.</Text>}
+                      <TouchableOpacity accessibilityRole="button" style={shared.inlineAction} onPress={useCurrent}>
+                        <Text style={[shared.actionText, shared.underlined]}>{!isLocationEnabled ? 'Enable and use current location'
                           : draft.origin ? 'Refresh current location' : 'Use current location'}</Text>
                       </TouchableOpacity>
                     </>
                   )}
                   {source === 'custom' && (customLocationAvailable ? (
                     <>
-                      <TextInput style={styles.locationInput} value={customText} onChangeText={editCustom}
-                        placeholder="City, address or place" placeholderTextColor="#706961"
+                      <TextInput style={shared.field} value={customText} onChangeText={editCustom}
+                        placeholder="City, address or place" placeholderTextColor={colors.placeholder}
                         accessibilityLabel="Custom location search" autoCorrect={false}
                         onLayout={event => { layout.current.inputY = event.nativeEvent.layout.y; }}
                         onFocus={() => scroll.current?.scrollTo({
@@ -244,9 +229,9 @@ export default function SpotFilterSheet({
                           animated: !getReduceMotion(),
                         })}
                         returnKeyType="search" onSubmitEditing={useCustom} />
-                      <TouchableOpacity accessibilityRole="button" style={styles.inlineAction} onPress={useCustom}
+                      <TouchableOpacity accessibilityRole="button" style={shared.inlineAction} onPress={useCustom}
                         disabled={lookup.pending || !customText.trim()}>
-                        <Text style={[styles.actionText, (lookup.pending || !customText.trim()) && styles.muted]}>Find location</Text>
+                        <Text style={[shared.actionText, shared.underlined, (lookup.pending || !customText.trim()) && shared.muted]}>Find location</Text>
                       </TouchableOpacity>
                       {lookup.matches.map(match => (
                         <TouchableOpacity key={match.key} accessibilityRole="button"
@@ -262,47 +247,35 @@ export default function SpotFilterSheet({
                         </Text>
                       )}
                     </>
-                  ) : <Text style={styles.hint}>Custom location lookup is currently unavailable.</Text>)}
+                  ) : <Text style={shared.hint}>Custom location lookup is currently unavailable.</Text>)}
                   {lookup.pending && (
-                    <View style={styles.loading} accessibilityLiveRegion="polite">
-                      <ActivityIndicator color="#333" />
-                      <Text style={styles.hint}>{source === 'current' ? 'Getting current location…' : 'Looking up location…'}</Text>
+                    <View style={shared.loading} accessibilityLiveRegion="polite">
+                      <ActivityIndicator color={colors.ink} />
+                      <Text style={shared.hint}>{source === 'current' ? 'Getting current location…' : 'Looking up location…'}</Text>
                     </View>
                   )}
-                  {!!lookup.error && <Text style={styles.error} accessibilityRole="alert">{lookup.error.message}</Text>}
+                  {!!lookup.error && <Text style={shared.error} accessibilityRole="alert">{lookup.error.message}</Text>}
                   {lookup.error?.action === 'settings' && (
-                    <TouchableOpacity accessibilityRole="button" style={styles.inlineAction}
+                    <TouchableOpacity accessibilityRole="button" style={shared.inlineAction}
                       onPress={() => Linking.openSettings().catch(() => {})}>
-                      <Text style={styles.actionText}>Open device settings</Text>
+                      <Text style={[shared.actionText, shared.underlined]}>Open device settings</Text>
                     </TouchableOpacity>
                   )}
-                  {!!draft.origin && <Text style={styles.reference}>Measuring from {draft.origin.label}</Text>}
-                  <View style={styles.options}>
-                    {DISTANCE_OPTIONS.map(radiusKm => (
-                      <Option key={radiusKm ?? 'any'} label={radiusKm === null ? 'Any Distance' : `${radiusKm} km`}
-                        selected={draft.radiusKm === radiusKm} onPress={() => update({ radiusKm })} />
-                    ))}
+                  {!!draft.origin && <Text style={shared.emphasis}>Measuring from {draft.origin.label}</Text>}
+                  <View style={[shared.switchRow, styles.limit]}>
+                    <Text style={shared.switchLabel}>Limit by distance</Text>
+                    <Switch value={limited} onValueChange={limitDistance} accessibilityLabel="Limit by distance"
+                      trackColor={{ true: colors.ink }} />
                   </View>
-                  <Text style={styles.hint}>Distances are measured in a straight line.</Text>
+                  {limited && <RadiusSlider value={draft.radiusKm} onChange={setRadius} disabled={lookup.pending} />}
                 </>
-              ) : <Text style={styles.hint}>{distanceUnavailable}</Text>}
-            </View>
+              ) : <Text style={shared.hint}>{distanceUnavailable}</Text>}
+            </FilterSection>
           </ScrollView>
-          <View style={[styles.footer, { paddingBottom: Math.max(12, bottom) }]}>
-            {needsOrigin && !lookup.pending && (
-              <Text style={styles.hint} accessibilityLiveRegion="polite">Choose a location to apply distance or nearest sorting.</Text>
-            )}
-            <View style={styles.footerActions}>
-              <TouchableOpacity accessibilityRole="button" style={styles.footerButton} onPress={reset}>
-                <Text style={styles.actionText}>Reset Filters</Text>
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: !canApply }}
-                disabled={!canApply} style={[styles.footerButton, styles.apply, !canApply && styles.disabledApply]}
-                onPress={() => { onApply(draft); dismiss(); }}>
-                <Text style={styles.applyText}>Apply Filters</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <SheetFooter resetLabel="Reset Filters" applyLabel="Apply Filters" onReset={reset} canApply={canApply}
+            hint={needsOrigin && !lookup.pending
+              ? (limited ? 'Choose a location to filter by distance.' : 'Choose a location to sort by nearest.') : null}
+            onApply={() => { onApply(draft); dismiss(); }} />
         </>
       )}
     </DiscoveryBottomSheet>
@@ -310,53 +283,8 @@ export default function SpotFilterSheet({
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1 },
-  bodyContent: { paddingBottom: 16 },
-  section: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DED8D1', paddingTop: 14, paddingBottom: 14, gap: 8 },
-  label: { color: '#323232', fontSize: 16, fontWeight: '700' },
-  labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  labelGrow: { flex: 1 },
-  listRow: {
-    minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderWidth: 1, borderColor: '#DDD5CC', backgroundColor: '#FFF9F1',
-  },
-  listWords: { flex: 1 },
-  listTitle: { color: '#36322E', fontSize: 16, fontWeight: '600' },
-  listCaption: { color: '#61594F', fontSize: 13, fontWeight: '500', marginTop: 2 },
-  check: {
-    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#333', backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  checked: { backgroundColor: '#333' },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: {
-    minHeight: 44, maxWidth: '100%', justifyContent: 'center', paddingVertical: 8,
-    paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD5CC', backgroundColor: '#FFF9F1',
-  },
-  optionSelected: { backgroundColor: '#333', borderColor: '#333' },
-  optionText: { color: '#36322E', fontSize: 14, fontWeight: '500' },
-  optionTextSelected: { color: '#FFF' },
-  hint: { fontSize: 14, color: '#61594F', lineHeight: 20 },
-  error: { fontSize: 14, color: '#982D24', lineHeight: 20 },
-  reference: { fontSize: 14, fontWeight: '600', color: '#36322E', lineHeight: 20 },
-  actionText: { fontSize: 15, fontWeight: '600', color: '#333', textAlign: 'center' },
-  muted: { color: '#756F68' },
-  inlineAction: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44, paddingVertical: 8 },
-  locationInput: {
-    minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, color: '#262321',
-    borderWidth: 1, borderColor: '#DDD5CC', borderRadius: 10,
-  },
-  match: { minHeight: 44, justifyContent: 'center', borderRadius: 10, backgroundColor: '#FFF5E4', padding: 10 },
-  matchText: { color: '#333', fontSize: 15 },
-  attribution: { color: '#61594F', fontSize: 12, textDecorationLine: 'underline' },
-  loading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DED8D1', paddingTop: 10, gap: 8 },
-  footerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  footerButton: {
-    flexGrow: 1, flexBasis: '45%', minHeight: 48, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center', padding: 10,
-  },
-  apply: { backgroundColor: '#333' },
-  disabledApply: { backgroundColor: '#6F6963' },
-  applyText: { color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  limit: { marginTop: 4 },
+  match: { minHeight: 44, justifyContent: 'center', borderRadius: 14, backgroundColor: colors.page, padding: 10 },
+  matchText: { color: colors.ink, fontSize: 15 },
+  attribution: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
 });

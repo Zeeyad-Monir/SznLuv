@@ -20,9 +20,9 @@ export const CITY_ART = {
 // Only Seasonal has its own illustration so far. The rest borrow one the app already ships until theirs is drawn.
 const COLLECTION_ART = {
   seasonal: require('../assets/Seasonal/SeasonalCoverIMG.png'),
-  outdoors: require('../assets/summer.png'),
-  'unique-food': require('../assets/spring.png'),
-  'night-out': require('../assets/winter.png'),
+  outdoors: require('../assets/VancouverOutdoorsCollectionCover.png'),
+  'unique-food': require('../assets/VancouverFoodCollectionCover.png'),
+  'night-out': require('../assets/VancouverNightOutCollectionCover.png'),
   // The featured "A morning outdoors" card, so it doesn't repeat the Outdoors card beneath it.
   'morning-outdoors': require('../assets/fall.png'),
 };

@@ -7,19 +7,18 @@
 // Only what the current chip and sort need is read, because every read is billed.
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Keyboard, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput,
+  ActivityIndicator, Animated, Keyboard, Platform, RefreshControl, ScrollView, StyleSheet, Text,
   TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import EmptyCard from '../components/EmptyCard';
 import ExploreCard from '../components/ExploreCard';
 import ExploreSortSheet, { DEFAULT_EXPLORE_SORT, RECOMMENDED, isDefaultSort } from '../components/ExploreSortSheet';
 import { focusAccessibility } from '../components/DiscoveryBottomSheet';
 import PersonRow from '../components/PersonRow';
 import { useSnackbar } from '../components/Snackbar';
+import { FilterButton, SearchBar } from '../components/filters/SearchControls';
 import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useEntrance from '../hooks/useEntrance';
@@ -497,25 +496,10 @@ export default function ExploreScreen({ navigation }) {
         <Animated.View style={entrance[0]}>
           <Text style={styles.title} accessibilityRole="header">Explore</Text>
           <View style={styles.searchRow}>
-            <View style={styles.searchBar}>
-              <Icon name="search" size={22} color={colors.muted} accessible={false} importantForAccessibility="no" />
-              <TextInput ref={inputRef} style={styles.searchInput} value={query} onChangeText={setQuery}
-                placeholder="Search lists and people" placeholderTextColor="#6B635A" accessibilityLabel="Search lists and people"
-                autoCorrect={false} autoCapitalize="none" returnKeyType="search" onSubmitEditing={Keyboard.dismiss} />
-              {results.status === 'searching' && <ActivityIndicator style={styles.searchSlot} color={colors.ink} />}
-              {!!query && results.status !== 'searching' && (
-                <TouchableOpacity style={styles.searchSlot} accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')}>
-                  <Icon name="cancel" size={20} color={colors.muted} accessible={false} importantForAccessibility="no" />
-                </TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity ref={sortButton} style={[styles.sortButton, sorted && styles.sortActive]}
-              accessibilityRole="button" accessibilityState={{ expanded: sheetOpen }}
-              accessibilityLabel={sorted ? 'Sort lists, changed' : 'Sort lists'}
-              onPress={() => { Keyboard.dismiss(); setSheetOpen(true); }}>
-              <Ionicons name="options-outline" size={24} color={sorted ? colors.white : colors.ink} />
-              {sorted && <View pointerEvents="none" style={styles.activeDot} />}
-            </TouchableOpacity>
+            <SearchBar ref={inputRef} value={query} onChangeText={setQuery} placeholder="Search lists and people"
+              busy={results.status === 'searching'} />
+            <FilterButton ref={sortButton} active={sorted} expanded={sheetOpen} label="Sort lists" activeLabel="Sort lists, changed"
+              onPress={() => { Keyboard.dismiss(); setSheetOpen(true); }} />
           </View>
           {!searching && <Chips options={chips} value={chip} onChange={setChip} />}
         </Animated.View>
@@ -538,18 +522,6 @@ const styles = StyleSheet.create({
   section: { marginTop: 24, marginBottom: 12 },
   afterHero: { marginTop: 4 },
   searchRow: { marginTop: 16, flexDirection: 'row', alignItems: 'stretch', gap: 10 },
-  searchBar: {
-    flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', paddingLeft: 14,
-    borderRadius: 24, backgroundColor: colors.field, borderWidth: 1, borderColor: colors.fieldBorder,
-  },
-  searchInput: { flex: 1, minHeight: 44, paddingHorizontal: 8, paddingVertical: 8, fontSize: 16, color: '#262321' },
-  searchSlot: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  sortButton: {
-    width: 48, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.field, borderWidth: 1, borderColor: colors.fieldBorder,
-  },
-  sortActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  activeDot: { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.snackbarAction },
   // The chip row runs to the screen edges so chips scroll out from under the gutter.
   chips: { marginTop: 14, marginHorizontal: -GUTTER },
   chipsContent: { paddingHorizontal: GUTTER, gap: 8 },

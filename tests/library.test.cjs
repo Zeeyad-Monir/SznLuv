@@ -204,6 +204,19 @@ test('add to list: saving someone else\'s spot copies the place without their no
   assert.ok(none.texts().includes('You don’t have any lists yet. Start one with this spot.'));
 });
 
+test('add to list: many lists start at five and every one can be found by searching', async () => {
+  const lists = Object.fromEntries(Array.from({ length: 30 }, (_, n) => [`l${n}`, listDoc(`Plan ${n + 1}`)]));
+  const h = createHarness({ documents: withLists(lists) });
+  const sheet = await mount(h, 'screens/AddToListSheet.js', { params: { spot: maan } });
+  const rows = () => sheet.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox');
+  assert.equal(rows().length, 5);
+  await sheet.press('Search your lists');
+  await act(async () => sheet.all('TextInput').find(node => node.props.accessibilityLabel === 'Search your lists').props.onChangeText('plan 27'));
+  assert.deepEqual(rows().map(node => node.props.accessibilityLabel), ['Plan 27, 0 spots']);
+  await sheet.press('Plan 27, 0 spots');
+  assert.deepEqual(h.documents.get('lists/l26').items, [{ spot: maan, note: '' }]);
+});
+
 test('new list: needs a title, saves once on a double tap, then opens the list', async () => {
   const h = createHarness({ documents: withLists({}) });
   const sheet = await mount(h, 'screens/ListDetailsSheet.js');

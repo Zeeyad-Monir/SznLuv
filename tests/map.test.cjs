@@ -315,8 +315,10 @@ test('map filter: picking lists shows only their spots, including a followed lis
   const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox');
   assert.deepEqual(rows().map(node => node.props.accessibilityLabel),
     ['Weekend, 2 spots', 'Golden Hour, Following · by maya', 'Fall, Vancouver · 43 spots']);
-  assert.ok(screen.texts().includes('Select a List / Collection'));
+  assert.ok(screen.texts().includes('Lists & collections'));
   assert.equal(screen.texts().includes('Sort by'), false, 'sorting is left out on a map');
+  assert.equal(screen.button('Search lists'), undefined, 'three lists all fit, so there is nothing to search');
+  assert.equal(screen.all('TouchableOpacity').some(node => /^Show \d+ more$/.test(textOf(node).join(''))), false);
 
   const pick = async label => { await act(async () => rows().find(node => node.props.accessibilityLabel === label).props.onPress()); };
   await pick('Golden Hour, Following · by maya');
@@ -371,6 +373,57 @@ test('map filter: lists combine with categories and search, and Reset clears eve
   await screen.press('Apply Filters');
   await settle();
   assert.deepEqual(pins(), MINE);
+});
+
+test('map filter: many lists show five, reveal more in batches, and every one can be searched', async () => {
+  const many = { ...saved };
+  for (let n = 1; n <= 120; n += 1) many[`lists/l${n}`] = addSpot(createList({ ownerUid: 'audit', title: `Trip ${n}`, now: n + 1 }), maan);
+  many['lists/again'] = createList({ ownerUid: 'audit', title: 'Trip 1', now: 500 }); // the same name, told apart by its caption
+  const { screen } = await openMap(many);
+  await screen.press('Filter spots');
+  const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox')
+    .map(node => node.props.accessibilityLabel);
+  const type = text => act(async () => screen.all('TextInput').find(node => node.props.accessibilityLabel === 'Search lists').props.onChangeText(text));
+  assert.equal(rows().length, 5, 'the panel starts compact');
+  await screen.press('Show 10 more');
+  assert.equal(rows().length, 15);
+
+  await screen.press('Search lists');
+  const field = screen.all('TextInput').find(node => node.props.accessibilityLabel === 'Search lists');
+  assert.equal(field.props.autoFocus, true, 'the field is ready to type in');
+  await type('trip 118');
+  assert.deepEqual(rows(), ['Trip 118, 1 spot'], 'found though it was not shown yet');
+  await act(async () => screen.all('TouchableOpacity').find(node => node.props.accessibilityLabel === 'Trip 118, 1 spot').props.onPress());
+  assert.ok(screen.texts().includes('1 selected'));
+
+  await type('zzz');
+  assert.deepEqual(rows(), []);
+  assert.ok(screen.texts().includes('No lists match “zzz”.'));
+  assert.ok(screen.button('Remove Trip 118, 1 spot'), 'the pick stays in view outside the search');
+  await screen.press('Clear search');
+  assert.equal(rows().length, 15);
+  assert.ok(screen.button('Remove Trip 118, 1 spot'), 'and past the lists shown so far');
+
+  await type('trip 1');
+  assert.ok(rows().includes('Trip 1, 1 spot') && rows().includes('Trip 1, 0 spots'), 'two lists with one name read differently');
+  await screen.press('Close list search');
+  assert.equal(screen.all('TextInput').some(node => node.props.accessibilityLabel === 'Search lists'), false);
+  assert.ok(screen.button('Search lists'));
+
+  await screen.press('Remove Trip 118, 1 spot');
+  assert.equal(screen.texts().includes('1 selected'), false);
+  for (let reveals = 0; reveals < 11; reveals += 1) await screen.press(screen.all('TouchableOpacity').map(node => textOf(node).join('')).find(label => /^Show \d+ more$/.test(label)));
+  assert.equal(rows().length, 122, 'every list, mine and the Weekend one');
+  assert.equal(screen.all('TouchableOpacity').some(node => /^Show \d+ more$/.test(textOf(node).join(''))), false, 'Show more goes once all are shown');
+});
+
+test('map filter: with no lists it says so, with no search or Show more', async () => {
+  const { 'lists/w': _weekend, ...noLists } = saved;
+  const { screen } = await openMap(noLists);
+  await screen.press('Filter spots');
+  assert.ok(screen.texts().includes('No saved lists yet. Lists you make, follow or keep with a heart show up here.'));
+  assert.equal(screen.button('Search lists'), undefined);
+  assert.equal(screen.all('TouchableOpacity').some(node => node.props.accessibilityRole === 'checkbox'), false);
 });
 
 // ---------------------------------------------------------------- Nothing to show, and trouble

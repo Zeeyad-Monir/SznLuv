@@ -5,6 +5,7 @@ const { createHarness, act } = require('./renderHarness.cjs');
 const { fallCategories, legacyFallSpots, detailedFallSpots } = require('../services/spots');
 const {
   createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasCoordinates,
+  RADIUS_MIN, RADIUS_MAX, RADIUS_STOPS, radiusAt, radiusPosition, stepRadius, widerRadius,
 } = require('../services/spotDiscovery');
 
 const origin = { latitude: 0, longitude: 0 };
@@ -106,6 +107,18 @@ const cards = renderer => buttons(renderer).flatMap(node => {
   const match = /^View details for (.+)$/.exec(node.props.accessibilityLabel || '');
   return match && node.props.accessibilityActions ? [match[1]] : [];
 });
+const slider = renderer => renderer.root.findByProps({ testID: 'radius-slider' });
+const radius = renderer => slider(renderer).props.accessibilityValue.now;
+const limitSwitch = renderer => renderer.root.findAllByType('Switch').find(node => node.props.accessibilityLabel === 'Limit by distance');
+const limit = (renderer, on) => act(async () => limitSwitch(renderer).props.onValueChange(on));
+// Moves the slider the way VoiceOver does, one stop per swipe, until it reads `km`.
+async function adjust(renderer, km) {
+  for (let swipe = 0; swipe < RADIUS_STOPS.length && radius(renderer) !== km; swipe++) {
+    const actionName = radius(renderer) < km ? 'increment' : 'decrement';
+    await act(async () => slider(renderer).props.onAccessibilityAction({ nativeEvent: { actionName } }));
+  }
+  assert.equal(radius(renderer), km);
+}
 const openSheet = renderer => press(labelled(renderer, 'Filter spots, filters active') || labelled(renderer, 'Filter spots'));
 const apply = renderer => press(button(renderer, 'Apply Filters'));
 const close = renderer => press(labelled(renderer, 'Close filters'));
@@ -212,8 +225,11 @@ test('current location requires an explicit opt-in and uses a single fix with se
   const renderer = await h.render('screens/FallDatesScreen.js');
   await openSheet(renderer);
   await press(button(renderer, 'Nearest'));
-  await press(button(renderer, '5 km'));
+  await limit(renderer, true);
+  assert.equal(permissionRequests, 0, 'turning on a distance limit with location off still waits to be asked');
+  await adjust(renderer, 5);
   assert.ok(button(renderer, 'Apply Filters').props.disabled);
+  assert.match(output(renderer), /Choose a location to filter by distance/);
   await press(button(renderer, 'Current location'));
   assert.equal(permissionRequests, 0);
   await press(button(renderer, 'Enable and use current location'));
@@ -291,7 +307,8 @@ test('custom lookup handles ambiguity, invalid queries, network failures and sta
   try {
     const renderer = await h.render('screens/FallDatesScreen.js');
     await openSheet(renderer);
-    await press(button(renderer, '10 km'));
+    await limit(renderer, true);
+    await adjust(renderer, 10);
     await press(button(renderer, 'Custom location'));
     await change(input(renderer, 'Custom location search'), 'Vancouver');
     assert.equal(lookup, undefined, 'typing a custom address does not make a request');
@@ -334,4 +351,105 @@ test('custom lookup handles ambiguity, invalid queries, network failures and sta
     if (priorKey === undefined) delete process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
     else process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY = priorKey;
   }
+});
+
+test('the radius track runs 1 to 200 km with finer steps near the start', () => {
+  assert.equal(RADIUS_STOPS[0], RADIUS_MIN);
+  assert.equal(RADIUS_STOPS.at(-1), RADIUS_MAX);
+  assert.equal(radiusAt(0), 1);
+  assert.equal(radiusAt(1), 200);
+  assert.equal(radiusAt(-3), 1, 'held at the ends');
+  assert.equal(radiusAt(7), 200);
+  assert.equal(radiusAt(radiusPosition(25)), 25);
+  for (const km of [5, 10, 25, 50, 100]) assert.ok(RADIUS_STOPS.includes(km), `${km} km, a distance chosen before the slider, is still a stop`);
+  assert.deepEqual([stepRadius(1, -1), stepRadius(1, 1), stepRadius(10, 1), stepRadius(50, 1), stepRadius(200, 1)], [1, 2, 15, 60, 200]);
+  assert.deepEqual([widerRadius(25), widerRadius(150), widerRadius(200)], [50, 200, null]);
+
+  // 25 km means up to and including 25 km from where you are.
+  const near = { name: 'Near', latitude: 0, longitude: 24.9 / 111.195 };
+  const far = { name: 'Far', latitude: 0, longitude: 25.1 / 111.195 };
+  const line = createSpotIndex([{ title: 'Line', spots: [near, far] }]);
+  assert.deepEqual(names(findMatchingSpots(line, '', { ...DEFAULT_FILTERS, origin, radiusKm: 25 })), ['Near']);
+});
+
+test('the distance slider reaches both ends, steps finely, applies and reopens at the applied distance', async () => {
+  const h = createHarness({
+    locationPermissions: async () => ({ status: 'granted' }),
+    getPosition: async () => ({ coords: { latitude: 49.15313, longitude: -122.53021 } }),
+  });
+  const renderer = await h.render('screens/FallDatesScreen.js', { location: true });
+  await openSheet(renderer);
+  assert.equal(renderer.root.findAllByProps({ testID: 'radius-slider' }).length, 0, 'no slider until a limit is asked for');
+  await limit(renderer, true);
+  assert.equal(radius(renderer), 25, 'starts at 25 km');
+  assert.match(output(renderer), /Measuring from .*Current location/, 'turning it on uses where you are when location is on');
+  assert.deepEqual(slider(renderer).props.accessibilityValue, { min: 1, max: 200, now: 25, text: '25 kilometres' });
+  assert.equal(slider(renderer).props.accessibilityRole, 'adjustable');
+
+  await adjust(renderer, 1);
+  assert.ok(labelled(renderer, 'Decrease distance').props.disabled, 'nothing below 1 km');
+  await press(labelled(renderer, 'Increase distance'));
+  assert.equal(radius(renderer), 2, 'the + button moves one stop');
+  await adjust(renderer, 200);
+  assert.ok(labelled(renderer, 'Increase distance').props.disabled, 'nothing past 200 km');
+
+  // Dragging: the track is 300 wide, so its middle is the middle stop.
+  const track = slider(renderer);
+  await act(async () => track.props.onLayout({ nativeEvent: { layout: { width: 300 } } }));
+  await act(async () => slider(renderer).props.onPanResponderGrant({ nativeEvent: { pageX: 120, locationX: 100 } }));
+  await act(async () => slider(renderer).props.onPanResponderMove({}, { moveX: 20 + 150 }));
+  assert.equal(radius(renderer), radiusAt(0.5));
+  await adjust(renderer, 15);
+  await apply(renderer);
+  assert.match(output(renderer), /Within 15 km of Current location/);
+  const within = cards(renderer).length;
+  assert.ok(within > 0 && within < 43);
+
+  await openSheet(renderer);
+  assert.equal(limitSwitch(renderer).props.value, true);
+  assert.equal(radius(renderer), 15, 'reopening shows the applied distance');
+  await limit(renderer, false);
+  await limit(renderer, true);
+  assert.equal(radius(renderer), 15, 'on again brings back the last distance');
+  await limit(renderer, false);
+  await apply(renderer);
+  assert.equal(cards(renderer).length, 43, 'off is any distance');
+  await act(async () => renderer.unmount());
+});
+
+test('no spots within the radius says so and offers a wider distance', async () => {
+  const h = createHarness({
+    locationPermissions: async () => ({ status: 'granted' }),
+    // Far out at sea: nothing in the Fall catalogue is close.
+    getPosition: async () => ({ coords: { latitude: 49.5, longitude: -126.5 } }),
+  });
+  const renderer = await h.render('screens/FallDatesScreen.js', { location: true });
+  await openSheet(renderer);
+  await limit(renderer, true);
+  await adjust(renderer, 50);
+  await apply(renderer);
+  assert.deepEqual(cards(renderer), []);
+  assert.match(output(renderer), /No spots within 50 km of Current location/);
+  await press(button(renderer, 'Widen to 100 km'));
+  assert.match(output(renderer), /Within 100 km of Current location/);
+  await act(async () => renderer.unmount());
+});
+
+test('while the location loads the slider waits, and Apply stays off until there is a place', async () => {
+  let answer;
+  const h = createHarness({
+    locationPermissions: async () => ({ status: 'granted' }),
+    getPosition: () => new Promise(resolve => { answer = resolve; }),
+  });
+  const renderer = await h.render('screens/FallDatesScreen.js', { location: true });
+  await openSheet(renderer);
+  await limit(renderer, true);
+  assert.match(output(renderer), /Getting current location…/);
+  assert.equal(slider(renderer).props.accessibilityState.disabled, true);
+  assert.ok(labelled(renderer, 'Increase distance').props.disabled);
+  assert.ok(button(renderer, 'Apply Filters').props.disabled);
+  await act(async () => answer({ coords: { latitude: 49.15313, longitude: -122.53021 } }));
+  assert.equal(slider(renderer).props.accessibilityState.disabled, false);
+  assert.equal(button(renderer, 'Apply Filters').props.disabled, false);
+  await act(async () => renderer.unmount());
 });

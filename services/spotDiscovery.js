@@ -1,4 +1,42 @@
-const DISTANCE_OPTIONS = [null, 5, 10, 25, 50, 100];
+// The radius slider runs 1 to 200 km. Its stops are closer together near the start, so a short distance is as
+// easy to pick as a long one: 1 to 10 km by 1, then by 5 to 50 km, then by 10 to 200 km.
+const RADIUS_MIN = 1;
+const RADIUS_MAX = 200;
+const RADIUS_DEFAULT = 25;
+const RADIUS_STOPS = [
+  ...Array.from({ length: 10 }, (_, step) => step + 1),
+  ...Array.from({ length: 8 }, (_, step) => 15 + step * 5),
+  ...Array.from({ length: 15 }, (_, step) => 60 + step * 10),
+];
+
+// The stop nearest a value, so a radius saved before the slider (or typed by a test) still lands on the track.
+function nearestStop(km) {
+  return RADIUS_STOPS.reduce((best, stop, index) => (
+    Math.abs(stop - km) < Math.abs(RADIUS_STOPS[best] - km) ? index : best), 0);
+}
+
+// Where a radius sits along the track, from 0 at 1 km to 1 at 200 km.
+function radiusPosition(km) {
+  return nearestStop(km) / (RADIUS_STOPS.length - 1);
+}
+
+// The radius at a point along the track (0 to 1).
+function radiusAt(position) {
+  const clamped = Math.min(1, Math.max(0, Number.isFinite(position) ? position : 0));
+  return RADIUS_STOPS[Math.round(clamped * (RADIUS_STOPS.length - 1))];
+}
+
+// One stop further (+1) or nearer (-1), held at the ends.
+function stepRadius(km, direction) {
+  const next = Math.min(RADIUS_STOPS.length - 1, Math.max(0, nearestStop(km) + direction));
+  return RADIUS_STOPS[next];
+}
+
+// The empty state's way out: twice as far, up to the end of the track.
+function widerRadius(km) {
+  return km >= RADIUS_MAX ? null : RADIUS_STOPS[nearestStop(Math.min(RADIUS_MAX, km * 2))];
+}
+
 const DEFAULT_FILTERS = { categories: [], radiusKm: null, sort: 'catalogue', origin: null };
 
 function hasCoordinates(point) {
@@ -172,7 +210,8 @@ function findMatchingSpots(index, query, filters) {
 }
 
 module.exports = {
-  DISTANCE_OPTIONS, DEFAULT_FILTERS, hasCoordinates, distanceKm, createSpotIndex,
+  RADIUS_MIN, RADIUS_MAX, RADIUS_DEFAULT, RADIUS_STOPS, radiusAt, radiusPosition, stepRadius, widerRadius,
+  DEFAULT_FILTERS, hasCoordinates, distanceKm, createSpotIndex,
   usesOrigin, hasActiveFilters, withoutCurrentLocation, findMatchingSpots,
   normalize, wordForm,
 };

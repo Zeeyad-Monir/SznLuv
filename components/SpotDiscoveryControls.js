@@ -1,41 +1,21 @@
-import React, { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { usesOrigin } from '../services/spotDiscovery';
+import { usesOrigin, widerRadius } from '../services/spotDiscovery';
 import { focusAccessibility } from './DiscoveryBottomSheet';
 import SpotFilterSheet from './SpotFilterSheet';
+import { FilterButton, SearchBar, SpotFilterButton, SpotSearchBar } from './filters/SearchControls';
+import { colors } from './theme';
 
-// `placeholder`, `style`, `onFocus` and `onBlur` let the Map tab float the same bar over the map.
-export function SpotSearchBar({ value, onChangeText, placeholder = 'Search spots', style, onFocus, onBlur }) {
-  return (
-    <View style={[styles.searchBar, style]}>
-      <Icon name="search" size={22} color="#62584E" accessible={false} importantForAccessibility="no" />
-      <TextInput
-        style={styles.searchInput} value={value} onChangeText={onChangeText}
-        placeholder={placeholder} placeholderTextColor="#6B635A" accessibilityLabel={placeholder}
-        autoCorrect={false} autoCapitalize="none" returnKeyType="search" onSubmitEditing={Keyboard.dismiss}
-        onFocus={onFocus} onBlur={onBlur}
-      />
-      {!!value && (
-        <TouchableOpacity style={styles.clearText} accessibilityRole="button"
-          accessibilityLabel="Clear search" onPress={() => onChangeText('')}>
-          <Icon name="cancel" size={20} color="#62584E" accessible={false} importantForAccessibility="no" />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+export { FilterButton, SearchBar, SpotFilterButton, SpotSearchBar };
+
+// What a distance filter says it is doing: "Within 25 km of Current location", or "Nearest to …".
+export function distanceSummary(filters) {
+  if (!usesOrigin(filters) || !filters.origin) return null;
+  return filters.radiusKm === null
+    ? `Nearest to ${filters.origin.label}`
+    : `Within ${filters.radiusKm} km of ${filters.origin.label}`;
 }
-
-export const SpotFilterButton = forwardRef(function SpotFilterButton({ active, expanded, onPress, style }, ref) {
-  return (
-    <TouchableOpacity ref={ref} style={[styles.filterButton, style, active && styles.filterActive]}
-      accessibilityRole="button" accessibilityState={{ expanded }}
-      accessibilityLabel={active ? 'Filter spots, filters active' : 'Filter spots'} onPress={onPress}>
-      <Icon name="tune" size={22} color={active ? '#FFF' : '#333'} accessible={false} importantForAccessibility="no" />
-      {active && <View pointerEvents="none" style={styles.activeDot} />}
-    </TouchableOpacity>
-  );
-});
 
 export default function SpotDiscoveryControls({ discovery }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -49,15 +29,13 @@ export default function SpotDiscoveryControls({ discovery }) {
   }, []);
 
   const { query, setQuery, count, filters, hasActiveFilters, clearFilters, applyFilters, index } = discovery;
-  const reference = usesOrigin(filters) && filters.origin && (filters.radiusKm === null
-    ? `Nearest to ${filters.origin.label}`
-    : `Within ${filters.radiusKm} km of ${filters.origin.label}`);
+  const reference = distanceSummary(filters);
 
   return (
     <View style={styles.controls}>
       <View style={styles.searchRow}>
-        <SpotSearchBar value={query} onChangeText={setQuery} />
-        <SpotFilterButton ref={filterButton} active={hasActiveFilters} expanded={sheetOpen}
+        <SearchBar value={query} onChangeText={setQuery} />
+        <FilterButton ref={filterButton} active={hasActiveFilters} expanded={sheetOpen}
           onPress={() => { Keyboard.dismiss(); setSheetOpen(true); }} />
       </View>
       <View style={styles.summary}>
@@ -78,16 +56,26 @@ export default function SpotDiscoveryControls({ discovery }) {
   );
 }
 
+// With a distance limit on, the way out is a wider distance as well as clearing everything.
 export function SpotEmptyState({ discovery }) {
-  const { query, hasActiveFilters, setQuery, clearFilters } = discovery;
+  const { query, hasActiveFilters, setQuery, clearFilters, filters, applyFilters } = discovery;
+  const radius = filters?.origin && filters.radiusKm !== null ? filters.radiusKm : null;
+  const wider = radius !== null ? widerRadius(radius) : null;
+  const text = radius !== null
+    ? `No spots within ${radius} km of ${filters.origin.label}. Widen the distance or clear filters.`
+    : query.trim() || hasActiveFilters ? 'Try a different search or adjust your filters.' : 'Check back for more spots soon.';
   return (
     <View style={styles.empty}>
-      <Icon name="search" size={26} color="#62584E" accessible={false} importantForAccessibility="no" />
+      <Icon name="search" size={26} color={colors.muted} accessible={false} importantForAccessibility="no" />
       <Text style={styles.emptyTitle} accessibilityRole="header">No spots found</Text>
-      <Text style={styles.emptyText}>
-        {query.trim() || hasActiveFilters ? 'Try a different search or adjust your filters.' : 'Check back for more spots soon.'}
-      </Text>
+      <Text style={styles.emptyText}>{text}</Text>
       <View style={styles.emptyActions}>
+        {!!wider && (
+          <TouchableOpacity accessibilityRole="button" style={[styles.emptyButton, styles.emptyPrimary]}
+            onPress={() => applyFilters({ ...filters, radiusKm: wider })}>
+            <Text style={styles.emptyPrimaryText}>Widen to {wider} km</Text>
+          </TouchableOpacity>
+        )}
         {!!query.trim() && (
           <TouchableOpacity accessibilityRole="button" style={styles.emptyButton} onPress={() => setQuery('')}>
             <Text style={[styles.summaryText, styles.underlined]}>Clear search</Text>
@@ -105,27 +93,17 @@ export function SpotEmptyState({ discovery }) {
 
 const styles = StyleSheet.create({
   controls: { paddingHorizontal: 20 },
-  searchRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  searchBar: {
-    flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', paddingLeft: 12,
-    borderRadius: 12, backgroundColor: '#FFF9F1', borderWidth: 1, borderColor: '#00000020',
-  },
-  searchInput: { flex: 1, minHeight: 44, paddingHorizontal: 8, paddingVertical: 8, fontSize: 16, color: '#262321' },
-  clearText: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  filterButton: {
-    minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FFF9F1', borderRadius: 12, borderWidth: 1, borderColor: '#00000020',
-  },
-  filterActive: { backgroundColor: '#333' },
-  activeDot: { position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFD39B' },
+  searchRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
   summary: { minHeight: 44, gap: 8, flexDirection: 'row', alignItems: 'center', alignContent: 'center', flexWrap: 'wrap' },
-  summaryText: { color: '#30261D', fontSize: 14, fontWeight: '600' },
+  summaryText: { color: colors.summary, fontSize: 14, fontWeight: '600' },
   summaryAction: { minHeight: 44, paddingHorizontal: 8, justifyContent: 'center', marginLeft: 'auto' },
   underlined: { textDecorationLine: 'underline' },
   reference: { fontWeight: '500', marginBottom: 8 },
-  empty: { alignItems: 'center', gap: 8, padding: 24, borderRadius: 14, backgroundColor: '#FFF9F1' },
-  emptyTitle: { fontSize: 19, fontWeight: '700', color: '#333', textAlign: 'center' },
-  emptyText: { fontSize: 15, color: '#62584E', textAlign: 'center' },
-  emptyActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  empty: { alignItems: 'center', gap: 8, padding: 24, borderRadius: 16, backgroundColor: colors.field },
+  emptyTitle: { fontSize: 19, fontWeight: '700', color: colors.ink, textAlign: 'center' },
+  emptyText: { fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
+  emptyActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  emptyPrimary: { paddingHorizontal: 18, borderRadius: 22, backgroundColor: colors.ink },
+  emptyPrimaryText: { color: colors.white, fontSize: 14, fontWeight: '700' },
 });

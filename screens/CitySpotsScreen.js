@@ -4,12 +4,13 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import EmptyCard from '../components/EmptyCard';
 import SpotBrowser from '../components/SpotBrowser';
-import { GUTTER, colors } from '../components/theme';
+import { GUTTER } from '../components/theme';
 import { useCity } from '../contexts/CityContext';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { citySpotSections } from '../services/collections';
 
 const RANKED = { rankSearch: true };
+const BACKGROUND = '#CFD5CE';
 // Each section is a season, so the card names only the town.
 const townOnly = spot => spot.locality ?? '';
 
@@ -29,11 +30,11 @@ export default function CitySpotsScreen({ navigation }) {
   }
   return (
     <SpotBrowser navigation={navigation} title={`${city.name} spots`} sectionKey={`city:${city.id}`}
-      sections={sections} search={RANKED} spotMeta={townOnly} />
+      sections={sections} search={RANKED} spotMeta={townOnly} backgroundColor={BACKGROUND} />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.page },
+  container: { flex: 1, backgroundColor: BACKGROUND },
   empty: { paddingHorizontal: GUTTER, paddingTop: SCREEN_CONTENT_TOP_GAP },
 });

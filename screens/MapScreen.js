@@ -14,7 +14,7 @@ import { MapCard, MapLocationButton, MapPill, floating } from '../components/map
 import { ClusterMarker, SpotMapMarker } from '../components/map/SpotMapMarker';
 import { useSnackbar } from '../components/Snackbar';
 import SpotMapPreview, { PREVIEW_CARD, PREVIEW_LIFT } from '../components/map/SpotMapPreview';
-import { SpotFilterButton, SpotSearchBar } from '../components/SpotDiscoveryControls';
+import { FilterButton, SearchBar } from '../components/filters/SearchControls';
 import SpotFilterSheet from '../components/SpotFilterSheet';
 import { colors } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
@@ -31,7 +31,7 @@ import {
 } from '../services/mapGeometry';
 import { mapSections } from '../services/mapSpots';
 import {
-  createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasActiveFilters,
+  createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasActiveFilters, widerRadius,
 } from '../services/spotDiscovery';
 import { openSpot } from '../services/venueNavigation';
 
@@ -303,6 +303,10 @@ export default function MapScreen({ navigation }) {
   const noMatch = settled && !nothingSaved && !nothingPlaced && (searching || filtering) && matched.length === 0;
   const showResults = searching && resultsOpen && matched.length > 0;
 
+  // A distance limit is named in what the map says, and widening it is offered when nothing is that close.
+  const radius = filters.origin && filters.radiusKm != null ? filters.radiusKm : null;
+  const wider = radius !== null ? widerRadius(radius) : null;
+
   let pill = null;
   if (data.failed) {
     pill = <MapPill alert message="Couldn’t load some saved spots" actionLabel="Try again" onAction={data.retry} />;
@@ -311,7 +315,8 @@ export default function MapScreen({ navigation }) {
   } else if (matched.length > 0 && ready && region && inView.length === 0) {
     pill = <MapPill message="No saved spots in this area" actionLabel="Show saved spots" onAction={showSavedSpots} />;
   } else if (filtering && matched.length > 0) {
-    pill = <MapPill message={`${countOf(matched.length)} ${matched.length === 1 ? 'matches' : 'match'} your filters`} actionLabel="Clear filters" onAction={clearFilters} />;
+    pill = <MapPill message={radius !== null ? `${countOf(matched.length)} within ${radius} km`
+      : `${countOf(matched.length)} ${matched.length === 1 ? 'matches' : 'match'} your filters`} actionLabel="Clear filters" onAction={clearFilters} />;
   } else if (location.status === 'off' && !nothingSaved) {
     pill = <MapPill message="Location is off" actionLabel="Turn on" onAction={location.enable} />;
   }
@@ -341,9 +346,9 @@ export default function MapScreen({ navigation }) {
 
         <View pointerEvents="box-none" style={styles.top}>
           <View style={styles.searchRow}>
-            <SpotSearchBar value={query} onChangeText={changeQuery} placeholder="Search saved spots"
+            <SearchBar value={query} onChangeText={changeQuery} placeholder="Search saved spots"
               style={[styles.search, floating]} onFocus={() => setResultsOpen(true)} />
-            <SpotFilterButton ref={filterButton} active={filtering} expanded={sheetOpen} style={[styles.filter, floating]}
+            <FilterButton ref={filterButton} active={filtering} expanded={sheetOpen} style={[styles.filter, floating]}
               onPress={() => { Keyboard.dismiss(); setResultsOpen(false); setSheetOpen(true); }} />
           </View>
           {showResults ? (
@@ -375,8 +380,10 @@ export default function MapScreen({ navigation }) {
             )}
             {noMatch && (
               <MapCard icon="search" title={filtering ? 'No saved spots match your filters.' : 'No saved spots match your search.'}
-                text="Try a different search or adjust your filters."
+                text={radius !== null ? `No saved spots within ${radius} km of ${filters.origin.label}. Widen the distance or clear filters.`
+                  : 'Try a different search or adjust your filters.'}
                 actions={[
+                  ...(wider ? [{ label: `Widen to ${wider} km`, primary: true, onPress: () => applyFilters({ ...filters, radiusKm: wider }) }] : []),
                   ...(searching ? [{ label: 'Clear search', onPress: () => setQuery('') }] : []),
                   ...(filtering ? [{ label: 'Clear filters', onPress: clearFilters }] : []),
                 ]} />
