@@ -65,6 +65,26 @@ const onArt = {
 // Corners of the illustrated cards on Home, Explore and the city picker.
 const CARD_RADIUS = 16;
 
+// The warm frosted material of the floating tab bar, for controls that float over content.
+// Glass is for chrome (buttons, capsules), never for content cards.
+const glass = {
+  blur: 42,
+  colors: ['rgba(255, 250, 240, 0.87)', 'rgba(252, 231, 205, 0.60)', 'rgba(255, 246, 233, 0.81)'],
+  // Without blur (Android, or Reduce Transparency on), the same cream run, opaque.
+  opaque: ['#FFFAF0', '#FAECD9', '#FFF5E4'],
+  start: { x: 0.14, y: 0 },
+  end: { x: 0.86, y: 1 },
+  rim: 'rgba(255, 255, 255, 0.90)',
+};
+// The soft brown lift under floating glass and the avatar.
+const floatShadow = {
+  shadowColor: '#62472D', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 13, elevation: 5,
+};
+// A warmer, deeper lift than cardShadow, for tiles that should feel glazed and raised.
+const liftShadow = {
+  shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 3,
+};
+
 const text = StyleSheet.create({
   // The one large line a page opens with ("What sounds good?").
   heroTitle: { fontSize: 37, lineHeight: 43, fontWeight: '800', letterSpacing: -0.6, color: colors.ink },
@@ -110,4 +130,7 @@ const spot = StyleSheet.create({
   meta: { fontSize: 14, fontWeight: '500', color: colors.spotMeta },
 });
 
-module.exports = { colors, GUTTER, GRID_GAP, CARD_RADIUS, tileWidth, cardShadow, artFade, onArt, text, controls, spot };
+module.exports = {
+  colors, GUTTER, GRID_GAP, CARD_RADIUS, tileWidth, cardShadow, artFade, onArt, text, controls, spot,
+  glass, floatShadow, liftShadow,
+};

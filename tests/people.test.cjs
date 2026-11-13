@@ -180,6 +180,50 @@ test('person: shows their bio, public picks without empty slots, and public list
   assert.ok(bare.texts().includes('Public lists'));
 });
 
+const byTestID = (screen, id) => screen.renderer.root.findAll(node => node.props.testID === id && typeof node.type === 'string')[0]
+  ?? screen.renderer.root.findAll(node => node.props.testID === id)[0];
+const flatStyle = node => Object.assign({}, ...[node.props.style].flat(Infinity).filter(Boolean));
+const ancestorWith = (node, test) => { for (let at = node; at; at = at.parent) if (at.props?.style && test(flatStyle(at))) return at; return null; };
+
+test('person: the header shows free stats and a backdrop from their #1 pick, falling back to their colour', async () => {
+  const h = createHarness({ documents: { ...base, ...maya, 'publicLists/m1': { ...maya['publicLists/m1'], followerCount: 3 } } });
+  const screen = await mount(h, 'screens/PersonScreen.js', { params: { uid: 'maya-uid' } });
+  assert.equal(byTestID(screen, 'profile-stats').props.accessibilityLabel, '2 picks, 2 public lists, 3 list follows');
+  assert.equal(screen.texts().includes('Top 4'), true);
+  const art = byTestID(screen, 'profile-backdrop').findAllByType('Image');
+  assert.equal(art.length, 1, 'a Fall #1 pick shows the fall illustration');
+  assert.match(String(art[0].props.source), /fall2\.png$/);
+
+  // A #1 pick with no season (a place they added) washes the backdrop in their avatar colour instead.
+  h.documents.set('profiles/maya-uid', { ...maya['profiles/maya-uid'], top4: { vancouver: [steps, farm] } });
+  const own = await mount(h, 'screens/PersonScreen.js', { params: { uid: 'maya-uid' } });
+  const backdrop = byTestID(own, 'profile-backdrop');
+  assert.equal(backdrop.findAllByType('Image').length, 0);
+  assert.ok(backdrop.findAll(node => flatStyle(node).backgroundColor === '#A7C8FF').length, 'the wash uses their colour');
+
+  // No picks: still the colour wash, and the stats read zero picks.
+  h.documents.set('profiles/maya-uid', { username: 'maya', avatarColor: '#A7C8FF' });
+  const bare = await mount(h, 'screens/PersonScreen.js', { params: { uid: 'maya-uid' } });
+  assert.equal(byTestID(bare, 'profile-backdrop').findAllByType('Image').length, 0);
+  assert.match(byTestID(bare, 'profile-stats').props.accessibilityLabel, /^0 picks, /);
+});
+
+test('profile: who-can-see-Top-4 sits in a light card, and Share is a round glass button', async () => {
+  const h = createHarness({ documents: {
+    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm], public: true } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm] } },
+  } });
+  const screen = await mount(h, 'screens/ProfileScreen.js');
+  assert.ok(screen.texts().includes('Anyone on SznLuv can see these.'));
+  const toggle = screen.renderer.root.findByType('Switch');
+  const card = ancestorWith(toggle.parent, style => 'backgroundColor' in style);
+  assert.equal(flatStyle(card).backgroundColor, '#FFFFFF', 'a light card, not the old dark row');
+  const share = screen.button('Share profile');
+  assert.ok(share);
+  assert.ok(ancestorWith(share, style => style.width === 48 && style.height === 48), 'round, 48pt');
+  assert.ok(screen.button('Edit profile'));
+});
+
 test('person: following is separate from following their lists, and names where to find them', async () => {
   const h = createHarness({ documents: { ...base, ...maya } });
   const screen = await mount(h, 'screens/PersonScreen.js', { params: { uid: 'maya-uid' } });

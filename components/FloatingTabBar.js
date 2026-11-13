@@ -1,39 +1,19 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import {
-  AccessibilityInfo, Animated, Platform, StyleSheet, TouchableOpacity, View, useWindowDimensions,
+  Animated, Platform, StyleSheet, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { selectionAsync } from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import useBlurEnabled from '../hooks/useBlurEnabled';
 import useReduceMotion from '../hooks/useReduceMotion';
 import { FLOATING_BAR_HEIGHT, useFloatingNavigationLayout } from '../navigation/floatingNavigationLayout';
 import pressTab from '../navigation/pressTab';
+import { glass } from './theme';
 
 const PILL_INSET = 7;
 const SLOT_WIDTH = 84;
 const ICON_COLOR = '#333333';
-
-function useBlurEnabled() {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-
-    let subscribed = true;
-    let changed = false;
-    const listener = AccessibilityInfo.addEventListener('reduceTransparencyChanged', reduced => {
-      changed = true;
-      setEnabled(!reduced);
-    });
-    AccessibilityInfo.isReduceTransparencyEnabled().then(reduced => {
-      if (subscribed && !changed) setEnabled(!reduced);
-    }).catch(() => {});
-    return () => {
-      subscribed = false;
-      listener.remove();
-    };
-  }, []);
-  return enabled;
-}
 
 export default function FloatingTabBar({ state, navigation, insets, items }) {
   const { width } = useWindowDimensions();
@@ -84,13 +64,11 @@ export default function FloatingTabBar({ state, navigation, insets, items }) {
       <View style={styles.shadow}>
         <View style={[styles.pill, !blurEnabled && styles.opaque]}>
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            {blurEnabled && <BlurView intensity={42} tint="light" style={StyleSheet.absoluteFillObject} />}
+            {blurEnabled && <BlurView intensity={glass.blur} tint="light" style={StyleSheet.absoluteFillObject} />}
             <LinearGradient
-              colors={blurEnabled
-                ? ['rgba(255, 250, 240, 0.87)', 'rgba(252, 231, 205, 0.60)', 'rgba(255, 246, 233, 0.81)']
-                : ['#FFFAF0', '#FAECD9', '#FFF5E4']}
-              start={{ x: 0.14, y: 0 }}
-              end={{ x: 0.86, y: 1 }}
+              colors={blurEnabled ? glass.colors : glass.opaque}
+              start={glass.start}
+              end={glass.end}
               style={StyleSheet.absoluteFillObject}
             />
             <View style={[StyleSheet.absoluteFillObject, styles.rim]} />

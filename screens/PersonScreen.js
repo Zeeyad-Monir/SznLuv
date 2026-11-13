@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
 import EmptyCard from '../components/EmptyCard';
+import { GlassButton } from '../components/GlassSurface';
 import ProfileView from '../components/ProfileSections';
 import { useSnackbar } from '../components/Snackbar';
 import { GUTTER, colors, controls } from '../components/theme';
@@ -147,16 +148,22 @@ function PublicProfile({ navigation, uid, targetUid, targetUsername }) {
       onPressPick={ref => openSpot(navigation, ref)}
       actions={!isMe && (
         <>
-          <TouchableOpacity style={[following ? controls.secondary : controls.primary, styles.grow, styles.withIcon]}
-            accessibilityRole="button" accessibilityState={{ selected: following }}
-            accessibilityLabel={following ? `Following ${person.username}. Unfollow` : `Follow ${person.username}`} onPress={toggleFollow}>
-            <Ionicons name={following ? 'checkmark' : 'add'} size={20} color={following ? colors.ink : colors.white} />
-            <Text style={following ? controls.secondaryText : controls.primaryText}>{following ? 'Following' : `Follow ${person.username}`}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[controls.secondary, styles.square]} accessibilityRole="button"
-            accessibilityLabel="More options" onPress={openMenu}>
+          {following ? (
+            <GlassButton accessibilityState={{ selected: true }} accessibilityLabel={`Following ${person.username}. Unfollow`} onPress={toggleFollow}>
+              <Ionicons name="checkmark" size={20} color={colors.ink} />
+              <Text style={controls.secondaryText}>Following</Text>
+            </GlassButton>
+          ) : (
+            <TouchableOpacity style={[controls.primary, styles.follow]} activeOpacity={0.85}
+              accessibilityRole="button" accessibilityState={{ selected: false }}
+              accessibilityLabel={`Follow ${person.username}`} onPress={toggleFollow}>
+              <Ionicons name="add" size={20} color={colors.white} />
+              <Text style={controls.primaryText}>{`Follow ${person.username}`}</Text>
+            </TouchableOpacity>
+          )}
+          <GlassButton round accessibilityLabel="More options" onPress={openMenu}>
             <Ionicons name="ellipsis-horizontal" size={20} color={colors.ink} />
-          </TouchableOpacity>
+          </GlassButton>
         </>
       )} />
   );
@@ -166,7 +173,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.profile },
   centred: { alignItems: 'center', justifyContent: 'center' },
   unavailable: { justifyContent: 'center', paddingHorizontal: GUTTER },
-  grow: { flex: 1 },
-  withIcon: { flexDirection: 'row', gap: 6 },
-  square: { width: 48, paddingHorizontal: 0 },
+  // The ink pill matches the glass buttons' fully rounded ends.
+  follow: { flex: 1, height: 48, borderRadius: 24, flexDirection: 'row', gap: 6 },
 });

@@ -1,11 +1,13 @@
 // Your own profile: who you are, your Top 4, and the lists you have made public.
 import React, { useCallback, useContext, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
+import { Ionicons } from '@expo/vector-icons';
 import AddSpotSheet from '../components/AddSpotSheet';
 import useMySpots from '../hooks/useMySpots';
 import EmptyCard from '../components/EmptyCard';
+import { GlassButton } from '../components/GlassSurface';
 import ProfileView from '../components/ProfileSections';
 import { useSnackbar } from '../components/Snackbar';
 import { GUTTER, colors, controls, text } from '../components/theme';
@@ -21,6 +23,8 @@ import { MAX_PICKS, addPick, cityTop4, exposedLocations, movePick, removePick, s
 import { canNavigate, openSpot } from '../services/venueNavigation';
 
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
+// Dark enough to read as "off" on the white visibility card.
+const SWITCH_OFF = '#D6CCBE';
 
 export default function ProfileScreen({ navigation }) {
   const { user, username } = useContext(AuthContext);
@@ -135,36 +139,38 @@ function OwnProfile({ navigation, uid, username }) {
       navigation={navigation} lists={publicLists} picks={city.picks} onPressPick={pickMenu} onAdd={() => setAdding(true)}
       actions={(
         <>
-          <TouchableOpacity style={controls.secondary} accessibilityRole="button"
+          <GlassButton accessibilityLabel="Edit profile"
             onPress={() => {
               if (canNavigate(navigation)) navigation.navigate('EditProfile', {
                 bio: profile?.bio ?? '', avatarColor: profile?.avatarColor ?? null,
                 ...(profile?.avatarPhotoId ? { avatarPhotoId: profile.avatarPhotoId } : {}),
               });
             }}>
+            <Ionicons name="pencil" size={16} color={colors.ink} />
             <Text style={controls.secondaryText}>Edit profile</Text>
-          </TouchableOpacity>
+          </GlassButton>
           {!!profile && (
-            <TouchableOpacity style={controls.secondary} accessibilityRole="button" onPress={shareProfile}>
-              <Text style={controls.secondaryText}>Share profile</Text>
-            </TouchableOpacity>
+            <GlassButton round accessibilityLabel="Share profile" onPress={shareProfile}>
+              <Ionicons name="share-outline" size={20} color={colors.ink} />
+            </GlassButton>
           )}
         </>
       )}
       top4Controls={(
-        <>
-          <View style={styles.row}>
-            <Text style={[styles.rowText, styles.rowLabel]}>Show Top 4 on my profile</Text>
-            <Switch
-              trackColor={{ false: '#A9A9A9', true: '#D9E5B6' }} thumbColor="#FFFFFF" ios_backgroundColor="#A9A9A9"
-              value={city.public} onValueChange={togglePublic} disabled={!city.picks.length}
-              accessibilityLabel="Show Top 4 on my profile"
-            />
+        <View style={styles.visibility}>
+          <Ionicons name={city.public ? 'globe-outline' : 'lock-closed'} size={20} color={colors.ink} />
+          <View style={styles.visibilityWords}>
+            <Text style={styles.visibilityLabel}>Show Top 4 on my profile</Text>
+            <Text style={[text.meta, styles.hint]}>
+              {!city.picks.length ? 'Pick up to four favourite spots.' : city.public ? 'Anyone on SznLuv can see these.' : 'Only you can see these.'}
+            </Text>
           </View>
-          <Text style={[text.meta, styles.hint]}>
-            {!city.picks.length ? 'Pick up to four favourite spots.' : city.public ? 'Anyone on SznLuv can see these.' : 'Only you can see these.'}
-          </Text>
-        </>
+          <Switch
+            trackColor={{ false: SWITCH_OFF, true: '#D9E5B6' }} thumbColor="#FFFFFF" ios_backgroundColor={SWITCH_OFF}
+            value={city.public} onValueChange={togglePublic} disabled={!city.picks.length}
+            accessibilityLabel="Show Top 4 on my profile"
+          />
+        </View>
       )}>
 
       {adding && (
@@ -184,11 +190,13 @@ function OwnProfile({ navigation, uid, username }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.profile },
   status: { justifyContent: 'center', paddingHorizontal: GUTTER },
-  row: {
-    minHeight: 50, paddingHorizontal: 15, borderRadius: 8, backgroundColor: colors.darkRow,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  // Who can see Top 4: a light card in the spot-page look, not a dark bar on the cream page.
+  visibility: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14,
+    borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceBorder,
+    shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1,
   },
-  rowText: { fontSize: 16, fontWeight: '500', color: colors.white },
-  rowLabel: { flex: 1, paddingVertical: 8, paddingRight: 8 },
-  hint: { marginTop: 8 },
+  visibilityWords: { flex: 1 },
+  visibilityLabel: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  hint: { marginTop: 2 },
 });
