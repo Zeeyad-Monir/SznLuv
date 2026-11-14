@@ -108,7 +108,7 @@ test('season Map uses the same filtered ordering and search results as Spots', a
   assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), cards);
   await act(async () => screen.all('TextInput')[0].props.onChangeText('Reifel'));
   assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), ['Reifel Bird Sanctuary']);
-  await screen.press('Map spot 1, Reifel Bird Sanctuary');
+  await act(async () => screen.all('Marker')[0].props.onPress());
   assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: catalogueRef('Reifel Bird Sanctuary') }]);
   assert.equal(screen.button('Map').props.accessibilityState.selected, true);
   await screen.press('Spots');

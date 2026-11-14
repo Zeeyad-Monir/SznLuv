@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { hasCoordinates } from '../services/spotDiscovery';
-import { colors, text } from './theme';
+import { colors } from './theme';
 
 export function mappable(entries) {
   return entries.map((entry, index) => ({ ...entry, number: index + 1 }))
@@ -31,27 +31,19 @@ export default function ListMap({ points, onOpen }) {
   }, [coordinateKey, ready, laidOut]);
 
   return (
-    <>
-      <View style={styles.frame}>
-        <MapView ref={map} style={styles.map} initialRegion={initialRegion.current}
-          onMapReady={() => setReady(true)} onLayout={() => setLaidOut(true)}>
-          {points.map((entry, index) => (
-            <Marker key={entry.spot.key} coordinate={coordinates[index]} title={entry.spot.name}
-              onPress={() => onOpen(entry.ref)} onCalloutPress={() => onOpen(entry.ref)}>
-              <View style={styles.pin}>
-                <Text style={styles.number} allowFontScaling={false}>{entry.number}</Text>
-              </View>
-            </Marker>
-          ))}
-        </MapView>
-      </View>
-      {points.map(entry => (
-        <TouchableOpacity key={entry.spot.key} style={styles.link} onPress={() => onOpen(entry.ref)}
-          accessibilityRole="button" accessibilityLabel={`Map spot ${entry.number}, ${entry.spot.name}`}>
-          <Text style={text.summary}>{entry.number}. {entry.spot.name}</Text>
-        </TouchableOpacity>
-      ))}
-    </>
+    <View style={styles.frame}>
+      <MapView ref={map} style={styles.map} initialRegion={initialRegion.current}
+        onMapReady={() => setReady(true)} onLayout={() => setLaidOut(true)}>
+        {points.map((entry, index) => (
+          <Marker key={entry.spot.key} coordinate={coordinates[index]} title={entry.spot.name}
+            onPress={() => onOpen(entry.ref)} onCalloutPress={() => onOpen(entry.ref)}>
+            <View style={styles.pin}>
+              <Text style={styles.number} allowFontScaling={false}>{entry.number}</Text>
+            </View>
+          </Marker>
+        ))}
+      </MapView>
+    </View>
   );
 }
 
@@ -63,5 +55,4 @@ const styles = StyleSheet.create({
     borderColor: colors.white, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
   },
   number: { color: colors.white, fontSize: 13, fontWeight: '800' },
-  link: { minHeight: 44, justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 12 },
 });

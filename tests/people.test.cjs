@@ -506,8 +506,6 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   await act(async () => screen.all('Marker')[1].props.onPress());
   const opened = h.navigations.at(-1);
   assert.deepEqual(opened, ['SpotDetailScreen', { spot: maan, sourceListId: 'm1' }]);
-  await screen.press('Map spot 2, Maan Farms');
-  assert.deepEqual(h.navigations.at(-1), opened);
   await screen.press('Spots');
   await screen.press('View details for Maan Farms');
   assert.deepEqual(h.navigations.at(-1), opened);
@@ -516,7 +514,8 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   const single = await open('one');
   await single.press('Map');
   assert.ok(single.texts().includes('1 of 2 spots on the map'));
-  assert.ok(single.button('Map spot 2, Aldor Family Farm'), 'number matches the card position');
+  assert.equal(single.all('Marker')[0].props.title, 'Aldor Family Farm');
+  assert.ok(!single.texts().some(t => /^2\. /.test(t)), 'no numbered list under the map');
   assert.equal(single.all('MapView')[0].props.initialRegion.latitude, single.all('Marker')[0].props.coordinate.latitude);
   await act(async () => single.renderer.unmount());
 
