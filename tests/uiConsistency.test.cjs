@@ -158,6 +158,20 @@ test('the shared detail layout orders venue and personal content and offers addr
   const sparse = await open(catalogueRef('Sunset Beach'));
   assert.ok(sparse.texts().includes('Sunset Beach'));
   assert.equal(sparse.button('Directions'), undefined);
+  // Every spot page has the same cards in the same order; anything missing reads N/A.
+  const cards = ['About', 'Hours', 'Cost', 'Best season', 'Good to know'];
+  const notAvailable = screen => screen.all('Text').filter(node => node.props.children === 'N/A')
+    .map(node => node.props.accessibilityLabel);
+  for (const screen of [venue, personal, sparse]) {
+    const positions = cards.map(label => screen.texts().indexOf(label));
+    assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])), String(positions));
+  }
+  assert.deepEqual(notAvailable(venue), []);
+  assert.deepEqual(notAvailable(personal), ['Cost: not available', 'Best season: not available', 'Website: not available']);
+  assert.deepEqual(notAvailable(sparse), [
+    'About: not available', 'Hours: not available', 'Cost: not available', 'Good to know: not available', 'Website: not available',
+  ]);
+  assert.ok(sparse.texts().includes('Website'));
   await act(async () => { venue.renderer.unmount(); personal.renderer.unmount(); sparse.renderer.unmount(); });
 });
 

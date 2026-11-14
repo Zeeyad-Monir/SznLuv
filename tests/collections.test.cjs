@@ -131,6 +131,39 @@ test('Spring cards, category filters and map open all twenty complete venue reco
   await act(async () => screen.renderer.unmount());
 });
 
+test('every catalogue spot with real data has the same detail fields as the Winter template', () => {
+  const { catalogueSpots, findCatalogueSpot } = require('../services/catalogue');
+  const { findSpotByName } = require('../services/spots');
+  const spots = catalogueSpots.filter(spot => !spot.placeholderAddress)
+    .map(spot => ({ ...findCatalogueSpot(spot.name), ...findSpotByName(spot.name) }));
+  assert.equal(spots.length, fallSpotNames.length + winterSpotNames.length + springSpotNames.length);
+  for (const spot of spots) {
+    assert.ok(spot.tagline && spot.hours && spot.cost && spot.websiteUrl, spot.name);
+    assert.equal(spot.about.length, 3, spot.name);
+    assert.deepEqual(spot.about.map(paragraph => paragraph.startsWith('Good to know:')), [false, false, true], spot.name);
+  }
+});
+
+test('Fall spot pages show hours, cost and visit links like Winter', async () => {
+  const { findSpotByName } = require('../services/spots');
+  const h = createHarness();
+  for (const name of ['Aldor Family Farm', 'Fright Nights at Playland', 'Stanley Park']) {
+    const spot = findSpotByName(name);
+    const detail = await mount(h, 'screens/SpotDetailScreen.js', { params: { spot: { k: 'c', name } } });
+    const texts = detail.texts();
+    for (const text of ['Hours', spot.hours, 'Cost', spot.cost, 'Best season', 'Fall', 'Good to know']) assert.ok(texts.includes(text), `${name}: ${text}`);
+    assert.ok(texts.includes(spot.about[2].slice('Good to know:'.length).trim()), name);
+    assert.ok(!texts.includes('N/A'), name);
+    await detail.press('Official website');
+    assert.deepEqual(h.calls.at(-1), ['openURL', spot.websiteUrl]);
+    if (spot.bookingUrl) {
+      await detail.press('Tickets & booking');
+      assert.deepEqual(h.calls.at(-1), ['openURL', spot.bookingUrl]);
+    }
+    await act(async () => detail.renderer.unmount());
+  }
+});
+
 // ---------------------------------------------------------------- Hearts on the season cards
 
 test('season card heart keeps the whole collection, without opening it or filling its spots\' hearts', async () => {

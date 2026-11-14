@@ -14,6 +14,10 @@ Researched 2026-11-03. Research only, no code changes. Twenty new fall spots, ea
 - **Photo**: the app needs one image per venue page (`require('../assets/...')`). I didn't download any. Use your own photos or get permission from the venue. Don't scrape.
 
 
+## Implementation status (2026-11-14)
+
+All 50 Fall spots now store the same detail fields as Winter and Spring: `hours`, `cost`, `websiteUrl` and, where there is a ticketing page, `bookingUrl`. They are taken from the verified audit in sections 12–16. The "Good to know" paragraph now holds practical tips only (booking, parking, pets, access), and dates and prices live in `hours` and `cost`. Those quote the 2026 season and need a yearly refresh. Every spot page uses the same cards in the same order, and any missing detail shows "N/A".
+
 ## Implementation status (2026-11-04)
 
 These 20 spots are now in the app. Twenty more were added on 2026-11-09; see sections 9 and 10.

@@ -2,7 +2,8 @@
 // Plain CommonJS (no React, no assets) so it can be unit-tested directly.
 //
 // Research and venue sources: docs/FALL_SPOTS_CATALOGUE.md.
-// Dates and prices in "Good to know" paragraphs are labelled "In 2026" because they change every year.
+// Each spot has the same detail fields as Winter and Spring (services/seasonSpots.js): hours, cost, websiteUrl
+// and an optional bookingUrl. Hours and cost quote the 2026 season and need a yearly refresh.
 //
 // Search tags describe the spot itself and include its locality. They are used only by discovery.
 //
@@ -31,8 +32,11 @@ const legacyFallSpots = [
     about: [
       'Take a tractor hayride out to the pumpkin patch at this working farm in Glen Valley. Back at the barns, visit the farm animals or catch the goat parade, usually at 9:30 am and 5:30 pm during pumpkin season.',
       'Stop at the Farmacy for baked goods and seasonal produce. The main farm area is mostly stroller- and wheelchair-friendly, with some bumpy gravel and dirt. Leave pet dogs at home.',
-      'Good to know: In 2026 the patch ran September 19 to October 31, 9 am to 6 pm daily, with last entry at 5 pm. Single tickets were listed at $21 for ages three and up, and pumpkins cost extra. The farm recommends booking online, especially on weekends.',
+      'Good to know: Book online ahead of busy weekends, since gate tickets depend on capacity. Pumpkins are paid for separately, so bring a bag to carry them home.',
     ],
+    hours: '2026 season ran Sep 19–Oct 31, daily 9 am–6 pm, last entry 5 pm. 2027 dates pending.',
+    cost: 'In 2026, single tickets were $21 for ages 3+. Pumpkins extra. 2027 rates pending.',
+    websiteUrl: 'https://aldoracresfamilyfarm.ca/',
     latitude: 49.15467,
     longitude: -122.53112,
     searchDescription: 'A working farm in Glen Valley with a pumpkin patch, hayrides, farm animals, forest walks and a seasonal market.',
@@ -51,8 +55,12 @@ const legacyFallSpots = [
     about: [
       'Ride a covered hay wagon to the LegenDairy Pumpkin Patch and pick a pumpkin from the field. Back at the barn you can see the dairy cows, meet other farm animals, and look for R2D2, the milking robot.',
       'The outing runs rain or shine. Wear boots if it’s muddy and bring a bag to carry your pumpkins, which are paid for separately. Leave pets at home.',
-      'Good to know: In 2026 the patch ran weekends September 26 to October 31, plus October 12 and 23, from 10 am to 5 pm. September 30 opened at 11 am. Last entry was 4 pm. Online or gate admission was $15 for adults and $13 for ages 2–18 and seniors 65+, plus GST. Children under two were free.',
+      'Good to know: Tickets are sold online or at the gate. Main and overflow parking are on site. Wheelchair access onto the wagon isn’t published, so call ahead if you need it.',
     ],
+    hours: '2026 season ran weekends Sep 26–Oct 31 plus Oct 12 and 23, 10 am–5 pm, last entry 4 pm. 2027 dates pending.',
+    cost: 'In 2026, $15 adults and $13 ages 2–18 and 65+, plus GST. Under 2 free. Pumpkins extra.',
+    websiteUrl: 'https://www.eagleacres.ca/pumpkin-patch',
+    bookingUrl: 'https://eagleacres.tickit.ca/',
     latitude: 49.15879,
     longitude: -122.55840,
     searchDescription: 'Take a covered hayride to the pumpkin patch, then visit farm animals and see the R2D2 milking robot at this working dairy.',
@@ -71,8 +79,11 @@ const legacyFallSpots = [
     about: [
       'At Laity’s South patch, follow the corn maze, race a friend through side-by-side paths, or explore Western Pumpkin Town. The pumpkin cannon fires hourly during public opening hours. South is designed with ages four and up in mind.',
       'Use the signed South parking entrance on Laity Street. Laity North is a separate patch on 128 Avenue, geared toward younger children, with its own admission. Both have accessible parking and ask visitors to leave pets at home.',
-      'Good to know: In 2026 South ran September 26 to October 31, generally noon to 5 pm on weekdays and 10 am to 6 pm on weekends and holidays. Hours varied on some dates. Gate-only tickets were $13 on weekdays or $16 on weekends and holidays for ages three and up, tax included. Pumpkins cost extra.',
+      'Good to know: Hours vary on some dates, so check the South calendar before you go. Tickets are sold at the gate. Weekdays are quieter if you want shorter lines for the maze.',
     ],
+    hours: '2026 season ran Sep 26–Oct 31, weekdays noon–5 pm, weekends and holidays 10 am–6 pm. 2027 dates pending.',
+    cost: 'In 2026, gate tickets were $13 weekdays or $16 weekends and holidays, ages 3+, tax included. Pumpkins extra.',
+    websiteUrl: 'https://laitypumpkinpatch.com/south/',
     latitude: 49.23275,
     longitude: -122.63195,
     searchDescription: 'The South location of a family-run pumpkin farm, with a corn maze, farm animals and seasonal displays.',
@@ -87,6 +98,9 @@ const legacyFallSpots = [
 //  title/detailAddress: venue page heading and address line
 //  tagline:             one-line "activity box"
 //  about:               paragraphs for the expandable About text; the last one is the practical "Good to know"
+//                       tips (no dates or prices: those go in hours and cost)
+//  hours/cost:          the facts card on the venue page
+//  websiteUrl/bookingUrl: the visit links
 const detailedFallSpots = [
   // ---------------------------------------------------------------- Pumpkin Patches & Harvest Farms
   {
@@ -106,8 +120,11 @@ const detailedFallSpots = [
     about: [
       'Ride a tractor wagon into the pumpkin fields, take a turn through the corn maze, and stop at the animal viewing area. The 2026 patch also had live music and train rides on weekends.',
       'Finish at the farm market, which has separate hours and free entry. There’s free parking on site, and some farm paths are uneven.',
-      'Good to know: In 2026 the patch opened September 26–27 and ran daily September 30 to October 31. Tickets were sold at the farm from 9 am to 4 pm on weekdays ($15) and 10 am to 4:30 pm on weekends and holidays ($20), plus tax. Ages two and under were free. Paid admission included a pumpkin and a Spartan apple.',
+      'Good to know: Tickets are sold at the farm’s ticket hut, and paid entry includes a pumpkin and a Spartan apple. Parking is free. Wear sturdy shoes for the uneven paths.',
     ],
+    hours: '2026 season ran Sep 26–27 and daily Sep 30–Oct 31. Tickets 9 am–4 pm weekdays, 10 am–4:30 pm weekends. 2027 dates pending.',
+    cost: 'In 2026, $15 weekdays or $20 weekends and holidays, plus tax. Ages 2 and under free.',
+    websiteUrl: 'https://richmondcountryfarms.com/',
   },
   {
     placeID: 'westham_island_herb_farm',
@@ -126,8 +143,11 @@ const detailedFallSpots = [
     about: [
       'Cross the single-lane wooden bridge from Ladner and you are on Westham Island, where the herb farm sets up a free fall display: Pumpkintown, Sunflower Lane, and a crowd of scarecrows.',
       'You only pay for the pumpkins and produce you take home. The Reifel Bird Sanctuary is nearby, so the two make a natural pairing for a day on the island.',
-      'Good to know: In 2026 the pumpkin patch and store were open daily in October from 10 am to 5 pm. Entry was free, and pumpkins were sold separately. Check the farm’s seasonal hours before driving out.',
+      'Good to know: The island is reached by a single-lane wooden bridge, so expect short waits on busy weekends. Check the farm’s seasonal hours before driving out.',
     ],
+    hours: '2026 season ran Oct 1–31, daily 10 am–5 pm. 2027 dates pending.',
+    cost: 'Free entry. Pumpkins and produce sold separately.',
+    websiteUrl: 'https://westhamislandherb.ca/pumpkins/',
   },
   {
     placeID: 'hazelmere_pumpkin_patch',
@@ -146,8 +166,11 @@ const detailedFallSpots = [
     about: [
       'Ride a wagon past the ten-acre pumpkin field at Gabriel Farms, try the mini corn maze, and visit the goats, sheep, and other farm animals. The vintage firetruck is a favourite stop in the play area.',
       'Choose a pumpkin from the field and pay for it separately. Friendly dogs are welcome on a leash.',
-      'Good to know: In 2026, weekends from September 19 to October 31 and Thanksgiving Monday ran 10 am to 5 pm, with entry by 4 pm. Admission was $12.50 for ages two and up. October 1–30 weekday afternoons ran 2 to 5 pm for $10 per person. Tickets were sold at the farm.',
+      'Good to know: Tickets are sold at the farm only. On weekends, entry closes at 4 pm. The wagon ride, mini corn maze and play area are included. Friendly leashed dogs are welcome.',
     ],
+    hours: '2026 season ran weekends Sep 19–Oct 31 and Thanksgiving Monday, 10 am–5 pm, plus Oct 1–30 weekdays 2–5 pm.',
+    cost: 'In 2026, $12.50 for ages 2+ on weekends and $10 on weekday afternoons. Pumpkins extra.',
+    websiteUrl: 'https://www.hazelmerepumpkinpatch.ca/',
   },
   {
     placeID: 'bog_riverside_cranberry',
@@ -166,8 +189,11 @@ const detailedFallSpots = [
     about: [
       'At harvest, the farm floods its fields so the cranberries float to the surface. Follow the self-guided audio tour around the bog and see whichever stage of the harvest is underway when you visit.',
       'Book the separate Cranberry Plunge to pull on farm-supplied waders and step among the floating berries. The farm lists it for children over five and adults, with an adult accompanying children 12 and under. The farm has a no-pets policy.',
-      'Good to know: In 2026 the harvest tours ran October 9, 10 and 12, with separately scheduled plunge sessions from September 30 to October 12. Listed prices were $7.50–$12.50 for the tour and $15 plus fees for the plunge. Book timed tickets online or try the gate if space remains.',
+      'Good to know: Book timed tickets online, or try the gate if space remains. The plunge is for ages five and up, and children 12 and under need an adult. No pets.',
     ],
+    hours: '2026 tours ran Oct 9, 10 and 12, with plunge sessions Sep 30–Oct 12. 2027 dates pending.',
+    cost: 'In 2026, tours were $7.50–$12.50 and the plunge was $15 plus fees.',
+    websiteUrl: 'https://www.riversidecranberries.ca/tours',
   },
   {
     placeID: 'hopcott_farms',
@@ -186,8 +212,11 @@ const detailedFallSpots = [
     about: [
       'Hopcott started growing cranberries in 1996. On its fall harvest tour, learn how the berries are grown and gathered, then spend time by the flooded bog. The full visit takes about an hour.',
       'Add the optional plunge to put on chest waders and step among the cranberries. The plunge is for ages 10 and up and has wader size limits. Leashed dogs are welcome on the tour. Follow your ticket instructions for check-in.',
-      'Good to know: In 2026 scheduled tours ran on select dates October 16–25. Tickets for ages 10–64 were $19 for the tour or $33 with the plunge, plus GST. Seniors paid $17 or $31, and ages nine and under could join the tour free. The bog is open to visitors by booked tour.',
+      'Good to know: The bog is only open to visitors on a booked tour, which lasts about an hour. Kids nine and under ride free on an adult’s lap. Leashed dogs are welcome.',
     ],
+    hours: '2026 tours ran on select dates Oct 16–25, with slots from 10 am to 4 pm. 2027 dates pending.',
+    cost: 'In 2026, $19 for the tour or $33 with the plunge for ages 10–64, plus GST. Seniors $17/$31.',
+    websiteUrl: 'https://hopcottfarms.ca/events/',
   },
   {
     placeID: 'maan_farms',
@@ -207,8 +236,11 @@ const detailedFallSpots = [
     about: [
       'Daytime Fall at the Farm centres on the Forest Pumpkin Patch and two corn mazes. There are Highland cows and other farm animals to see, plus zip lines and a corn play pit in Barnyard Adventureland.',
       'The separate Halloween Fright Festival takes over on select nights, with four haunted attractions, a midway, and an illuminated pumpkin patch. The operator recommends the haunts for ages 14 and up and requires a waiver.',
-      'Good to know: In 2026 the daytime event ran September 12 to November 1, generally 9 am to 6 pm, with advance admission for ages three and up listed at $17–$31 before tax and fees. The evening festival ran on select nights October 2–31 with its own tickets from $69. Leashed dogs were welcome on designated daytime Dog Days.',
+      'Good to know: Buy daytime tickets ahead, since prices rise on weekends and holidays. The evening haunts are recommended for 14+. Leashed dogs are welcome on designated Dog Days.',
     ],
+    hours: '2026 daytime season ran Sep 12–Nov 1, generally 9 am–6 pm. Evening festival on select nights in October.',
+    cost: 'In 2026, daytime advance admission was $17–$31 for ages 3+, before tax and fees. Evening tickets from $69.',
+    websiteUrl: 'https://maanfarms.com/pages/fall-at-the-farm',
   },
 
   {
@@ -228,8 +260,11 @@ const detailedFallSpots = [
     about: [
       "Every fall, Taves turns its Abbotsford farm into the Magic of Fall, with more than 30 acres to wander. Stroll Autumn's Avenue, take on three corn mazes, and choose a pumpkin from the huge pumpkin garden.",
       'The u-pick orchards sell apples by the bag, and the activity passes cover the petting barn, jumping pillows, and the 150-foot slide. Leashed dogs are welcome in the pumpkin patch and maze. The orchards and store are pet-free.',
-      'Good to know: In 2026 Magic of Fall ran September 12 to October 31, 10 am to 5:30 pm weekdays and 9:30 am to 6 pm weekends and holidays. Weekday picking had free entry and activity passes started at $24.70. At peak weekends and holidays, the Picking Pass was $12.95 for ages three and up. Activity pass holders also needed a timed parking pass if driving.',
+      'Good to know: Weekday picking has free entry. Activity pass holders who drive also need a timed parking pass. Arrive by 4:30 pm to fit in every activity. Leashed pets in designated areas.',
     ],
+    hours: '2026 Magic of Fall ran Sep 12–Oct 31, weekdays 10 am–5:30 pm, weekends and holidays 9:30 am–6 pm.',
+    cost: 'In 2026, activity passes from $24.70. Peak weekend picking needed a $12.95 Picking Pass for ages 3+.',
+    websiteUrl: 'https://www.tavesfamilyfarms.com/magic-of-fall-experience/',
   },
   {
     placeID: 'krause_berry_farms',
@@ -249,8 +284,11 @@ const detailedFallSpots = [
     about: [
       'Pick a pumpkin in the field, wander the barley maze, or choose from the pumpkins, squash and gourds at the farm market.',
       'The Waffle Bar serves seasonal pumpkin waffles, and the farm bakery and estate winery are right by the market. Stop for a pie or a glass of fruit wine after the patch.',
-      'Good to know: The farm announced the patch and maze were open on September 27, 2026. Farm and patch entry were free, with pumpkins sold separately. Fall farm hours were Wednesday to Sunday, 9:30 am to 5 pm, and the Waffle Bar closed at 3:30 pm. Use the lot off 248 Street and leave pets and outside food at home.',
+      'Good to know: The Waffle Bar closes at 3:30 pm, earlier than the farm. Use the lot off 248 Street. Leave pets and outside food at home.',
     ],
+    hours: 'Fall farm hours Wednesday–Sunday, 9:30 am–5 pm. In 2026 the patch and maze opened Sep 27.',
+    cost: 'Free farm and patch entry. Pumpkins sold separately.',
+    websiteUrl: 'https://www.krauseberryfarms.com/pages/hours-contact',
   },
   {
     placeID: 'willow_view_farms',
@@ -269,8 +307,11 @@ const detailedFallSpots = [
     about: [
       'Pick apples in this Abbotsford orchard while each variety is ripe. Check the daily orchard map at the entrance for open rows and look for the white picking signs.',
       'Choose from harvested pumpkins and squash at the farm market, where you can also get fresh-pressed cider or a cider slushie. The farm lists its red petting barn as open from after Labour Day through Halloween.',
-      'Good to know: September and October 2026 hours were Tuesday to Sunday and Thanksgiving Monday, 10 am to 5:30 pm. Entry and parking were free, with no booking required. U-pick apples were $1.89/lb on the September list. Bring a bag or buy one on site, and leave pets at home. The farm lists August 2027 for reopening.',
+      'Good to know: No booking is needed. Bring a bag for apples or buy one on site. The farm is closed for now, so check its website before driving out. Leave pets at home.',
     ],
+    hours: '2026 fall hours were Tuesday–Sunday and Thanksgiving Monday, 10 am–5:30 pm. The farm lists August 2027 for reopening.',
+    cost: 'Free entry and parking. U-pick apples were $1.89/lb in September 2026.',
+    websiteUrl: 'https://www.willowviewfarms.com/',
   },
   // ---------------------------------------------------------------- Festivals & Gardens
   {
@@ -290,8 +331,11 @@ const detailedFallSpots = [
     about: [
       'On the Saturday before Thanksgiving, vendor tents and food trucks line the village streets. Browse cranberry preserves and baked goods, pick up fresh cranberries by the Community Hall and catch live performances.',
       'The Lions Club starts the morning with a pancake breakfast. Fort Langley National Historic Site also ran its own cranberry stomp and harvest activities in 2026, with separate admission at the fort.',
-      'Good to know: The 2026 street festival was free to enter and ran October 10, 10 am to 4 pm, with pancakes from 8 am. Food and market purchases cost extra. Glover Road closes to traffic during the festival, so use the Community Hall pin as a walking landmark and check the event map for parking.',
+      'Good to know: Glover Road closes to traffic during the festival, so park outside the village and walk in. Fresh cranberries are sold by the Community Hall.',
     ],
+    hours: '2026 festival ran Oct 10, 10 am–4 pm, with a pancake breakfast from 8 am. 2027 date pending.',
+    cost: 'Free to enter. Food and market purchases extra.',
+    websiteUrl: 'https://www.tourism-langley.ca/the-ultimate-guide-to-langley-in-the-fall/',
   },
   {
     placeID: 'ubc_botanical_garden',
@@ -310,8 +354,11 @@ const detailedFallSpots = [
     about: [
       'Shop for BC-grown apples and apple trees, sip warm cider and catch live music at this UBC Botanical Garden fundraiser. Kids can dive into the giant leaf pile or try the crafts in the arbour.',
       'The 2026 Tasting Tent served more than 50 varieties, including apples rarely sold in stores. It required festival admission and a separate timed ticket, $12 for ages 8 and up. Children seven and under needed free admission and a free tasting ticket if joining the tasting.',
-      'Good to know: In 2026 it ran October 17 and 18, 11 am to 4 pm. Admission for ages 8–64 was $12 early bird, $15 advance or $18 at the gate. Seniors paid $1 less. The last bookable festival slot was 2 pm and the last tasting slot was 3:30 pm. UBC directed drivers to Thunderbird Parkade for the free shuttle. Service animals are welcome.',
+      'Good to know: Book a timed slot ahead. The last tasting slot is mid-afternoon. Park at Thunderbird Parkade for the free shuttle. Service animals are welcome.',
     ],
+    hours: '2026 festival ran Oct 17–18, 11 am–4 pm. 2027 dates pending.',
+    cost: 'In 2026, ages 8–64 paid $12 early bird, $15 advance or $18 at the gate. Seniors $1 less. Tasting Tent $12 extra.',
+    websiteUrl: 'https://botanicalgarden.ubc.ca/apple-festival/',
   },
   {
     placeID: 'vandusen_harvest_days',
@@ -331,8 +378,11 @@ const detailedFallSpots = [
     about: [
       'The Learning Garden and hedge maze get dressed for fall, with pumpkin displays, live bluegrass and folk music, face painting, games and crafts. The Discovery Tent hosts rotating nature activities and demonstrations.',
       'Follow Nickie Lewis’s Sculpture Stroll of biodegradable works and look for sugar maples, ginkgo and bald cypress in fall colour. Programming is included with garden admission or membership. Food trucks sell refreshments separately.',
-      'Good to know: In 2026 it ran weekends from September 26 to October 18 plus Thanksgiving Monday, 10:30 am to 4:30 pm, when garden admission ended. Adults paid $13.27 online before tax and fees or $15.81 at the gate before tax. Kids four and under needed a free ticket. Limited free parking is off West 37th Avenue, with accessible spaces. Service animals are welcome.',
+      'Good to know: Last entry is 30 minutes before the garden closes. Kids four and under need a free ticket. Limited free parking is off West 37th Avenue, with accessible spaces.',
     ],
+    hours: '2026 ran weekends Sep 26–Oct 18 plus Thanksgiving Monday, 10:30 am–4:30 pm. 2027 dates pending.',
+    cost: 'Included with garden admission. In 2026, adults paid $13.27 online or $15.81 at the gate, before tax.',
+    websiteUrl: 'https://vancouver.ca/parks-recreation-culture/harvest-days.aspx',
   },
   {
     placeID: 'nitobe_memorial_garden',
@@ -351,8 +401,11 @@ const detailedFallSpots = [
     about: [
       'Follow the paths around the pond at this traditional Japanese stroll garden, past moss, stone lanterns and a tea house. In autumn, red and gold maples reflect in the water.',
       'The garden has its own Lower Mall entrance. Paid parking is at Fraser River Parkade. Some stone paths are uneven, and washrooms are outside the garden.',
-      'Good to know: In 2026 Nitobe was open Tuesday to Sunday, 10 am to 4:30 pm, from September 8 to October 31. UBC’s visitor page lists winter hours of 10 am to 3 pm from November 1. Published 2026 admission was $10 adult, $8 concession or $25 family before tax at the fall rate, and $7 in winter. Children under 13 need an adult guardian. Service dogs are welcome.',
+      'Good to know: Buy tickets online or at the garden. Children under 13 need an adult. Service animals are welcome. Peak maple colour is usually mid to late October.',
     ],
+    hours: 'Fall 2026: Tuesday–Sunday, 10 am–4:30 pm to Oct 31. Winter hours 10 am–3 pm from Nov 1.',
+    cost: 'In 2026, $10 adult, $8 concession or $25 family at the fall rate, $7 in winter, before tax.',
+    websiteUrl: 'https://botanicalgarden.ubc.ca/nitobe-memorial-garden/',
   },
   {
     placeID: 'sun_yat_sen_garden',
@@ -371,8 +424,11 @@ const detailedFallSpots = [
     about: [
       'Moon Palace fills the courtyards of Chinatown’s classical Chinese garden with lion dances, traditional music, lantern riddles, crafts and mooncake demonstrations.',
       'Write a wish for a floating lantern on the Jade Pond and stay into the evening to see the lanterns lit. The festival takes place inside the ticketed garden, with its entrance at Keefer and Carrall. The adjoining public park is free.',
-      'Good to know: In 2026 Moon Palace ran September 26 and 27, 2 pm to 9 pm. Event tickets were $16 adult, $13 senior, $12 student or youth ages 4–17, and $40 for a family of two adults and up to three children, before tax and ticket fees. Pets stay home.',
+      'Good to know: Buy tickets online. Enter at Keefer and Carrall. There is no visitor lot, so take transit or use nearby paid parking. Leave pets at home.',
     ],
+    hours: '2026 festival ran Sep 26–27, 2–9 pm. 2027 dates pending.',
+    cost: 'In 2026, $16 adult, $13 senior, $12 student or youth, $40 family, before tax and fees.',
+    websiteUrl: 'https://vancouverchinesegarden.com/events/',
   },
 
   {
@@ -392,8 +448,11 @@ const detailedFallSpots = [
     about: [
       'Walk the gravel paths through Edwin and Francisca Darts’s South Surrey garden. During the September Scarecrow Stroll, local garden clubs set up displays in the pasture and visitors vote for their favourite.',
       'The free Get Gathering open house on September 19, 2026 had live music, ikebana and garden activities. The main paths are gravel with inclines, and visitor parking is off 16 Avenue via 170 Street.',
-      'Good to know: The 2026 season ended September 27, with regular hours Friday to Sunday, 10 am to 4 pm. The Scarecrow Stroll ran on open days September 4 to 27. Regular admission was by donation, with $5 suggested, cash or card. Children under 12 with an adult and garden members entered free. Service animals are welcome.',
+      'Good to know: Park in the visitor lot reached from 16 Avenue via 170 Street. Gravel slopes can limit wheelchair access. Donations by cash or card. Service animals only.',
     ],
+    hours: '2026 season ran to Sep 27, Friday–Sunday, 10 am–4 pm. 2027 dates pending.',
+    cost: 'By donation, $5 suggested. Under 12 with an adult and members free.',
+    websiteUrl: 'https://www.surrey.ca/parks-recreation/parks/park-features-amenities/display-feature-gardens/darts-hill-garden-park',
   },
   {
     placeID: 'vandusen_mushroom_show',
@@ -412,8 +471,11 @@ const detailedFallSpots = [
     about: [
       'Each fall, the Vancouver Mycological Society sets out tables of fresh local fungi at VanDusen. Compare specimens, hear talks by mushroom experts and browse the vendors.',
       'Go to Floral Hall and the Cedar Room by the West 37th Avenue lot. Floral Hall is wheelchair accessible and the free lot has accessible spaces.',
-      'Good to know: In 2026 the show ran October 25, 10 am to 5 pm. VanDusen listed entry by donation and the event notice advertised $5 with free entry for children under 12. The show and garden have separate admission.',
+      'Good to know: Garden entry is a separate ticket from the show. Bring questions for the experts, and photos of any mushrooms you want identified.',
     ],
+    hours: '2026 show ran Oct 25, 10 am–5 pm. 2027 date pending.',
+    cost: 'In 2026, by donation (event notice listed $5, under 12 free). Garden admission separate.',
+    websiteUrl: 'https://vanmyco.org/event/vms-fall-mushroom-show-2/',
   },
   {
     placeID: 'stewart_farm_harvest_fair',
@@ -432,8 +494,11 @@ const detailedFallSpots = [
     about: [
       'Historic Stewart Farm and Totest Aleng: Indigenous Learning House co-hosted the 2026 Harvest Fair at Elgin Heritage Park. The program brought together live music, storytelling and hands-on activities.',
       'Browse the artisan market, try seasonal food and see heritage demonstrations around the farm. The Victorian farmhouse, orchard and heritage buildings are all part of the site.',
-      'Good to know: The 2026 fair was free and ran September 19, noon to 4 pm. The lot off Crescent Road has accessible parking spaces. The city listed overflow parking a three-minute walk away.',
+      'Good to know: The lot off Crescent Road has accessible spaces, with overflow parking a three-minute walk away. Trails are packed gravel and the buildings have first-floor access.',
     ],
+    hours: '2026 fair ran Sep 19, noon–4 pm. 2027 date pending.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.surrey.ca/news-events/events/harvest-fair',
   },
   {
     placeID: 'renfrew_ravine_moon_festival',
@@ -452,8 +517,11 @@ const detailedFallSpots = [
     about: [
       'Still Moon Arts Society celebrates the harvest moon with lanterns, music and illuminated art in East Vancouver. The main day starts with the Harvest Fair at Slocan Park, with artisan booths and a Harvest Veggie Contest.',
       'Join the Twilight Lantern Procession at Slocan Park or head straight to Streamside Lanterns in Renfrew Community Park at 2929 East 22nd Avenue. The directions pin leads to Slocan Park near the 29th Avenue SkyTrain station.',
-      'Good to know: The 2026 festival ran September 7–26. On September 26, the fair ran 4–7 pm, the procession 7–7:15 pm and Streamside Lanterns 7:15–9:15 pm. All three were free with an optional RSVP. Some workshops required separate registration and a fee.',
+      'Good to know: RSVP for the main day to get updates. Some workshops need separate registration and a fee. Bring a light for the walk between parks after dark.',
     ],
+    hours: '2026 festival ran Sep 7–26, with the main day Sep 26, 4–9:15 pm. 2027 dates pending.',
+    cost: 'Free main day with optional RSVP. Some workshops had a fee.',
+    websiteUrl: 'https://stillmoonarts.ca/2026-renfrew-ravine-moon-festival/',
   },
   {
     placeID: 'haney_house_apple_harvest',
@@ -473,8 +541,11 @@ const detailedFallSpots = [
     about: [
       'Haney House celebrates Maple Ridge’s apple-growing history with tours of the 1878 house, lawn games and apple-themed crafts. The 2026 program also listed apple samples and cider.',
       'The Port Haney Heritage Walk passes the house and its orchard. The property overlooks the Fraser River and the historic Port Haney townsite.',
-      'Good to know: The 2026 festival ran September 20 from 11 am to 2 pm at Haney House Museum on 224 Street. Admission was by donation and no registration was required.',
+      'Good to know: No registration is needed. The festival is at Haney House on 224 Street, not the main museum. Pair it with the Port Haney Heritage Walk past the orchard.',
     ],
+    hours: '2026 festival ran Sep 20, 11 am–2 pm. 2027 date pending.',
+    cost: 'By donation.',
+    websiteUrl: 'https://mapleridgemuseum.org/apple-harvest-fest/',
   },
   {
     placeID: 'granville_island_day_of_the_dead_market',
@@ -494,8 +565,11 @@ const detailedFallSpots = [
     about: [
       'Latincouver’s Granville Island market celebrates Día de los Muertos with an artisan market, Latin American food vendors and live performances, including mariachi. The 2026 Catrina contest and Saturday evening party were part of the program.',
       'The workshops and community altar were at Ocean Artworks Pavilion, 1531 Johnston Street. Workshop options included sugar skull decorating, Catrina lanterns and making an ofrenda to honour loved ones.',
-      'Good to know: In 2026 the market ran October 31 from 11 am to 11 pm and November 1 from 11 am to 8 pm. Market admission was by donation. Separately booked workshops cost $5–$20 and had limited spots. The pin leads to the market on Old Bridge Street.',
+      'Good to know: Book workshops ahead because spots are limited. Parking on Granville Island fills up quickly, so consider transit or the False Creek ferries.',
     ],
+    hours: '2026 market ran Oct 31, 11 am–11 pm, and Nov 1, 11 am–8 pm. 2027 dates pending.',
+    cost: 'Market by donation. In 2026, workshops were $5–$20.',
+    websiteUrl: 'https://latincouver.ca/lahm/events/day-of-the-dead-celebration-granville-island/',
   },
   // ---------------------------------------------------------------- Halloween & After Dark
   {
@@ -516,8 +590,11 @@ const detailedFallSpots = [
     about: [
       'After dark, Burnaby Village Museum lights up its heritage streets with jack-o’-lanterns, a small graveyard and a spooky circus. DJ Drac, a shadow puppet show and seasonal snacks at Mai’s Café are part of the evening.',
       'The displays are designed for families and use dramatic lighting without strobes or gore. Costumes are encouraged. In 2026, trick-or-treating was on Halloween only and the carousel stayed closed throughout the event.',
-      'Good to know: In 2026 it ran October 23–25 and 30–31, 4–9 pm, with timed entry through 8 pm. Advance tickets were $12 adult and $7 ages 2–12. Gate tickets were $15/$10 while available, and under two was free. The pin leads to the Carousel Gate. Most facilities are step-free, parking is limited and service animals are welcome.',
+      'Good to know: Buy timed tickets ahead and enter at the Carousel Gate. Most paths are paved and step-free. Parking is limited. Service animals only.',
     ],
+    hours: '2026 ran Oct 23–25 and 30–31, 4–9 pm, with timed entry until 8 pm. 2027 dates pending.',
+    cost: 'In 2026, advance $12 adult and $7 ages 2–12. Gate $15/$10 if available. Under 2 free.',
+    websiteUrl: 'https://www.burnaby.ca/recreation-and-arts/events/haunted-village',
   },
   {
     placeID: 'playland_fright_nights',
@@ -536,8 +613,12 @@ const detailedFallSpots = [
     about: [
       'Playland’s October event brings together seven haunted houses, including Carn-Evil and The Void, plus after-dark rides and roaming scare actors. Admission includes the houses and operating rides. The PNE recommends ages 13 and up.',
       'The optional Rapid Pass in 2026 gave one express visit to each house and five select rides. It cost $56 in advance or $58 day-of, on top of admission. Ride and house queues can close before the park.',
-      'Good to know: In 2026 it ran select nights October 7–31 from 6 pm. Admission was $39–$59 in advance or $45–$69 day-of. Enter at East Hastings and Windermere. There is no re-entry, and bags must fit the 8.5 × 11 inch limit. Paid parking is available.',
+      'Good to know: Recommended for ages 13+. Enter at East Hastings and Windermere. There is no re-entry, and bags must fit within 8.5 × 11 inches. Paid parking on site.',
     ],
+    hours: '2026 ran select nights Oct 7–31 from 6 pm. Closing times varied by date.',
+    cost: 'In 2026, $39–$59 in advance or $45–$69 day-of. Rapid Pass extra.',
+    websiteUrl: 'https://frightnights.ca/admission/',
+    bookingUrl: 'https://ticketleader.evenue.net/events/fright-nights',
   },
   {
     placeID: 'capilano_canyon_frights',
@@ -556,8 +637,12 @@ const detailedFallSpots = [
     about: [
       'The suspension bridge glows orange for Canyon Frights. Look for skeleton scenes, giant spiders and glowing mushrooms, or follow clues on the Frightful Forest scavenger hunt.',
       'The event is included in park admission. Costumes must be family-friendly and leave faces visible. The bridge, Cliffwalk and Treetops Adventure have stairs or other access barriers for wheelchairs.',
-      'Good to know: In 2026 it ran October 9–November 1. Entry was 10 am–8 pm, extended to 9 pm October 23–25 and October 30–November 1. Guests could stay an hour after entry closed. Adult window admission was $79.95 before tax and ages five and under were free. Passholders booked timed entry. There is limited paid parking and a free downtown shuttle.',
+      'Good to know: You can stay an hour after entry closes. Passholders book timed entry. Parking is limited and paid, so the free downtown shuttle is the easier option.',
     ],
+    hours: '2026 ran Oct 9–Nov 1, entry 10 am–8 pm, extended to 9 pm on the final two weekends.',
+    cost: 'In 2026, adult window admission was $79.95 before tax. Ages 5 and under free.',
+    websiteUrl: 'https://www.capbridge.com/events/canyon-frights/',
+    bookingUrl: 'https://www.capbridge.com/tickets-and-hours/',
   },
 
   {
@@ -577,8 +662,11 @@ const detailedFallSpots = [
     about: [
       'A professional actor leads this evening walking play by lamplight. The route brings stories from early Gastown to life, including the Great Fire of 1886 and an 1898 murder.',
       'Meet outside Monaco Café at Water and Cordova and finish at Maple Tree Square. The 1.5 km route has cobblestones and a short hill near the start. The operator describes it as accessible to powered wheelchairs.',
-      'Good to know: The 2026 Halloween schedule ran nightly at 7 pm with extra times. Book ahead. Tickets were $35 adult or $32 youth and senior. The operator recommends ages 12 and up, and minors need an adult. Service dogs are welcome. Waterfront Station is a block from the meeting point.',
+      'Good to know: Book ahead. Recommended for ages 12 and up, and minors need an adult. Waterfront Station is a block from the meeting point. Service dogs are welcome.',
     ],
+    hours: '2026 Halloween schedule ran nightly at 7 pm, with extra times added.',
+    cost: 'In 2026, $35 adult or $32 youth and senior.',
+    websiteUrl: 'https://forbiddenvancouver.ca/lost-souls-of-gastown-vancouver-tour/',
   },
   {
     placeID: 'haunted_halloween_trolley',
@@ -597,8 +685,11 @@ const detailedFallSpots = [
     about: [
       'Ride through Vancouver after dark with the Great Canadian Trolley Company. The guide tells local ghost stories tied to Stanley Park, Mountain View Cemetery and Shaughnessy.',
       'Allow about 2 to 2.5 hours. The tour runs rain or shine and may use flashing lights. The booking listing directs guests to the north side of the 900 block of West Cordova, near the crosswalk by Canada Place.',
-      'Good to know: In 2026 the tour ran on select dates October 8–November 1. A 6 pm departure was listed at $74 per adult through a booking partner, with pickup from 5:45 pm. The tour is designed for ages 13 and up. Confirm the pickup and time on your ticket.',
+      'Good to know: Designed for ages 13 and up. Pickup starts about 15 minutes before departure, so confirm the stop and time on your ticket.',
     ],
+    hours: '2026 tours ran on select dates Oct 8–Nov 1, with a 6 pm departure. 2027 dates pending.',
+    cost: 'In 2026, $74 per adult through a booking partner.',
+    websiteUrl: 'https://greatcanadiantrolley.com/guided-day-tours/haunted-halloween-trolley-tour/',
   },
   {
     placeID: 'bear_creek_halloween_train',
@@ -617,8 +708,11 @@ const detailedFallSpots = [
     about: [
       'The daytime Pumpkin Express runs through a decorated forest at Bear Creek Park. Buy tickets at the train station. The ride includes a pumpkin and a treat.',
       'The evening Scream Train adds live scare actors and sound effects, including Chainsaw Charlie. The operator recommends ages 12 and up. Book an hourly slot online or join the walk-in line when space permits.',
-      'Good to know: In 2026 the Pumpkin Express ran October 1–31, 10 am–5 pm, at $12 plus tax. The Scream Train ran October 16–November 1, with evening slots varying by date. Online night tickets were $18 plus $0.90 tax. Use the Bear Creek Park entrance off 88 Avenue.',
+      'Good to know: Book night tickets online, since evening slots sell out. Use the Bear Creek Park entrance off 88 Avenue.',
     ],
+    hours: '2026: Pumpkin Express Oct 1–31, 10 am–5 pm. Scream Train Oct 16–Nov 1, evening slots vary.',
+    cost: 'In 2026, $12 plus tax by day and $18 plus tax for night tickets online.',
+    websiteUrl: 'https://www.bctrains.com/',
   },
   {
     placeID: 'cougar_creek_house_of_horrors',
@@ -637,8 +731,11 @@ const detailedFallSpots = [
     about: [
       'Cougar Creek’s fall lineup includes five haunted houses, including Sinneraria, Abomination and Astroparasitix. The main show features live scare actors, animatronics and the Cougar Creepshow stage show.',
       'Horrors Jr. is a separate lights-on session on select afternoons, with the sets on display and the actors and animatronics off. The 2026 season finished with a Whisper Night on November 1.',
-      'Good to know: In 2026 evening dates ran October 2–November 1, generally 7–10 pm. Published prices were $39.99–$49.99 for standard admission, $59.99–$69.99 for Speed Pass and from $19.99 for Horrors Jr., before fees. The main show is recommended for 14+. Anyone 13 or under needs an adult. On-site parking is free.',
+      'Good to know: The main show is recommended for 14+, and anyone 13 or under needs an adult. Horrors Jr. suits younger kids. On-site parking is free.',
     ],
+    hours: '2026 ran evenings Oct 2–Nov 1, generally 7–10 pm. 2027 dates pending.',
+    cost: 'In 2026, $39.99–$49.99 standard, $59.99–$69.99 Speed Pass, Horrors Jr. from $19.99, before fees.',
+    websiteUrl: 'https://www.cougarcreekhouseofhorrors.com/',
   },
   {
     placeID: 'grave_tales_fort_langley',
@@ -658,8 +755,11 @@ const detailedFallSpots = [
     about: [
       'Meet your Parks Canada guide at the Visitor Centre for ghost stories and local history after dark. Youth Grave Tales is for ages eight and up, with a paying adult aged 18 or older. The other three tours are for ages 18 and up.',
       'Spirit of the Place tells stories within the fort and involves little walking. Graves of the Tradesmen covers about 4 km through the village. Descent into Darkness is a three-hour walk with mature and graphic themes.',
-      'Good to know: The 2026 calendar listed tours October 16–30 with start times from 6 to 9 pm. Youth and Spirit of the Place were $24.58, Graves was $31.58 and Descent was $44.97 per person. Parks Canada arranged payment after booking and offered full refunds for cancellations at least 48 hours in advance. The main lot is free. Check the tour confirmation for after-hours parking.',
+      'Good to know: Book through Parks Canada. Cancel at least 48 hours ahead for a full refund. The main lot is free. Check your confirmation for after-hours parking.',
     ],
+    hours: '2026 tours ran Oct 16–30, with start times from 6 to 9 pm. 2027 dates pending.',
+    cost: 'In 2026, $24.58 for Youth and Spirit of the Place, $31.58 for Graves and $44.97 for Descent.',
+    websiteUrl: 'https://parks.canada.ca/lhn-nhs/bc/langley/visit',
   },
   {
     placeID: 'steveston_scarecrow_crawl',
@@ -679,8 +779,11 @@ const detailedFallSpots = [
     about: [
       'Steveston shops, cafés and heritage sites make their own scarecrows and display them around the village each October. Look for figures in windows and outside participating businesses.',
       'Start at Steveston Tram, walk west along Moncton Street and take a detour down to the waterfront. Some scarecrows can only be seen while their host shop or museum is open. At the museum, an accessible walkway runs beside the tram car, and steps lead into the car itself.',
-      'Good to know: In 2026 the free, self-guided crawl ran October 1–31, with no ticket required. From October 6, the Tram was open Tuesday to Sunday, 10 am to 4 pm. Free three-hour parking is posted in the village and at the community centre.',
+      'Good to know: Start at the Steveston Tram and wander the village at your own pace. Free three-hour parking is posted in the village and at the community centre.',
     ],
+    hours: '2026 crawl ran Oct 1–31 during business hours. 2027 dates pending.',
+    cost: 'Free. No ticket required.',
+    websiteUrl: 'https://stevestonmerchants.com/events/',
   },
   {
     placeID: 'central_spark',
@@ -700,8 +803,11 @@ const detailedFallSpots = [
     about: [
       'Burnaby’s free Halloween celebration brings a DJ, roaming performers, pumpkin carving and food trucks to Central Park. Costumes are encouraged.',
       'In 2026 a weather-dependent drone show was scheduled for 7:15 pm, with fireworks at 7:30 pm. The event area has level, unpaved ground and the city recommends leaving pets at home. Service animals are welcome.',
-      'Good to know: The 2026 event was October 30, 6–8 pm, with no ticket required. Patterson Avenue was closed to cars between Kingsway and Central Boulevard. Use Patterson SkyTrain or the Olive Avenue drop-off. The pin marks the park-side Patterson entrance.',
+      'Good to know: Patterson Avenue closes to cars, so take the SkyTrain to Patterson or use the Olive Avenue drop-off. The event area is level but unpaved. Leave pets at home.',
     ],
+    hours: '2026 event ran Oct 30, 6–8 pm, with fireworks at 7:30 pm. 2027 date pending.',
+    cost: 'Free. No ticket required.',
+    websiteUrl: 'https://www.burnaby.ca/recreation-and-arts/events/central-spark',
   },
   // ---------------------------------------------------------------- Salmon & Wildlife
   {
@@ -721,8 +827,11 @@ const detailedFallSpots = [
     about: [
       'Watch the Serpentine River from the bridges on the Salmon Habitat Loop. Coho, chum and Chinook return in fall, with mid-October through November a useful window for salmon viewing.',
       'The Serpentine Enhancement Society runs the hatchery. Metro Vancouver lists the Hatchery Trail and Salmon Habitat Loop as accessible, with accessible washrooms at the Serpentine Fields entrance.',
-      'Good to know: The park is free. Use the 96 Avenue hatchery parking entrance and check the posted gate hours. Hatchery access depends on volunteer availability, so the creek trail is the dependable visit. Leash dogs on the salmon trails.',
+      'Good to know: Use the 96 Avenue hatchery parking entrance. Hatchery access depends on volunteers, so the creek trail is the dependable visit. Leash dogs on the salmon trails.',
     ],
+    hours: 'Park opens 7 am, with posted seasonal closing as early as 5 pm. Salmon usually run mid-Oct through Nov.',
+    cost: 'Free.',
+    websiteUrl: 'https://tyneheadhatchery.ca/',
   },
   {
     placeID: 'hoy_creek_hatchery',
@@ -741,8 +850,11 @@ const detailedFallSpots = [
     about: [
       'Walk beside Hoy Creek to look for chum returning from mid-October and coho from November. The volunteer-run hatchery is on the creek trail, about a ten-minute walk from Lafarge Lake–Douglas Station.',
       'The hatchery normally opens during volunteer work sessions and for public open houses on the first Saturday of most months, 9:30–11:30 am, except July and August. Keep people and dogs out of the creek.',
-      'Good to know: The free 2026 Salmon Come Home event ran October 25, 11 am–3 pm. Reach the hatchery on foot from the Guildford Way trailhead. The city directed event drivers to the aboveground City Hall staff lot off Burlington Drive, free on Sundays, or to Town Centre Park.',
+      'Good to know: The hatchery is reached on foot from the Guildford Way trailhead. Look for chum from mid-October and coho from November. Check the website for open house dates.',
     ],
+    hours: 'Open houses on the first Saturday, 9:30–11:30 am, except July and August. 2026 Salmon Come Home ran Oct 25.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.hoyscottcreeks.org/visit',
   },
   {
     placeID: 'reifel_bird_sanctuary',
@@ -762,8 +874,12 @@ const detailedFallSpots = [
     about: [
       'Follow the coastal trails and lookouts for migrating shorebirds, ducks and snow geese. Snow geese start returning in fall, and their numbers change through the season.',
       'Allow 60–90 minutes. Follow Robertson Road across Westham Island, then take the signed sanctuary turnoff to the visitor lot and gift shop. Wheelchairs and strollers are permitted on the trails. Pets, bikes and drones stay home. Buy bird seed at the gift shop.',
-      'Good to know: In 2026 hours were 9 am–4 pm, closed most Mondays. The sanctuary asks visitors to reserve a free parking slot from three days ahead until 8 am on the visit day. Last entry was 3 pm with a booking, or 2:30 pm for drop-ins when space allowed. Pay at the gift shop: $10 adult, $8 ages 65+, $7 ages 2–14.',
+      'Good to know: Reserve a free parking slot from three days ahead until 8 am on the visit day. One booking covers the car. No pets, bikes or drones.',
     ],
+    hours: '9 am–4 pm, closed most Mondays. Last entry 3 pm with a booking or 2:30 pm for drop-ins.',
+    cost: 'In 2026, $10 adult, $8 ages 65+, $7 ages 2–14, paid at the gift shop.',
+    websiteUrl: 'https://www.reifelbirdsanctuary.com/planning.html',
+    bookingUrl: 'https://reifelsanctuary.calendarspots.com/main.php?c=369045158745&language=english',
   },
 
   {
@@ -783,8 +899,11 @@ const detailedFallSpots = [
     about: [
       'Watch returning chum and coho from the fish fence area near the 240th Street bridge. Staff and volunteers use the fence to monitor the run and collect broodstock. Mid-October to mid-November is a typical viewing window.',
       'The fish fence has its own lot on Kanaka Creek Road. For Bell-Irving Hatchery or the Canyon Trail to Cliff Falls, go to the separate 256th Street entrance.',
-      'Good to know: Fish viewing is free and self-guided. The free 2026 Return of the Salmon program ran October 18, 11 am–3 pm, with hourly registration slots. For a regular visit, check posted gate hours. Keep dogs leashed and watch from the paths and viewing areas.',
+      'Good to know: Viewing is self-guided and free. Stay on the paths and viewing areas, and keep dogs leashed. Check posted park gate hours before heading out.',
     ],
+    hours: 'Salmon usually run mid-Oct to mid-Nov. Check posted park gate hours.',
+    cost: 'Free.',
+    websiteUrl: 'https://keeps.org/october/',
   },
   {
     placeID: 'wings_over_iona',
@@ -804,8 +923,11 @@ const detailedFallSpots = [
     about: [
       'Wings Over Iona celebrates fall migration at Iona Beach Regional Park. Watch bird banders at work, see live raptors and try hands-on activities about the birds moving through the estuary.',
       'The free drop-in festival uses an accessible site near the park’s main lot. The separately booked 2026 Birding for Beginners walk ran 8:30–10:30 am for ages 10 and up. The program guide listed $15 per adult, $11.25 for ages 65 and up, and $7.50 for youth.',
-      'Good to know: The 2026 festival was September 12, 11 am–2 pm. Parking was limited. The free event shuttle from Templeton Station began at 7:45 am, with the last departure from Iona at 2:15 pm. The organizer asked visitors to leave pets at home.',
+      'Good to know: Parking is limited, so take the free event shuttle from Templeton Station. Register ahead for the morning bird walk. Leave pets at home.',
     ],
+    hours: '2026 festival ran Sep 12, 11 am–2 pm. 2027 date pending.',
+    cost: 'Free festival. In 2026 the separate morning bird walk was $15 adult.',
+    websiteUrl: 'https://www.richmond.ca/culture/calendar/search/Event.aspx?EventID=19110',
   },
   {
     placeID: 'hyde_creek_hatchery',
@@ -825,8 +947,11 @@ const detailedFallSpots = [
     about: [
       'Follow the creekside path near the hatchery to look for chum and coho moving upstream in October and November. Fish activity varies with the run and creek conditions.',
       'The Annual Salmon Return includes short, volunteer-led tours of the hatchery and its education centre. Parking at the hatchery is limited. For the event, park at Hyde Creek Recreation Centre, 1379 Laurier Avenue, and walk upstream.',
-      'Good to know: The 2026 Annual Salmon Return is scheduled for November 21, 9 am–2 pm. The family-friendly tours are free and last about 20 minutes. The pin marks the hatchery.',
+      'Good to know: Tours are free, family-friendly and last about 20 minutes. Fish activity varies with the run and creek conditions, so dress for rain and be patient.',
     ],
+    hours: '2026 Annual Salmon Return scheduled for Nov 21, 9 am–2 pm.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.hydecreek.org/facility',
   },
   {
     placeID: 'boundary_bay_fall_migration',
@@ -846,8 +971,11 @@ const detailedFallSpots = [
     about: [
       'Shorebirds and ducks feed and rest at Boundary Bay along the Pacific Flyway. In fall, look for dunlin moving in flocks and northern harriers flying low over the fields.',
       'Start at the Centennial Beach lot and head north on the flat 12 Avenue Dyke Trail. The broad gravel path has a mostly firm surface, and Centennial Beach has accessible washrooms.',
-      'Good to know: The park and trail are free. Check posted seasonal gate hours and the tide before heading out. Watch from the dyke and keep dogs leashed and clear of signed wildlife areas. Rising water can bring flocks closer to shore.',
+      'Good to know: Check the tide before you go, since rising water brings flocks closer to shore. Watch from the dyke and keep dogs leashed and out of signed wildlife areas.',
     ],
+    hours: 'Gates open 7 am, with seasonal closing as early as 5 pm. Best birding October and November.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.delta.ca/parks-recreation/parks-trails/park-and-amenity-search/boundary-bay-regional-park',
   },
   // ---------------------------------------------------------------- Fall Colour Walks
   {
@@ -868,8 +996,11 @@ const detailedFallSpots = [
     about: [
       'Start at South Beach for views of shoreline maples against the evergreens. The 1 km Energy Trail makes a short outing. BC Hydro lists the lake loop at 8 km and 4–5 hours, with the route crossing the suspension and floating bridges.',
       'Powerhouse Road is closed to walkers between North Beach and Buntzen Dam after a rockslide. Check the trail map and current alerts before setting out. Keep dogs leashed outside the designated off-leash areas and trail.',
-      'Good to know: Entry and parking are free. The 2026 reservation season ended September 7. After that, the lot is first come, first served. The gates opened at 8 am and closed at 6 pm October 12–25, 5:30 pm October 26–November 1 and 4:30 pm from November 2.',
+      'Good to know: After the summer reservation season, the lot is first come, first served. The full loop takes 4–5 hours, and the 1 km Energy Trail is a shorter option.',
     ],
+    hours: 'Gates open 8 am. In 2026, closing moved from 6 pm in mid-October to 4:30 pm from Nov 2.',
+    cost: 'Free entry and parking.',
+    websiteUrl: 'https://www.bchydro.com/community/recreation_areas/buntzen_lake.html',
   },
   {
     placeID: 'queen_elizabeth_park',
@@ -889,8 +1020,11 @@ const detailedFallSpots = [
     about: [
       'Walk through the quarry gardens for Japanese maples and seasonal colour, then head to the summit plaza for views of Vancouver and the North Shore mountains. The park and outdoor gardens are free. Pay parking is available, with a drop-off loop near Seasons in the Park.',
       'Bloedel Conservatory is a separate indoor visit with tropical plants and birds. Its main path is wheelchair accessible, and working guide and service dogs are welcome. In 2026 it was open 10 am–5 pm September 8–October 31 and 10 am–4 pm in November and December, except Christmas Day. Last entry was 15 minutes before closing.',
-      'Good to know: 2026 Bloedel admission was $9.50 adult, $7.60 senior, $6.65 youth, $4.75 child and free for ages four and under, before tax. Buy at the desk or online for $1 off adult admission. During the November 16–20, 2026 lower-lot path closure, the City directed visitors to the upper lot.',
+      'Good to know: Buy Bloedel tickets online to save $1 on adult admission. The indoor path is accessible and service dogs are welcome. Use the upper lot during path closures.',
     ],
+    hours: 'Outdoor gardens open daily. Bloedel Conservatory 10 am–4 pm in November and December.',
+    cost: 'Free outdoor gardens. In 2026, Bloedel was $9.50 adult before tax. Paid parking.',
+    websiteUrl: 'https://vancouver.ca/parks-recreation-culture/queen-elizabeth-park.aspx',
   },
   {
     placeID: 'pacific_spirit_park',
@@ -910,8 +1044,11 @@ const detailedFallSpots = [
     about: [
       'Start near Spanish Banks West and cross Northwest Marine Drive to reach Admiralty Trail. Look for yellow bigleaf maples among the evergreens. The Admiralty, Salish and West Canyon trails connect in the woods above the shore.',
       'The regional park is free. Starting October 1, 2026, Spanish Banks beach lots offered two hours of free parking per day through March, then $3 per additional hour. Forest paths can be uneven, muddy and sloped. Follow posted dog rules.',
-      'Good to know: Check Metro Vancouver’s current trail alerts and posted closing times before leaving. The beachside path is a shorter option if a forest section is closed.',
+      'Good to know: Dog rules vary by trail, so check the official map. The beachside path is a shorter option if a forest section is closed.',
     ],
+    hours: 'Open daily. Check Metro Vancouver’s posted closing times and trail alerts.',
+    cost: 'Free. From Oct 2026, beach lots offer two free hours, then $3 per hour.',
+    websiteUrl: 'https://metrovancouver.org/services/regional-parks/park/pacific-spirit-regional-park',
   },
   {
     placeID: 'stanley_park_fall_walk',
@@ -930,8 +1067,11 @@ const detailedFallSpots = [
     about: [
       'Start at the Alberni and Chilco viewing plaza on the southeast shore of Lost Lagoon. Follow the lagoon path and continue to the Vancouver Rowing Club on the Coal Harbour side for fall colour along the waterfront. Follow the seawall to Brockton Point for a longer walk.',
       'The park is free and parking is paid year-round. The free Lost Lagoon Nature House opens on Saturdays and Sundays, 10 am–4 pm, September through June. Its short approach is unpaved, and winter flood barriers can make wheelchair access difficult from November.',
-      'Good to know: Follow posted pedestrian detours near the Chilco Street water tunnel work. Keep dogs leashed outside designated off-leash areas. In fall 2026, seawall work farther west affected the stretch between Lumberman’s Arch and Third Beach.',
+      'Good to know: Follow posted pedestrian detours near the Chilco Street water tunnel work. Keep dogs leashed outside designated off-leash areas.',
     ],
+    hours: 'Open daily. Nature House open weekends, 10 am–4 pm, September–June.',
+    cost: 'Free. Pay parking year-round.',
+    websiteUrl: 'https://vancouver.ca/parks-recreation-culture/lost-lagoon.aspx',
   },
   {
     placeID: 'deer_lake_park',
@@ -950,8 +1090,11 @@ const detailedFallSpots = [
     about: [
       'Start near the east beach and follow the shoreline paths for autumn reflections. The loop uses finely crushed gravel, packed earth and wooden boardwalk. Some sections have slopes and exposed roots. The east beach lot has accessible stalls and a nearby accessible washroom.',
       'On the north shore, follow the paved path by the Festival Lawn toward Burnaby Art Gallery and the Shadbolt Centre. Eagles Estate on the southeast shore has Japanese maples in its heritage garden.',
-      'Good to know: The park is free and open dawn to dusk. Keep dogs leashed and off the beach and picnic area. The boat-launch boardwalk closed for replacement on September 21, 2026. Follow the signed Sperling Avenue and Deer Lake Drive detour, which adds about five minutes.',
+      'Good to know: Keep dogs leashed and off the beach and picnic area. The boat-launch boardwalk is closed for replacement, with a signed detour that adds about five minutes.',
     ],
+    hours: 'Open dawn to dusk. Parking lots close at 10 pm.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.burnaby.ca/explore-outdoors/parks/deer-lake-park',
   },
   {
     placeID: 'campbell_valley_park',
@@ -971,8 +1114,11 @@ const detailedFallSpots = [
     about: [
       'Start at the North Valley lot off 16 Avenue for the 2.3 km Little River Loop. The mostly flat trail crosses the Little Campbell River twice on raised boardwalks and passes wet meadows and patches of fall colour. Metro Vancouver lists the loop and nearby washrooms as wheelchair accessible.',
       'For a longer outing, connect to the Ravine Trail or take the 11 km Shaggy Mane Trail, which is shared with horses. Leash dogs except in the signed leash-optional area by the separate 4 Avenue entrance.',
-      'Good to know: Entry and parking are free. In 2026 gates opened at 7 am, closing at 7 pm October 6–November 2 and 6 pm November 3–December 31. Check current park alerts for construction near eastern McLean Pond.',
+      'Good to know: Check Metro Vancouver’s park alerts for construction near McLean Pond. Gates close earlier as the days shorten, so plan to finish before dusk.',
     ],
+    hours: 'Gates open 7 am. In 2026, closing was 7 pm Oct 6–Nov 2 and 6 pm Nov 3–Dec 31.',
+    cost: 'Free entry and parking.',
+    websiteUrl: 'https://metrovancouver.org/services/regional-parks/park/campbell-valley-regional-park',
   },
   {
     placeID: 'ubc_main_mall',
@@ -994,6 +1140,9 @@ const detailedFallSpots = [
       'The paved promenade is free and requires no booking. The pin marks the walking route by Koerner Library. Drivers can use a paid campus parkade, including the nearby Fraser River or Rose Garden parkade, and continue on foot.',
       'Good to know: Campus paths and crossings stay busy during term. Follow posted access and detour signs. Nitobe Memorial Garden is a separate, ticketed visit.',
     ],
+    hours: 'Open daily. Best colour mid to late October.',
+    cost: 'Free. Paid parking at Fraser River and Rose Garden parkades.',
+    websiteUrl: 'https://visit.ubc.ca/',
   },
   {
     placeID: 'trout_lake',
@@ -1013,8 +1162,11 @@ const detailedFallSpots = [
     about: [
       'Follow the path around Trout Lake in John Hendry Park for autumn reflections and North Shore mountain views. The waterfront path passes the lake’s north and south beaches.',
       'The park is free and typically open 6 am–10 pm. Keep dogs leashed outside the signed north-end off-leash area. The pin marks the north park lot, which hosts the farmers market.',
-      'Good to know: In 2026 Trout Lake Farmers Market ran Saturdays, 9 am–2 pm, April 4–October 31, at Lakewood Drive and East 13th Avenue. There was no general market parking. Four accessible market stalls were available by Templeton Drive.',
+      'Good to know: Dogs can go off leash in the designated north area and must be leashed elsewhere. The Saturday farmers market runs April to October, with no general market parking.',
     ],
+    hours: 'Park open 6 am–10 pm unless posted otherwise.',
+    cost: 'Free.',
+    websiteUrl: 'https://covapp.vancouver.ca/parkfinder/parkdetail.aspx?inparkid=85',
   },
   {
     placeID: 'burnaby_mountain_park',
@@ -1033,8 +1185,11 @@ const detailedFallSpots = [
     about: [
       'Start at the upper park for fall colour, the Centennial Rose Garden and views over Burrard Inlet. See the Kamui Mintara sculptures, also known as Playground of the Gods, from outside the protective fence.',
       'The park is free and open dawn to dusk. The upper lot closes at 10 pm, and the City lists the amenities near the Mintara lot as wheelchair accessible. Keep dogs leashed. Lower forest trails include steep and rugged sections.',
-      'Good to know: The City lists the Velodrome stair section between Mountain Air Trail and the top of Pandora Trail as closed indefinitely. Check the City’s park notices for work affecting Centennial Way or the upper lot.',
+      'Good to know: The Velodrome stairs between Mountain Air Trail and upper Pandora are closed indefinitely. View Kamui Mintara from outside its fence. Dogs must be leashed.',
     ],
+    hours: 'Open dawn to dusk. Main lot closes at 10 pm.',
+    cost: 'Free.',
+    websiteUrl: 'https://www.burnaby.ca/explore-outdoors/parks/burnaby-mountain-conservation-area',
   },
   {
     placeID: 'hadden_park',
@@ -1054,8 +1209,11 @@ const detailedFallSpots = [
     about: [
       'Start by the Vancouver Maritime Museum and walk west along the waterfront toward Kitsilano Beach. Hadden Park’s large maples add fall colour above English Bay, with views across to the North Shore.',
       'The park and seawall are free. Pay parking is available in the Maritime Museum lot off Ogden Avenue, with designated accessible stalls. Use the paved waterfront route for a firmer surface. The off-leash beach includes sand and grass.',
-      'Good to know: The signed, unfenced off-leash area is open 6 am–10 pm October–April. In September the summer schedule still applies, with off-leash hours 6–10 am and 5–10 pm. Leash dogs elsewhere.',
+      'Good to know: Leash dogs beyond the signed off-leash boundary. The maples peak in mid to late October. Extend the walk along Kitsilano Beach if you have time.',
     ],
+    hours: 'Open daily. Off-leash area 6 am–10 pm October–April.',
+    cost: 'Free. Pay parking at the Maritime Museum lot.',
+    websiteUrl: 'https://covapp.vancouver.ca/ParkFinder/parkdetail.aspx?inparkid=110',
   },
 ];
 

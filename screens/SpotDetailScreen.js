@@ -32,6 +32,14 @@ import { hasCoordinates } from '../services/spotDiscovery';
 import { findSpotByName } from '../services/spots';
 import spotImages, { spotPhotoCredits } from './spotImages';
 
+export const NOT_AVAILABLE = 'N/A';
+// Blank and whitespace-only strings count as missing.
+const present = value => (typeof value === 'string' ? value.trim() : value) || '';
+
+function NotAvailable({ label }) {
+  return <Text style={spotStyle.body} accessibilityLabel={`${label}: not available`}>{NOT_AVAILABLE}</Text>;
+}
+
 const seasonNames = values => values?.map(value => SPOT_SEASONS.find(season => season.value === value)?.label ?? value).join(', ');
 
 export default function SpotDetailScreen({ navigation, route }) {
@@ -162,8 +170,11 @@ function SpotPage({
   const hasPin = hasCoordinates({ latitude, longitude });
   const url = ready ? directionsUrl({ latitude, longitude, address: directionsAddress }, Platform.OS) : null;
   const saved = reference && isSaved(reference);
-  const facts = [['Hours', hours], ['Cost', cost], ['Best season', bestSeason]].filter(([, value]) => value);
-  const visitLinks = [['Official website', websiteUrl], ['Tickets & booking', bookingUrl]].filter(([, value]) => value);
+  // Every spot page shows the same cards in the same order; missing details read "N/A".
+  const facts = [['Hours', hours], ['Cost', cost], ['Best season', bestSeason]].map(([label, value]) => [label, present(value)]);
+  const visitLinks = [['Official website', present(websiteUrl)], ['Tickets & booking', present(bookingUrl)]].filter(([, value]) => value);
+  const about = present(description);
+  const goodToKnow = present(tips);
 
   return (
     <SignedInScreen style={styles.container}>
@@ -226,40 +237,37 @@ function SpotPage({
                 <Text style={[controls.secondaryText, styles.lightText, styles.actionText]}>Add to list</Text>
               </TouchableOpacity>
             </View>
-            {!!(tagline || description) && (
-              <View style={spotStyle.section}>
-                <Text style={spotStyle.heading} accessibilityRole="header">About</Text>
-                {!!tagline && <Text style={spotStyle.label}>{tagline}</Text>}
-                {!!description && <ReadMoreText style={spotStyle.body}>{description}</ReadMoreText>}
-              </View>
-            )}
-            {facts.length > 0 && (
-              <View style={spotStyle.section}>
-                {facts.map(([label, value]) => (
-                  <View key={label} style={styles.fact}>
-                    <Text style={spotStyle.label}>{label}</Text>
-                    <Text style={spotStyle.body}>{value}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            {!!tips && (
-              <View style={spotStyle.section}>
-                <Text style={spotStyle.heading} accessibilityRole="header">Good to know</Text>
-                <Text style={spotStyle.body}>{tips}</Text>
-              </View>
-            )}
-            {visitLinks.length > 0 && (
-              <View style={spotStyle.section}>
-                {visitLinks.map(([label, link]) => (
-                  <TouchableOpacity key={label} style={styles.visitLink} accessibilityRole="link"
-                    onPress={() => Linking.openURL(link).catch(() => snackbar.show({ message: 'Couldn’t open this link.' }))}>
-                    <Text style={spotStyle.label}>{label}</Text>
-                    <Ionicons name="open-outline" size={16} color={honey.ink} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            <View style={spotStyle.section}>
+              <Text style={spotStyle.heading} accessibilityRole="header">About</Text>
+              {!!present(tagline) && <Text style={spotStyle.label}>{tagline}</Text>}
+              {about ? <ReadMoreText style={spotStyle.body}>{about}</ReadMoreText> : !present(tagline) && <NotAvailable label="About" />}
+            </View>
+            <View style={spotStyle.section}>
+              {facts.map(([label, value]) => (
+                <View key={label} style={styles.fact}>
+                  <Text style={spotStyle.label}>{label}</Text>
+                  {value ? <Text style={spotStyle.body}>{value}</Text> : <NotAvailable label={label} />}
+                </View>
+              ))}
+            </View>
+            <View style={spotStyle.section}>
+              <Text style={spotStyle.heading} accessibilityRole="header">Good to know</Text>
+              {goodToKnow ? <Text style={spotStyle.body}>{goodToKnow}</Text> : <NotAvailable label="Good to know" />}
+            </View>
+            <View style={spotStyle.section}>
+              {visitLinks.length > 0 ? visitLinks.map(([label, link]) => (
+                <TouchableOpacity key={label} style={styles.visitLink} accessibilityRole="link"
+                  onPress={() => Linking.openURL(link).catch(() => snackbar.show({ message: 'Couldn’t open this link.' }))}>
+                  <Text style={spotStyle.label}>{label}</Text>
+                  <Ionicons name="open-outline" size={16} color={honey.ink} />
+                </TouchableOpacity>
+              )) : (
+                <View style={styles.fact}>
+                  <Text style={spotStyle.label}>Website</Text>
+                  <NotAvailable label="Website" />
+                </View>
+              )}
+            </View>
             {(hasPin || !!address) && <SpotLocation name={name} address={address} latitude={latitude} longitude={longitude} previewRoute={venue} />}
             {hasPin && <SpotWeather key={`${latitude},${longitude}`} latitude={latitude} longitude={longitude} />}
           </Animated.View>
