@@ -130,8 +130,12 @@ for (const [season, search, expected] of [
   ['Winter', 'tidal mudflats', 'Maplewood Flats'],
   ['Winter', 'specimen cabinets', 'Beaty Biodiversity Museum'],
   ['Winter', 'viewing towers', 'Serpentine Fen'],
+  ['Winter', 'handbell choir', 'Christmas With Chor Leoni'],
+  ['Winter', 'yarn ornament', 'Homemade Holidays at Historic Stewart Farm'],
   ['Spring', 'Pacific Flyway', 'Iona Beach Spring Migration'],
   ['Spring', 'lambing season', 'Maplewood Farm Spring Lambs'],
+  ['Spring', 'Lysichiton americanus', 'Campbell Valley Spring Swamp Lanterns'],
+  ['Spring', 'Tri-City Dust Devils', 'Vancouver Canadians Opening Weekend'],
   ['Summer', 'ocean drive', 'Sunset Beach'],
 ]) {
   test(`${season} finds ${expected} and shows a recoverable empty state`, async () => {
@@ -172,9 +176,9 @@ test('draft filters discard on dismiss and applied state survives a season remou
   assert.equal(h.timings.length, initialAnimations, 'reduced motion skips the sheet animation');
   assert.ok(button(renderer, 'Nearest'));
   await press(button(renderer, 'Winter Walks & Wildlife'));
-  assert.equal(cards(renderer).length, 40, 'editing the draft leaves the applied list alone');
+  assert.equal(cards(renderer).length, 50, 'editing the draft leaves the applied list alone');
   await press(renderer.root.findByProps({ testID: 'spot-filter-backdrop' }));
-  assert.equal(cards(renderer).length, 40);
+  assert.equal(cards(renderer).length, 50);
   await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
   assert.deepEqual(h.calls.filter(([action]) => action === 'focusAccessibility'), [
     ['focusAccessibility', 'Filter spots'], ['focusAccessibility', 'Filter spots'],

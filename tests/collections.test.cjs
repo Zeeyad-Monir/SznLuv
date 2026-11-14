@@ -42,14 +42,14 @@ test('Spring cover counts catalogue spots even when Firestore has the old placeh
   await act(async () => screen.renderer.unmount());
 });
 
-test('Winter browses, maps and opens all forty complete spot pages', async () => {
+test('Winter browses, maps and opens all fifty complete spot pages', async () => {
   const h = createHarness();
   const screen = await mount(h, 'screens/WinterDatesScreen.js');
   const spots = winterCategories.flatMap(category => category.spots);
-  assert.equal(spots.length, 40);
+  assert.equal(spots.length, 50);
   assert.deepEqual(winterSpotNames, spots.map(spot => spot.name));
-  assert.equal(collectionCaption('vancouver-winter'), 'Vancouver · 40 spots');
-  assert.deepEqual(winterCategories.map(category => category.spots.length), [4, 13, 5, 10, 8]);
+  assert.equal(collectionCaption('vancouver-winter'), 'Vancouver · 50 spots');
+  assert.deepEqual(winterCategories.map(category => category.spots.length), [4, 14, 6, 5, 13, 8]);
   const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
   for (const spot of spots) {
     assert.ok(photos[spot.name] && credits[spot.name]?.licenseUrl, spot.name);
@@ -59,30 +59,36 @@ test('Winter browses, maps and opens all forty complete spot pages', async () =>
 
   await screen.press('Map');
   assert.deepEqual(pinNames(screen), winterSpotNames);
-  const market = spots.find(spot => spot.name === 'Japan Market Christmas Market');
-  await act(async () => pinNamed(screen, market.name).props.onPress());
+  await screen.press('Filter spots');
+  await screen.press('Winter Shows');
+  await screen.press('Apply Filters');
+  const shows = winterCategories.find(category => category.title === 'Winter Shows').spots;
+  assert.deepEqual(pinNames(screen), shows.map(spot => spot.name));
+
+  const show = shows.find(spot => spot.name === 'Gateway Theatre Holiday Musical');
+  await act(async () => pinNamed(screen, show.name).props.onPress());
   await act(async () => mapPreview(screen).props.onPress());
-  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'c', name: market.name } }]);
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'c', name: show.name } }]);
   const detail = await mount(h, 'screens/SpotDetailScreen.js', { params: h.navigations.at(-1)[1] });
-  assert.ok(detail.texts().includes(market.hours));
-  assert.ok(detail.texts().includes(market.cost));
+  assert.ok(detail.texts().includes(show.hours));
+  assert.ok(detail.texts().includes(show.cost));
   await detail.press('Official website');
-  assert.deepEqual(h.calls.at(-1), ['openURL', market.websiteUrl]);
+  assert.deepEqual(h.calls.at(-1), ['openURL', show.websiteUrl]);
   await detail.press('Tickets & booking');
-  assert.deepEqual(h.calls.at(-1), ['openURL', market.bookingUrl]);
+  assert.deepEqual(h.calls.at(-1), ['openURL', show.bookingUrl]);
   await detail.press('Directions');
-  assert.match(h.calls.at(-1)[1], /49\.28203%2C-123\.1212/);
+  assert.match(h.calls.at(-1)[1], /49\.16734%2C-123\.14713/);
   await act(async () => { detail.renderer.unmount(); screen.renderer.unmount(); });
 });
 
-test('Spring cards, category filters and map open all twenty complete venue records', async () => {
+test('Spring cards, category filters and map open all thirty complete venue records', async () => {
   const h = createHarness();
   const screen = await mount(h, 'screens/SpringDatesScreen.js');
   const spots = collectionSpots('vancouver-spring');
-  assert.equal(collectionCaption('vancouver-spring'), 'Vancouver · 20 spots');
-  assert.deepEqual(springCategories.map(category => category.spots.length), [5, 5, 3, 7]);
+  assert.equal(collectionCaption('vancouver-spring'), 'Vancouver · 30 spots');
+  assert.deepEqual(springCategories.map(category => category.spots.length), [7, 7, 6, 10]);
   assert.deepEqual(spots.map(spot => spot.name), springSpotNames);
-  assert.equal(new Set(spots.map(spot => spot.placeID)).size, 20);
+  assert.equal(new Set(spots.map(spot => spot.placeID)).size, 30);
   assert.ok(!spots.some(spot => spot.placeholderAddress));
 
   const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
