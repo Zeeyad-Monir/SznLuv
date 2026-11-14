@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const React = require('react');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { mount, textOf } = require('./support.cjs');
+const { mount, textOf, pinNames, pinNamed, mapPreview } = require('./support.cjs');
 const { catalogueRef } = require('../services/catalogue');
 const { createList, addSpot, toPublicSnapshot } = require('../services/listsState');
 
@@ -105,10 +105,11 @@ test('season Map uses the same filtered ordering and search results as Spots', a
   const cards = screen.all(h.load('components/SpotCard.js').default).map(card => card.props.spot.name);
   assert.ok(cards.length > 1);
   await screen.press('Map');
-  assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), cards);
+  assert.deepEqual(pinNames(screen), cards);
   await act(async () => screen.all('TextInput')[0].props.onChangeText('Reifel'));
-  assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), ['Reifel Bird Sanctuary']);
-  await screen.press('Map spot 1, Reifel Bird Sanctuary');
+  assert.deepEqual(pinNames(screen), ['Reifel Bird Sanctuary']);
+  await act(async () => pinNamed(screen, 'Reifel Bird Sanctuary').props.onPress({ stopPropagation() {} }));
+  await act(async () => mapPreview(screen).props.onPress({ stopPropagation() {} }));
   assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: catalogueRef('Reifel Bird Sanctuary') }]);
   assert.equal(screen.button('Map').props.accessibilityState.selected, true);
   await screen.press('Spots');
@@ -154,8 +155,8 @@ test('the shared detail layout orders venue and personal content and offers addr
   assert.deepEqual(h.calls.at(-1), ['openURL', 'http://maps.apple.com/?daddr=12%20Main%20St']);
   await personal.press('Add photos');
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { spotId: 'audit_cafe' }]);
-  const sparse = await open(catalogueRef('Blossom Garden'));
-  assert.ok(sparse.texts().includes('Blossom Garden'));
+  const sparse = await open(catalogueRef('Sunset Beach'));
+  assert.ok(sparse.texts().includes('Sunset Beach'));
   assert.equal(sparse.button('Directions'), undefined);
   await act(async () => { venue.renderer.unmount(); personal.renderer.unmount(); sparse.renderer.unmount(); });
 });

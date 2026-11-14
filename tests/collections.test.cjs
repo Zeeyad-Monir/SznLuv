@@ -2,10 +2,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { mount, quiet, flush } = require('./support.cjs');
+const { mount, quiet, flush, pinNames, pinNamed, mapPreview } = require('./support.cjs');
 const { COLLECTIONS, collectionById, collectionsForCity, collectionSpots, collectionCaption } = require('../services/collections');
 const { catalogueSections } = require('../services/catalogue');
 const { fallSpotNames } = require('../services/spots');
+const { springCategories, springSpotNames, winterCategories, winterSpotNames } = require('../services/seasonSpots');
 
 const kept = h => [...h.documents.keys()].filter(key => key.startsWith('users/audit/savedCollections/'));
 
@@ -29,6 +30,105 @@ test('collections: spots are read live from the catalogue, never copied', () => 
   assert.deepEqual(collectionSpots('gone'), []);
   assert.equal(collectionCaption('vancouver-fall'), `Vancouver · ${fallSpotNames.length} spots`);
   assert.equal(collectionCaption('gone'), '');
+});
+
+test('Spring cover counts catalogue spots even when Firestore has the old placeholder count', async () => {
+  const h = createHarness({ documents: { 'dateCounts/spring': { count: 4 } } });
+  const screen = await mount(h, 'screens/SeasonsScreen.js');
+  const cover = screen.button('Spring Season - View Active Date Ideas');
+  assert.ok(cover);
+  assert.deepEqual(cover.findAllByType('Text').map(node => node.children.join('')),
+    ['Spring', `${collectionSpots('vancouver-spring').length} Active Ideas`]);
+  await act(async () => screen.renderer.unmount());
+});
+
+test('Winter browses, maps and opens all forty complete spot pages', async () => {
+  const h = createHarness();
+  const screen = await mount(h, 'screens/WinterDatesScreen.js');
+  const spots = winterCategories.flatMap(category => category.spots);
+  assert.equal(spots.length, 40);
+  assert.deepEqual(winterSpotNames, spots.map(spot => spot.name));
+  assert.equal(collectionCaption('vancouver-winter'), 'Vancouver · 40 spots');
+  assert.deepEqual(winterCategories.map(category => category.spots.length), [4, 13, 5, 10, 8]);
+  const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
+  for (const spot of spots) {
+    assert.ok(photos[spot.name] && credits[spot.name]?.licenseUrl, spot.name);
+    assert.ok(spot.websiteUrl && spot.hours && spot.cost && spot.searchTags.length, spot.name);
+    assert.ok(screen.button(`View details for ${spot.name}`), spot.name);
+  }
+
+  await screen.press('Map');
+  assert.deepEqual(pinNames(screen), winterSpotNames);
+  const market = spots.find(spot => spot.name === 'Japan Market Christmas Market');
+  await act(async () => pinNamed(screen, market.name).props.onPress());
+  await act(async () => mapPreview(screen).props.onPress());
+  assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: { k: 'c', name: market.name } }]);
+  const detail = await mount(h, 'screens/SpotDetailScreen.js', { params: h.navigations.at(-1)[1] });
+  assert.ok(detail.texts().includes(market.hours));
+  assert.ok(detail.texts().includes(market.cost));
+  await detail.press('Official website');
+  assert.deepEqual(h.calls.at(-1), ['openURL', market.websiteUrl]);
+  await detail.press('Tickets & booking');
+  assert.deepEqual(h.calls.at(-1), ['openURL', market.bookingUrl]);
+  await detail.press('Directions');
+  assert.match(h.calls.at(-1)[1], /49\.28203%2C-123\.1212/);
+  await act(async () => { detail.renderer.unmount(); screen.renderer.unmount(); });
+});
+
+test('Spring cards, category filters and map open all twenty complete venue records', async () => {
+  const h = createHarness();
+  const screen = await mount(h, 'screens/SpringDatesScreen.js');
+  const spots = collectionSpots('vancouver-spring');
+  assert.equal(collectionCaption('vancouver-spring'), 'Vancouver · 20 spots');
+  assert.deepEqual(springCategories.map(category => category.spots.length), [5, 5, 3, 7]);
+  assert.deepEqual(spots.map(spot => spot.name), springSpotNames);
+  assert.equal(new Set(spots.map(spot => spot.placeID)).size, 20);
+  assert.ok(!spots.some(spot => spot.placeholderAddress));
+
+  const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
+  for (const spot of spots) {
+    assert.match(String(photos[spot.name]), /Seasonal\/spring\/.+\.jpg$/);
+    assert.ok(credits[spot.name]?.licenseUrl && credits[spot.name]?.sourceUrl, spot.name);
+    assert.ok(screen.button(`View details for ${spot.name}`), spot.name);
+  }
+
+  await screen.press('Filter spots');
+  await screen.press('Trails & Tides');
+  await screen.press('Apply Filters');
+  await screen.press('Map');
+  assert.deepEqual(pinNames(screen), springCategories[1].spots.map(spot => spot.name));
+  await screen.press('Clear filters');
+  await screen.press('Filter spots');
+  await screen.press('Spring Wildlife & Farms');
+  await screen.press('Apply Filters');
+  assert.deepEqual(pinNames(screen), springCategories[2].spots.map(spot => spot.name));
+  await screen.press('Clear filters');
+  assert.deepEqual(pinNames(screen), springSpotNames);
+
+  for (const spot of spots) {
+    const pin = pinNamed(screen, spot.name);
+    assert.deepEqual(pin.props.coordinate, { latitude: spot.latitude, longitude: spot.longitude });
+    await act(async () => pin.props.onPress());
+    await act(async () => mapPreview(screen).props.onPress());
+    const [route, params] = h.navigations.at(-1);
+    assert.equal(route, 'SpotDetailScreen');
+    assert.deepEqual(params, { spot: { k: 'c', name: spot.name } });
+    const detail = await mount(h, 'screens/SpotDetailScreen.js', { params });
+    assert.ok(detail.texts().includes(spot.title));
+    assert.ok(detail.texts().includes(spot.hours));
+    assert.ok(detail.texts().includes(spot.cost));
+    assert.ok(detail.all('Image').some(image => image.props.source === photos[spot.name]));
+    await detail.press('Official website');
+    assert.deepEqual(h.calls.at(-1), ['openURL', spot.websiteUrl]);
+    if (spot.bookingUrl) {
+      await detail.press('Tickets & booking');
+      assert.deepEqual(h.calls.at(-1), ['openURL', spot.bookingUrl]);
+    }
+    await detail.press('Directions');
+    assert.ok(h.calls.at(-1)[1].endsWith(encodeURIComponent(`${spot.latitude},${spot.longitude}`)));
+    await act(async () => detail.renderer.unmount());
+  }
+  await act(async () => screen.renderer.unmount());
 });
 
 // ---------------------------------------------------------------- Hearts on the season cards

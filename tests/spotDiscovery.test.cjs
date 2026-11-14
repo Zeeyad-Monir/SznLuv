@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const React = require('react');
 const { createHarness, act } = require('./renderHarness.cjs');
+const { citySpotSections } = require('../services/collections');
 const { fallCategories, legacyFallSpots, detailedFallSpots, fallSpotNames } = require('../services/spots');
 const {
   createSpotIndex, DEFAULT_FILTERS, distanceKm, findMatchingSpots, hasCoordinates,
@@ -126,11 +127,14 @@ const close = renderer => press(labelled(renderer, 'Close filters'));
 
 for (const [season, search, expected] of [
   ['Fall', 'maple ridge laity', 'Laity Pumpkin Patch'],
-  ['Winter', 'winter birding', 'Maplewood Flats'],
-  ['Spring', 'bike meadow', 'Meadow Path'],
+  ['Winter', 'tidal mudflats', 'Maplewood Flats'],
+  ['Winter', 'specimen cabinets', 'Beaty Biodiversity Museum'],
+  ['Winter', 'viewing towers', 'Serpentine Fen'],
+  ['Spring', 'Pacific Flyway', 'Iona Beach Spring Migration'],
+  ['Spring', 'lambing season', 'Maplewood Farm Spring Lambs'],
   ['Summer', 'ocean drive', 'Sunset Beach'],
 ]) {
-  test(`${season} searches its own spots and shows a recoverable empty state`, async () => {
+  test(`${season} finds ${expected} and shows a recoverable empty state`, async () => {
     const h = createHarness();
     const renderer = await h.render(`screens/${season}DatesScreen.js`);
     await change(input(renderer), search);
@@ -168,15 +172,22 @@ test('draft filters discard on dismiss and applied state survives a season remou
   assert.equal(h.timings.length, initialAnimations, 'reduced motion skips the sheet animation');
   assert.ok(button(renderer, 'Nearest'));
   await press(button(renderer, 'Winter Walks & Wildlife'));
-  assert.equal(cards(renderer).length, 10, 'editing the draft leaves the applied list alone');
+  assert.equal(cards(renderer).length, 40, 'editing the draft leaves the applied list alone');
   await press(renderer.root.findByProps({ testID: 'spot-filter-backdrop' }));
-  assert.equal(cards(renderer).length, 10);
+  assert.equal(cards(renderer).length, 40);
   await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
   assert.deepEqual(h.calls.filter(([action]) => action === 'focusAccessibility'), [
     ['focusAccessibility', 'Filter spots'], ['focusAccessibility', 'Filter spots'],
   ]);
 
   await openSheet(renderer);
+  await press(button(renderer, 'Holiday Markets'));
+  await apply(renderer);
+  await change(input(renderer), 'zakka');
+  assert.deepEqual(cards(renderer), ['Japan Market Christmas Market']);
+  await change(input(renderer), '');
+  await openSheet(renderer);
+  await press(button(renderer, 'Holiday Markets'));
   await press(button(renderer, 'Winter Walks & Wildlife'));
   await press(button(renderer, 'A–Z'));
   await apply(renderer);
@@ -493,26 +504,33 @@ test('"Current location" follows the person: moving updates the results, and an 
   await limit(renderer, true);
   await adjust(renderer, 10);
   await apply(renderer);
-  const near = ['Stewart Farm Harvest Fair', 'Cougar Creek House of Horrors', 'Bear Creek Halloween Train', 'Tynehead Hatchery', 'Darts Hill Garden Park'];
-  assert.deepEqual(new Set(cards(renderer)), new Set(near), 'the five spots within 10 km of Surrey');
+  const citySpots = citySpotSections('vancouver').flatMap(section => section.spots);
+  const withinRadius = position => new Set(citySpots
+    .filter(spot => hasCoordinates(spot) && distanceKm(position, spot) <= 10)
+    .map(spot => spot.name));
+  const nearSurrey = withinRadius(surrey);
+  const nearDowntown = withinRadius(downtown);
+  assert.deepEqual(new Set(cards(renderer)), nearSurrey);
+  assert.ok(cards(renderer).includes('Serpentine Fen'));
   assert.equal(watches.length, 1, 'following starts once the filter is applied');
   assert.deepEqual(watches[0], { accuracy: 3, distanceInterval: 100, timeInterval: 10000 });
 
   await act(async () => report(downtown));
-  assert.equal(cards(renderer).length, 18, 'after moving downtown, the 18 spots within 10 km of there');
+  assert.deepEqual(new Set(cards(renderer)), nearDowntown);
+  assert.ok(cards(renderer).includes('Try Curling at Hillcrest'));
   assert.ok(cards(renderer).includes('Stanley Park'));
   assert.ok(!cards(renderer).includes('Stewart Farm Harvest Fair'));
 
   // Coming back to the app takes a fresh fix straight away.
   fix = surrey;
   await act(async () => { h.appState('active'); await new Promise(resolve => setTimeout(resolve, 0)); });
-  assert.deepEqual(new Set(cards(renderer)), new Set(near));
+  assert.deepEqual(new Set(cards(renderer)), nearSurrey);
 
   // The sheet shows the moved position too, so Apply doesn't put the old one back.
   await openSheet(renderer);
   await act(async () => report(downtown));
   await apply(renderer);
-  assert.equal(cards(renderer).length, 18);
+  assert.deepEqual(new Set(cards(renderer)), nearDowntown);
 
   // Precise Location off: a fix only good to a few kilometres is called approximate.
   await act(async () => report({ ...downtown, accuracy: 3000 }));

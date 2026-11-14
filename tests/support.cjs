@@ -52,4 +52,11 @@ const quiet = async run => {
 };
 
 
-module.exports = { mount, textOf, quiet, flush };
+// The numbered pins on a list or collection map (components/ListMap.js), by spot name, and its preview card.
+const listPins = screen => screen.all('Marker').filter(node => node.props.testID?.startsWith('map-pin:'));
+const pinName = pin => pin.props.accessibilityLabel.replace(/\. Spot \d+$/, '');
+const pinNames = screen => listPins(screen).map(pinName);
+const pinNamed = (screen, name) => listPins(screen).find(pin => pinName(pin) === name);
+const mapPreview = screen => screen.all('Marker').find(node => node.props.testID === 'map-preview');
+
+module.exports = { mount, textOf, quiet, flush, pinNames, pinNamed, mapPreview };

@@ -20,6 +20,7 @@ const seasons = {
   Spring: {
     categories: springCategories, backgroundColor: '#FFB6C1', ink: '#FFFFFF',
     animation: require('../assets/flowerFalling2.json'), speed: 0.8, scale: 2.8, opacity: 0.3,
+    search: { rankSearch: true },
   },
   Summer: {
     categories: summerCategories, backgroundColor: '#F8DD74', ink: '#FFF8F0',

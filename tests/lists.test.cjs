@@ -25,7 +25,8 @@ test('catalogue: one entry per spot across all four seasons, each knowing its se
   assert.equal(new Set(catalogueSpots.map(spot => spot.name)).size, catalogueSpots.length);
   assert.ok(fallSpotNames.every(name => seasonOf(name) === 'Fall'));
   assert.equal(seasonOf('Robson Square Ice Rink'), 'Winter');
-  assert.equal(seasonOf('Blossom Garden'), 'Spring');
+  assert.equal(seasonOf('Nitobe Memorial Garden Spring Blossoms'), 'Spring');
+  assert.equal(seasonOf('Nitobe Memorial Garden'), 'Fall');
   assert.equal(seasonOf('Sunset Beach'), 'Summer');
   assert.equal(findCatalogueSpot('Aldor Family Farm').locality, 'Langley');
   assert.equal(locality('Main Mall, UBC, Vancouver'), 'Vancouver');

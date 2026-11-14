@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { featuredRotation } = require('../services/collections');
 const { createHarness, act } = require('./renderHarness.cjs');
-const { mount, quiet, flush } = require('./support.cjs');
+const { mount, quiet, flush, pinNames, pinNamed, mapPreview, textOf } = require('./support.cjs');
 const { catalogueRef } = require('../services/catalogue');
 const { createList, addSpot, toPublicSnapshot } = require('../services/listsState');
 
@@ -276,8 +276,8 @@ test('person: the header shows free stats and a backdrop from their #1 pick, fal
 
 test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Share is a round glass button', async () => {
   const h = createHarness({ documents: {
-    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, catalogueRef('Blossom Garden')], public: true } } },
-    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, catalogueRef('Blossom Garden')] } },
+    ...base, 'users/audit': { username: 'audit', top4: { vancouver: { picks: [farm, catalogueRef('Sunset Beach')], public: true } } },
+    'profiles/audit': { username: 'audit', top4: { vancouver: [farm, catalogueRef('Sunset Beach')] } },
   } });
   const screen = await mount(h, 'screens/ProfileScreen.js');
   assert.ok(screen.texts().includes('Anyone on SznLuv can see these.'));
@@ -295,7 +295,7 @@ test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Shar
   const tileImages = label => screen.button(label).findAllByType('Image').map(node => String(node.props.source));
   assert.equal(tileImages('Number 1: Aldor Family Farm, Langley · Fall').length, 1);
   assert.match(tileImages('Number 1: Aldor Family Farm, Langley · Fall')[0], /FamilyFarm\.jpg$/);
-  assert.deepEqual(tileImages('Number 2: Blossom Garden, Spring'), []);
+  assert.deepEqual(tileImages('Number 2: Sunset Beach, Summer'), []);
   // The photo is sized to the square tile, so "cover" crops it around the centre instead of showing a corner.
   const photo = flatStyle(screen.button('Number 1: Aldor Family Farm, Langley · Fall').findAllByType('Image')[0]);
   assert.equal(typeof photo.width, 'number');
@@ -490,8 +490,8 @@ test('explore: Following with nobody followed points to search', async () => {
 test('list page: Spots and Map handle zero, one and multiple pins in spot order', async () => {
   const h = createHarness({ documents: {
     ...base, ...maya,
-    'publicLists/one': publicCopy('One pin', [catalogueRef('Blossom Garden'), farm], 'maya-uid', 'maya'),
-    'publicLists/zero': publicCopy('No pins', [catalogueRef('Blossom Garden')], 'maya-uid', 'maya'),
+    'publicLists/one': publicCopy('One pin', [catalogueRef('Sunset Beach'), farm], 'maya-uid', 'maya'),
+    'publicLists/zero': publicCopy('No pins', [catalogueRef('Sunset Beach')], 'maya-uid', 'maya'),
   } });
   const open = listId => mount(h, 'screens/ListScreen.js', { params: { listId } });
   const screen = await open('m1');
@@ -502,12 +502,24 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   const map = screen.all('MapView')[0];
   await act(async () => { map.props.onLayout(); map.props.onMapReady(); });
   assert.equal(h.calls.find(([name]) => name === 'fitToCoordinates')[1].length, 2);
-  assert.deepEqual(screen.all('Marker').map(marker => marker.props.title), [farm.name, maan.name]);
-  await act(async () => screen.all('Marker')[1].props.onPress());
+  assert.deepEqual(pinNames(screen), [farm.name, maan.name]);
+  // As on the Map tab, a pin opens a preview first: just the name and an arrow.
+  const navigated = h.navigations.length;
+  await act(async () => screen.all('Marker')[1].props.onPress({ stopPropagation() {} }));
+  assert.equal(h.navigations.length, navigated, 'a pin alone does not leave the list');
+  assert.deepEqual(textOf(mapPreview(screen)), [maan.name]);
+  assert.equal(screen.all('Marker')[1].props.accessibilityState.selected, true);
+  await act(async () => screen.all('Marker')[0].props.onPress({ stopPropagation() {} }));
+  assert.deepEqual(textOf(mapPreview(screen)), [farm.name], 'one preview at a time');
+  await act(async () => map.props.onPress({ nativeEvent: { action: 'marker-press' } }));
+  assert.ok(mapPreview(screen), 'a marker press reaching the map leaves the preview open');
+  await act(async () => map.props.onPress({ nativeEvent: {} }));
+  assert.equal(mapPreview(screen), undefined, 'a tap on empty map closes it');
+  await act(async () => screen.all('Marker')[1].props.onPress({ stopPropagation() {} }));
+  await act(async () => mapPreview(screen).props.onPress({ stopPropagation() {} }));
   const opened = h.navigations.at(-1);
   assert.deepEqual(opened, ['SpotDetailScreen', { spot: maan, sourceListId: 'm1' }]);
-  await screen.press('Map spot 2, Maan Farms');
-  assert.deepEqual(h.navigations.at(-1), opened);
+  assert.equal(screen.all('Text').some(node => textOf(node).join('') === `2. ${maan.name}`), false, 'no spot list under the map');
   await screen.press('Spots');
   await screen.press('View details for Maan Farms');
   assert.deepEqual(h.navigations.at(-1), opened);
@@ -516,7 +528,7 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   const single = await open('one');
   await single.press('Map');
   assert.ok(single.texts().includes('1 of 2 spots on the map'));
-  assert.ok(single.button('Map spot 2, Aldor Family Farm'), 'number matches the card position');
+  assert.ok(pinNamed(single, 'Aldor Family Farm').props.accessibilityLabel.endsWith('Spot 2'), 'number matches the card position');
   assert.equal(single.all('MapView')[0].props.initialRegion.latitude, single.all('Marker')[0].props.coordinate.latitude);
   await act(async () => single.renderer.unmount());
 
@@ -525,7 +537,7 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   assert.equal(zero.all('MapView').length, 0);
   assert.ok(zero.texts().includes('No locations to map'));
   await zero.press('Back to Spots');
-  assert.ok(zero.button('View details for Blossom Garden'));
+  assert.ok(zero.button('View details for Sunset Beach'));
   await act(async () => zero.renderer.unmount());
 });
 

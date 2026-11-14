@@ -122,11 +122,11 @@ test('map: a pin shows one preview at a time, which opens the spot’s own page'
   assert.equal(preview(), undefined);
 
   await tap(pin('c:Aldor Family Farm'));
-  assert.deepEqual(textOf(preview()), ['Aldor Family Farm', 'Tap for more details'], 'no distance without a location');
+  assert.deepEqual(textOf(preview()), ['Aldor Family Farm'], 'no distance without a location');
   assert.equal(pin('c:Aldor Family Farm').props.accessibilityState.selected, true);
 
   await tap(pin('x:audit_steps1'));
-  assert.deepEqual(textOf(preview()), ['Waterfront steps', 'Tap for more details']);
+  assert.deepEqual(textOf(preview()), ['Waterfront steps']);
   assert.equal(screen.all('Marker').filter(node => node.props.testID === 'map-preview').length, 1);
 
   // A marker press also reaches the map; only a tap on empty map closes the preview.
@@ -205,7 +205,7 @@ test('map: the first visit asks for location once; a yes turns it on, a no leave
   await denied.look();
   assert.deepEqual(denied.pins(), MINE, 'the pins are all still there');
   await denied.tap(denied.pin('c:Aldor Family Farm'));
-  assert.deepEqual(textOf(denied.preview()), ['Aldor Family Farm', 'Tap for more details'], 'no made-up distance');
+  assert.deepEqual(textOf(denied.preview()), ['Aldor Family Farm'], 'no made-up distance');
   // Once the phone has said no, the offer to turn it on leads to the phone's settings.
   answers.current = { granted: false, status: 'denied', canAskAgain: false };
   await denied.screen.press('Turn on location');
@@ -435,8 +435,8 @@ test('map: says so kindly when nothing is saved, and when the saved spots have n
   await empty.screen.press('Explore spots');
   assert.deepEqual(empty.h.navigations.at(-1), ['HomeTab', { screen: 'SeasonsScreen', initial: false }]);
 
-  // A placeholder from Spring still has no map coordinates.
-  const unplaced = await openMap({ 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1, 'Blossom Garden': heart('Spring') } });
+  // A placeholder from Summer still has no map coordinates.
+  const unplaced = await openMap({ 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1, 'Sunset Beach': heart('Summer') } });
   await unplaced.spreadOut();
   await unplaced.look();
   assert.deepEqual(unplaced.pins(), []);
@@ -494,4 +494,28 @@ test('map: a followed list that was deleted or made private stops adding pins, w
   assert.equal(screen.texts().includes('Couldn’t load some saved spots'), false);
   await screen.press('Filter spots');
   assert.deepEqual(rows().map(node => node.props.accessibilityLabel), ['Weekend, 2 spots'], 'it is no longer offered in the filter');
+});
+
+test('map: a preview name takes at most two lines, shrinks by a quarter when it must, then ends in “…”', async () => {
+  const h = createHarness();
+  const { nameFit, NAME_MAX_LINES, NAME_SMALL_SCALE, PREVIEW_CARD, previewCardSize } = h.load('components/map/SpotMapPreview.js');
+  assert.equal(NAME_MAX_LINES, 2);
+  assert.equal(NAME_SMALL_SCALE, 0.75);
+  assert.deepEqual(nameFit('Maan Farms'), { lines: 1, small: false });
+  assert.deepEqual(nameFit('Laity Pumpkin Patch'), { lines: 1, small: false });
+  assert.deepEqual(nameFit('Aldor Family Farm Corn Maze'), { lines: 2, small: false });
+  // Too long for two lines at the normal size, but it fits at three quarters of it.
+  assert.deepEqual(nameFit('Burnaby Village Museum Heritage Christmas'), { lines: 2, small: true });
+  // Too long even then: still two small lines, and the rest is cut off.
+  assert.deepEqual(nameFit('The Very Long Name Of A Spot That Goes On And On Past Two Lines'), { lines: 2, small: true });
+  assert.deepEqual(nameFit('Supercalifragilisticexpialidociousness'), { lines: 2, small: false }, 'one long word breaks across two lines');
+
+  const card = name => h.load('components/map/SpotMapPreview.js').default({ spot: { name, latitude: 49, longitude: -123 }, onPress() {} });
+  const nameText = name => {
+    const words = card(name).props.children.props.children[1].props.children[0].props.children[0];
+    return { lines: words.props.numberOfLines, size: [].concat(words.props.style).filter(Boolean).reduce((all, one) => ({ ...all, ...one }), {}).fontSize };
+  };
+  assert.deepEqual(nameText('Maan Farms'), { lines: 1, size: 16 });
+  assert.deepEqual(nameText('Burnaby Village Museum Heritage Christmas'), { lines: 2, size: 12 });
+  assert.ok(PREVIEW_CARD.height >= previewCardSize({ distance: false }).height, 'the room kept for the card covers every name');
 });

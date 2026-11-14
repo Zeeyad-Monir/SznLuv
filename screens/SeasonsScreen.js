@@ -31,7 +31,7 @@ import useEntrance from '../hooks/useEntrance';
 import { useCollectionHeart } from '../hooks/useSavedCollections';
 import CollectionCard from '../components/CollectionCard';
 import { useCity } from '../contexts/CityContext';
-import { collectionsForCity } from '../services/collections';
+import { collectionsForCity, collectionSpots } from '../services/collections';
 import { canNavigate } from '../services/venueNavigation';
 
 // =========================
@@ -67,12 +67,11 @@ export default function SeasonsScreen() {
 
   // Counts start from the local defaults so the cards are complete the moment the page arrives
   const [fallCount, setFallCount] = useState(fallSpotNames.length);
-  const [springCount, setSpringCount] = useState(4);
   const [summerCount, setSummerCount] = useState(3);
 
   const { city } = useCity();
   const collections = collectionsForCity(city.id);
-  const counts = { fall: fallCount, winter: winterSpotNames.length, spring: springCount, summer: summerCount };
+  const counts = { fall: fallCount, winter: winterSpotNames.length, summer: summerCount };
   const entrance = useEntrance(collections.length);
   // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.
   const { isSaved, toggleHeart } = useCollectionHeart();
@@ -97,11 +96,6 @@ export default function SeasonsScreen() {
       // Fall count comes from the spot list itself (services/spots.js) so it always matches the Fall screen
       setFallCount(fallSpotNames.length);
 
-      // Fetching Spring date count
-      const springDatesRef = doc(db, 'dateCounts', 'spring');
-      const springDatesSnap = await getDoc(springDatesRef);
-      setSpringCount(springDatesSnap.exists() ? springDatesSnap.data().count : 4);
-
       // Fetching Summer date count
       const summerDatesRef = doc(db, 'dateCounts', 'summer');
       const summerDatesSnap = await getDoc(summerDatesRef);
@@ -110,7 +104,6 @@ export default function SeasonsScreen() {
       console.error('Error fetching date counts:', error); // Logging any errors
       // Setting default counts in case of error
       setFallCount(fallSpotNames.length);
-      setSpringCount(0);
       setSummerCount(0);
     }
   };
@@ -140,7 +133,7 @@ export default function SeasonsScreen() {
             <Animated.View key={collection.id} style={entrance[index]}>
               <CollectionCard
                 title={collection.title}
-                count={counts[collection.key]}
+                count={collection.key === 'spring' ? collectionSpots(collection.id).length : counts[collection.key]}
                 art={seasonalImages[collection.key]}
                 accessibilityLabel={`${collection.title} Season - View Active Date Ideas`}
                 onPress={() => openSeason(collection.screen)}

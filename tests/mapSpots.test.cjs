@@ -141,8 +141,8 @@ test('map: custom spots are placed from the reference, their record, or a public
 
 test('map: bad coordinates never make a pin, and a spot the app dropped is left out', () => {
   assert.equal(toMapSpot(catalogueRef('No Such Farm')), null);
-  const placeholder = toMapSpot(catalogueRef('Blossom Garden'));
-  assert.equal(placeholder.name, 'Blossom Garden');
+  const placeholder = toMapSpot(catalogueRef('Sunset Beach'));
+  assert.equal(placeholder.name, 'Sunset Beach');
   const broken = [
     placeholder,
     toMapSpot({ ...mine, id: 'me_a', lat: 120, lng: 10 }),

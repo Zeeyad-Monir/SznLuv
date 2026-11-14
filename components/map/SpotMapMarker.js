@@ -1,4 +1,5 @@
 // Pins on the Map tab: one dot per saved spot, and a counted bubble where several sit too close to tell apart.
+// The map on a list or collection uses the same pin with its place in the list written on it (`number`).
 // Each sits in a 44pt target so it is easy to tap, and none of them redraws while the map moves.
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,14 +10,19 @@ const centre = { x: 0.5, y: 0.5 };
 // A marker press also reaches the map as a press; stopping it here keeps the preview from closing again.
 const pressed = (event, run) => { event?.stopPropagation?.(); run(); };
 
-export function SpotMapMarker({ spot, selected, onPress }) {
+export function SpotMapMarker({ spot, selected, number, onPress }) {
+  const numbered = number != null;
   return (
     <Marker coordinate={{ latitude: spot.latitude, longitude: spot.longitude }} anchor={centre}
       tracksViewChanges={false} zIndex={selected ? 3 : 1} onPress={event => pressed(event, () => onPress(spot))}
       testID={`map-pin:${spot.key}`} accessibilityRole="button" accessibilityState={{ selected }}
-      accessibilityLabel={`${spot.name}. Saved spot`} accessibilityHint="Shows a preview">
+      accessibilityLabel={numbered ? `${spot.name}. Spot ${number}` : `${spot.name}. Saved spot`} accessibilityHint="Shows a preview">
       <View style={styles.target}>
-        <View style={[styles.pin, selected && styles.pinSelected]} />
+        {numbered ? (
+          <View style={[styles.numbered, selected && styles.numberedSelected]}>
+            <Text style={styles.count} allowFontScaling={false}>{number}</Text>
+          </View>
+        ) : <View style={[styles.pin, selected && styles.pinSelected]} />}
       </View>
     </Marker>
   );
@@ -53,5 +59,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.danger, ...rim,
   },
   clusterWide: { minWidth: 42 },
+  numbered: {
+    minWidth: 30, height: 30, paddingHorizontal: 4, borderRadius: 15, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.danger, ...rim,
+  },
+  numberedSelected: { minWidth: 34, height: 34, borderRadius: 17, borderWidth: 3, borderColor: colors.ink },
   count: { color: colors.white, fontSize: 14, fontWeight: '800' },
 });
