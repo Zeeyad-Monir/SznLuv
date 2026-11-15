@@ -4,7 +4,7 @@ const { catalogueRef } = require('../services/catalogue');
 const { createSpotIndex, findMatchingSpots, DEFAULT_FILTERS, hasActiveFilters } = require('../services/spotDiscovery');
 const {
   mapSources, selectableSources, pruneSelection, neededListIds, eligibleRefs, needsPublicCopy, toMapSpot,
-  pinnable, mapSections,
+  pinnable, mapSections, DEFAULT_SELECTION, isDefaultSelection, selectionSummary,
 } = require('../services/mapSpots');
 const {
   validRegion, regionAround, regionFor, regionBounds, inBounds, spotsInRegion, clusterSpots, shiftRegion,
@@ -27,12 +27,14 @@ const keys = refs => refs.map(ref => (ref.k === 'c' ? ref.name : ref.id)).sort()
 
 // ---------------------------------------------------------------- What is on the map
 
-test('map: hearts and my own lists are on the map by default, each spot once', () => {
+test('map: only the single hearts are on the map by default; my lists join when switched on, each spot once', () => {
   const sources = mapSources({
     favourites: { ...hearted('Aldor Family Farm'), 'x:me_steps': { isFavourite: true, owner: 'me', name: 'Waterfront steps', savedAt: 2 }, listsMigratedAt: 9, collections: [] },
     myLists: [list('weekend', [farm, maan, mine]), list('dates', [maan])],
   });
-  assert.deepEqual(keys(eligibleRefs(sources)), ['Aldor Family Farm', 'Maan Farms', 'me_steps']);
+  assert.deepEqual(DEFAULT_SELECTION, ['saved']);
+  assert.deepEqual(keys(eligibleRefs(sources)), ['Aldor Family Farm', 'me_steps'], 'a list I made is not shown until it is picked');
+  assert.deepEqual(keys(eligibleRefs(sources, ['saved', 'mine:weekend', 'mine:dates'])), ['Aldor Family Farm', 'Maan Farms', 'me_steps']);
   assert.deepEqual(sources.map(source => source.kind), ['saved', 'mine', 'mine']);
   assert.equal(sources[1].caption, '3 spots');
   assert.equal(sources[2].caption, '1 spot');
@@ -40,10 +42,12 @@ test('map: hearts and my own lists are on the map by default, each spot once', (
 
 test('map: a spot stays while any source still holds it, and goes when none does', () => {
   const inList = [list('weekend', [farm])];
+  const on = ['saved', 'mine:weekend'];
   const both = mapSources({ favourites: hearted('Aldor Family Farm'), myLists: inList });
-  assert.deepEqual(keys(eligibleRefs(both)), ['Aldor Family Farm']);
-  // The heart is removed: the list still holds it.
-  assert.deepEqual(keys(eligibleRefs(mapSources({ favourites: {}, myLists: inList }))), ['Aldor Family Farm']);
+  assert.deepEqual(keys(eligibleRefs(both, on)), ['Aldor Family Farm']);
+  // The heart is removed: the list, still switched on, holds it.
+  assert.deepEqual(keys(eligibleRefs(mapSources({ favourites: {}, myLists: inList }), on)), ['Aldor Family Farm']);
+  assert.deepEqual(eligibleRefs(mapSources({ favourites: {}, myLists: inList })), [], 'and with only the hearts on, it goes');
   // An un-hearted entry left in the document does not count either.
   const unhearted = { 'Aldor Family Farm': { isFavourite: false, season: 'Fall' } };
   assert.deepEqual(eligibleRefs(mapSources({ favourites: unhearted, myLists: [] })), []);
@@ -52,13 +56,11 @@ test('map: a spot stays while any source still holds it, and goes when none does
 test('map: a followed list is never on the default map, even with an old "Show all spots on map" flag', () => {
   const off = mapSources({ favourites: hearted('Maan Farms'), followed: [follow('forest', [farm, laity])] });
   assert.deepEqual(keys(eligibleRefs(off)), ['Maan Farms']);
-  assert.equal(off.at(-1).onMap, false);
   assert.equal(off.at(-1).caption, 'Following · by maya');
 
   // The list page used to have a switch that saved `showOnMap` on the follow. It no longer counts.
   const legacy = mapSources({ favourites: hearted('Maan Farms'), followed: [follow('forest', [farm, laity], { showOnMap: true })] });
   assert.deepEqual(keys(eligibleRefs(legacy)), ['Maan Farms']);
-  assert.equal(legacy.at(-1).onMap, false);
 });
 
 test('map: a kept season is never on the default map but can be picked', () => {
@@ -72,16 +74,18 @@ test('map: a kept season is never on the default map but can be picked', () => {
 
 // ---------------------------------------------------------------- Picking lists in the filter
 
-test('map filter: picked lists replace the default set, combined without repeats', () => {
+test('map filter: everything switched on is shown together, without repeats', () => {
   const sources = mapSources({
     favourites: hearted('Tynehead Hatchery'),
     myLists: [list('weekend', [farm, maan]), list('dates', [maan, laity]), list('other', [hatchery])],
   });
   assert.deepEqual(keys(eligibleRefs(sources, ['mine:weekend'])), ['Aldor Family Farm', 'Maan Farms']);
   assert.deepEqual(keys(eligibleRefs(sources, ['mine:weekend', 'mine:dates'])), ['Aldor Family Farm', 'Laity Pumpkin Patch', 'Maan Farms']);
-  // The hearted hatchery is hidden while lists are picked, and back when the selection is cleared.
+  // The single hearts are one more thing to switch on or off: they stay beside a picked list unless turned off.
+  assert.deepEqual(keys(eligibleRefs(sources, ['saved', 'mine:weekend'])), ['Aldor Family Farm', 'Maan Farms', 'Tynehead Hatchery']);
+  assert.deepEqual(keys(eligibleRefs(sources, ['saved', 'mine:other'])), ['Tynehead Hatchery'], 'hearted and in a picked list: one pin');
   assert.equal(keys(eligibleRefs(sources, ['mine:weekend'])).includes('Tynehead Hatchery'), false);
-  assert.equal(keys(eligibleRefs(sources, [])).includes('Tynehead Hatchery'), true);
+  assert.deepEqual(eligibleRefs(sources, []), [], 'with everything off the map is empty');
 });
 
 test('map filter: a followed list can be picked, and only then is its public copy needed', () => {
@@ -89,8 +93,9 @@ test('map filter: a followed list can be picked, and only then is its public cop
   const sources = mapSources({ favourites: hearted('Maan Farms'), followed });
   assert.deepEqual(keys(eligibleRefs(sources, ['followed:forest'])), ['Aldor Family Farm', 'Laity Pumpkin Patch']);
   assert.equal(followed[0].pointer.showOnMap, undefined);
-  assert.deepEqual(keys(eligibleRefs(sources, [])), ['Maan Farms']);
-  assert.deepEqual(neededListIds([followed[0].pointer], []), []);
+  assert.deepEqual(keys(eligibleRefs(sources, ['saved', 'followed:forest'])), ['Aldor Family Farm', 'Laity Pumpkin Patch', 'Maan Farms']);
+  assert.deepEqual(keys(eligibleRefs(sources)), ['Maan Farms']);
+  assert.deepEqual(neededListIds([followed[0].pointer], ['saved']), []);
   assert.deepEqual(neededListIds([followed[0].pointer], ['followed:forest']), ['forest']);
   assert.deepEqual(neededListIds([{ id: 'forest', showOnMap: true }, { id: 'quiet' }], []), [], 'an old flag reads nothing');
 });
@@ -112,7 +117,10 @@ test('map filter: lists that were unfollowed, deleted or withdrawn leave the sel
   assert.deepEqual(pruneSelection(selection, sources), ['mine:weekend', 'followed:forest']);
   const untouched = ['mine:weekend'];
   assert.equal(pruneSelection(untouched, sources), untouched, 'an unchanged selection keeps its identity');
-  assert.deepEqual(pruneSelection(['saved'], sources), [], 'single hearts are not a list to pick');
+  const hearts = ['saved'];
+  assert.equal(pruneSelection(hearts, sources), hearts, 'the single hearts are always there to switch on');
+  assert.deepEqual(pruneSelection(['saved', 'mine:deleted'], sources), ['saved']);
+  assert.equal(selectableSources(sources).some(source => source.id === 'saved'), false, 'they are a switch, not a list to pick');
 });
 
 // ---------------------------------------------------------------- From references to pins
@@ -151,15 +159,16 @@ test('map: bad coordinates never make a pin, and a spot the app dropped is left 
   assert.deepEqual(pinnable(broken), []);
   assert.equal(pinnable([toMapSpot(farm), ...broken]).length, 1, 'the good pin still loads');
   // Malformed entries in a list are skipped rather than crashing.
-  assert.deepEqual(keys(eligibleRefs([{ id: 'saved', onMap: true, refs: [null, { k: '?' }, farm] }])), ['Aldor Family Farm']);
+  assert.deepEqual(keys(eligibleRefs([{ id: 'saved', refs: [null, { k: '?' }, farm] }])), ['Aldor Family Farm']);
 });
 
 test('map: when a spot is referenced twice, the reference that knows the place is kept', () => {
   const bare = { k: 'x', id: 'me_steps', owner: 'me', name: 'Waterfront steps' };
   const sources = mapSources({ favourites: { 'x:me_steps': { isFavourite: true, owner: 'me', name: 'Waterfront steps' } }, myLists: [list('weekend', [mine])] });
-  const [ref] = eligibleRefs(sources);
-  assert.equal(ref.lat, mine.lat);
-  assert.equal(eligibleRefs([{ id: 'a', onMap: true, refs: [mine, bare] }]).length, 1);
+  const refs = eligibleRefs(sources, ['saved', 'mine:weekend']);
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].lat, mine.lat);
+  assert.equal(eligibleRefs([{ id: 'a', refs: [mine, bare] }], ['a']).length, 1);
 });
 
 // ---------------------------------------------------------------- Search and filters over saved spots
@@ -183,10 +192,30 @@ test('map search: uses the app’s own search, hidden tags included, over saved 
   assert.deepEqual(names('farm', near), []);
 });
 
-test('map filter: picked lists light the filter button, and the other screens are unaffected', () => {
-  assert.equal(hasActiveFilters(DEFAULT_FILTERS), false);
+test('map filter: only a choice other than the saved spots alone counts as a filter, and it is put in words', () => {
+  assert.equal(hasActiveFilters(DEFAULT_FILTERS), false, 'the other screens are unaffected');
   assert.equal(hasActiveFilters({ ...DEFAULT_FILTERS, listIds: [] }), false);
-  assert.equal(hasActiveFilters({ ...DEFAULT_FILTERS, listIds: ['mine:weekend'] }), true);
+  assert.equal(isDefaultSelection(['saved']), true);
+  assert.equal(isDefaultSelection(), true);
+  assert.equal(isDefaultSelection([]), false, 'switching the saved spots off is a choice too');
+  assert.equal(isDefaultSelection(['saved', 'mine:weekend']), false);
+  assert.equal(isDefaultSelection(['mine:weekend']), false);
+
+  const sources = mapSources({
+    favourites: hearted('Maan Farms'),
+    myLists: [list('weekend', [farm]), list('dates', [laity])],
+    keptCollections: { 'vancouver-fall': { savedAt: 1 }, 'vancouver-winter': { savedAt: 2 } },
+  });
+  const kept = sources.filter(source => source.kind === 'collection').map(source => source.id);
+  assert.equal(kept.length, 2);
+  assert.equal(selectionSummary(sources, ['saved']), 'Saved spots');
+  assert.equal(selectionSummary(sources, []), 'Nothing shown');
+  assert.equal(selectionSummary(sources, ['saved', 'mine:weekend']), 'Saved spots + weekend');
+  assert.equal(selectionSummary(sources, ['mine:weekend', 'mine:dates']), '2 lists');
+  assert.equal(selectionSummary(sources, ['saved', ...kept]), 'Saved spots + 2 collections');
+  assert.equal(selectionSummary(sources, [kept[0], 'mine:dates']), '2 lists & collections');
+  assert.equal(selectionSummary(sources, ['saved', kept[0], 'mine:dates']), 'Saved spots + 2 more');
+  assert.equal(selectionSummary(sources, ['mine:gone']), 'Nothing shown', 'a list that no longer exists is not counted');
 });
 
 // ---------------------------------------------------------------- Regions

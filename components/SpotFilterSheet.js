@@ -19,9 +19,18 @@ import { colors } from './theme';
 
 const EMPTY_LOOKUP = { pending: false, matches: [], error: null };
 
-// The Map tab adds to the same sheet: `collections` ([{ id, title, caption }]) puts "Lists & collections"
-// first and keeps the picks in `filters.listIds`; `showSort={false}` drops sorting, which a map
-// has no use for; `defaults` is what Reset goes back to.
+// The Map tab adds to the same sheet: `collections` ([{ id, kind, title, caption }]) puts "Show on map"
+// first: a switch for the single hearts, then the kept collections, the user's own lists and the lists they
+// follow, each picked one by one. Everything switched on is kept in `filters.listIds` (the hearts as
+// 'saved'). `showSort={false}` drops sorting, which a map has no use for; `defaults` is what Reset goes
+// back to.
+const SAVED = 'saved';
+const SOURCE_GROUPS = [
+  { kind: 'collection', title: 'Saved collections', searchLabel: 'Search collections', emptyText: 'No saved collections yet. Collections you keep with a heart show up here.' },
+  { kind: 'mine', title: 'My lists', searchLabel: 'Search my lists', emptyText: 'No lists yet. Lists you make show up here.' },
+  { kind: 'followed', title: 'Following', searchLabel: 'Search followed lists' }, // left out when nothing is followed
+];
+
 export default function SpotFilterSheet({
   filters, index, onApply, onDismiss, collections = null, showSort = true, defaults = DEFAULT_FILTERS,
   distanceUnavailable = 'Distance filters are unavailable for this season.',
@@ -136,6 +145,16 @@ export default function SpotFilterSheet({
     const picked = previous.listIds ?? [];
     return { ...previous, listIds: picked.includes(id) ? picked.filter(other => other !== id) : [...picked, id] };
   });
+  // A whole group at once: every one of its lists on, or all of them off. The other groups are left alone.
+  const setGroup = (items, on) => setDraft(previous => {
+    const ids = items.map(item => item.id);
+    const others = (previous.listIds ?? []).filter(id => !ids.includes(id));
+    return { ...previous, listIds: on ? [...others, ...ids] : others };
+  });
+  const sourceGroups = collections
+    ? SOURCE_GROUPS.map(group => ({ ...group, items: collections.filter(item => item.kind === group.kind) }))
+      .filter(group => group.items.length || group.emptyText)
+    : [];
 
   const chooseCurrent = () => {
     selectSource('current');
@@ -177,10 +196,21 @@ export default function SpotFilterSheet({
               scroll.current?.scrollToEnd?.({ animated: !getReduceMotion() });
             }}>
             {!!collections && (
-              <ListPicker first title="Lists & collections" items={collections} selectedIds={pickedLists}
-                onToggle={toggleList} onClear={() => update({ listIds: [] })}
-                emptyText="No saved lists yet. Lists you make, follow or keep with a heart show up here." />
+              <FilterSection title="Show on map" first>
+                <View style={shared.switchRow}>
+                  <Text style={shared.switchLabel}>Saved spots</Text>
+                  <Switch value={pickedLists.includes(SAVED)} onValueChange={() => toggleList({ id: SAVED })}
+                    accessibilityLabel="Saved spots" trackColor={{ true: colors.ink }} />
+                </View>
+                <Text style={shared.hint}>Spots you saved one by one.</Text>
+              </FilterSection>
             )}
+            {sourceGroups.map(group => (
+              <ListPicker key={group.kind} title={group.title} items={group.items} searchLabel={group.searchLabel}
+                selectedIds={pickedLists.filter(id => group.items.some(item => item.id === id))}
+                onToggle={toggleList} onClear={() => setGroup(group.items, false)}
+                onSelectAll={() => setGroup(group.items, true)} emptyText={group.emptyText} />
+            ))}
             {index.categoryOptions.length > 0 && (
               <FilterSection title="Categories" first={!collections}>
                 <View style={shared.options}>

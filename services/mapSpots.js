@@ -4,13 +4,13 @@
 // A spot can be on the map for more than one reason (hearted, in one of my lists, in a list picked in the
 // filter). Each reason is a "source"; a spot is pinned once, and only leaves when no source holds it.
 //
-// - saved: spots hearted one by one. Always on the map.
-// - mine: a list the user made. Always on the map.
-// - followed: someone else's public list. Never on the map by default; pick it in the filter. (An old
-//   `showOnMap` flag on a follow, from the switch the list page used to have, is ignored.)
-// - collection: a season the user kept with a heart. Never on the map by default; pick it in the filter.
+// - saved: spots hearted one by one. On the map by default; the filter can switch them off.
+// - collection: a SznLuv collection the user kept with a heart. Off until picked in the filter.
+// - mine: a list the user made. Off until picked in the filter.
+// - followed: someone else's public list. Off until picked in the filter. (An old `showOnMap` flag on a
+//   follow, from the switch the list page used to have, is ignored.)
 //
-// Picking lists in the filter replaces the default set with just those lists.
+// The selection is the IDs of the sources that are switched on. The map shows every spot in any of them.
 const { catalogueRef, findCatalogueSpot, hasPin, spotKey } = require('./catalogue');
 const { collectionById, collectionCaption, collectionSpots } = require('./collections');
 const { SPOT_CATEGORIES, ownerOfSpotId, savedCustomSpots } = require('./customSpotsState');
@@ -19,6 +19,10 @@ const { hasCoordinates } = require('./spotDiscovery');
 const OTHER = 'Other';
 const count = total => `${total} ${total === 1 ? 'spot' : 'spots'}`;
 const sourceId = (kind, id) => `${kind}:${id}`;
+const SAVED = 'saved';
+// What the map shows until the filter says otherwise: the single hearts, and nothing else.
+const DEFAULT_SELECTION = Object.freeze([SAVED]);
+const isDefaultSelection = (ids = DEFAULT_SELECTION) => ids.length === 1 && ids[0] === SAVED;
 
 // The same rule as services/follows.js isStalePointer, which can't be loaded here (it imports Firestore).
 const isStale = (pointer, list) => !list || list.publishedAt !== pointer.publishedAt;
@@ -35,10 +39,10 @@ function savedRefs(favourites) {
 // `followed` is [{ pointer, list }]: `list` is the public copy, null once it is known to be gone, and
 // undefined while it has not been read (it is only read when it is on the map or picked in the filter).
 function mapSources({ favourites, myLists = [], followed = [], keptCollections = {} } = {}) {
-  const sources = [{ id: 'saved', kind: 'saved', title: 'Saved', caption: '', onMap: true, refs: savedRefs(favourites) }];
+  const sources = [{ id: SAVED, kind: 'saved', title: 'Saved spots', caption: '', refs: savedRefs(favourites) }];
   for (const list of myLists) {
     const refs = (list.items ?? []).map(item => item.spot);
-    sources.push({ id: sourceId('mine', list.id), kind: 'mine', title: list.title, caption: count(refs.length), onMap: true, refs });
+    sources.push({ id: sourceId('mine', list.id), kind: 'mine', title: list.title, caption: count(refs.length), refs });
   }
   for (const { pointer, list } of followed) {
     // Deleted, made private, or withdrawn and shared again: it stops counting, and leaves the filter.
@@ -49,7 +53,6 @@ function mapSources({ favourites, myLists = [], followed = [], keptCollections =
       kind: 'followed',
       title: list?.title ?? pointer.title ?? 'List',
       caption: ['Following', by].filter(Boolean).join(' · '),
-      onMap: false,
       refs: (list?.items ?? []).map(item => item.spot),
     });
   }
@@ -61,7 +64,6 @@ function mapSources({ favourites, myLists = [], followed = [], keptCollections =
       kind: 'collection',
       title: collection.title,
       caption: collectionCaption(id),
-      onMap: false,
       refs: collectionSpots(id).map(spot => catalogueRef(spot.name)),
     });
   }
@@ -72,10 +74,11 @@ function mapSources({ favourites, myLists = [], followed = [], keptCollections =
 const selectableSources = sources => sources.filter(source => source.kind !== 'saved');
 
 // Lists that were picked and have since been unfollowed, deleted or withdrawn drop out of the selection.
-// Returns the same array when nothing changed, so callers can compare by identity.
-function pruneSelection(selectedIds = [], sources) {
-  const known = new Set(selectableSources(sources).map(source => source.id));
-  const kept = selectedIds.filter(id => known.has(id));
+// The single hearts are always there to switch on. Returns the same array when nothing changed, so callers
+// can compare by identity.
+function pruneSelection(selectedIds = DEFAULT_SELECTION, sources) {
+  const known = new Set(sources.map(source => source.id));
+  const kept = selectedIds.filter(id => id === SAVED || known.has(id));
   return kept.length === selectedIds.length ? selectedIds : kept;
 }
 
@@ -87,13 +90,11 @@ function neededListIds(pointers = [], selectedIds = []) {
     .map(pointer => pointer.id);
 }
 
-// One reference per spot. With nothing picked, every source that is on the map; otherwise only the picked
-// ones. When the same spot is referenced twice, the reference that says where it is wins.
-function eligibleRefs(sources, selectedIds = []) {
+// One reference per spot, from every source that is switched on. When the same spot is referenced twice,
+// the reference that says where it is wins.
+function eligibleRefs(sources, selectedIds = DEFAULT_SELECTION) {
   const picked = new Set(selectedIds);
-  const chosen = picked.size
-    ? sources.filter(source => picked.has(source.id))
-    : sources.filter(source => source.onMap);
+  const chosen = sources.filter(source => picked.has(source.id));
   const byKey = new Map();
   for (const source of chosen) {
     for (const ref of source.refs) {
@@ -149,7 +150,23 @@ function mapSections(spots) {
     .filter(section => section.spots.length);
 }
 
+// What is switched on, in a few words, for the map to say while it differs from the default.
+function selectionSummary(sources, selectedIds = DEFAULT_SELECTION) {
+  const picked = new Set(selectedIds);
+  const on = sources.filter(source => picked.has(source.id));
+  const lists = on.filter(source => source.kind !== 'saved');
+  const hearts = on.length > lists.length;
+  if (!lists.length) return hearts ? 'Saved spots' : 'Nothing shown';
+  const collections = lists.filter(source => source.kind === 'collection').length;
+  const named = lists.length === 1 ? lists[0].title
+    : collections === lists.length ? `${lists.length} collections`
+    : collections === 0 ? `${lists.length} lists`
+    : hearts ? `${lists.length} more` : `${lists.length} lists & collections`;
+  return hearts ? `Saved spots + ${named}` : named;
+}
+
 module.exports = {
+  DEFAULT_SELECTION, isDefaultSelection, selectionSummary,
   mapSources, selectableSources, pruneSelection, neededListIds, eligibleRefs,
   needsPublicCopy, toMapSpot, pinnable, mapSections, sourceId,
 };

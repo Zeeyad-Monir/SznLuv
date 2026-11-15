@@ -1,7 +1,8 @@
 // Pick from someone's lists, however many they have. The first few show; "Show more" reveals the rest in
 // batches; the Search button opens a field that searches every list, shown or not. With a filter
 // (`selectedIds`), the picks are also kept as chips at the top, so one stays in view when it is past the
-// shown batch or outside the search. Used by the Map's filter and by Add to list.
+// shown batch or outside the search, and `onSelectAll` adds a way to tick every list at once. Used by the
+// Map's filter and by Add to list.
 import React, { useMemo, useState } from 'react';
 import { LayoutAnimation, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,7 +38,7 @@ function ListRow({ item, checked, onPress, style }) {
 // `items` are { id, title, caption }. With `selectedIds` and `onClear` it is a filter that shows its picks;
 // without them, `isChecked` says which rows are ticked and a tap acts straight away (Add to list).
 export default function ListPicker({
-  title, items, selectedIds, isChecked = id => selectedIds?.includes(id), onToggle, onClear,
+  title, items, selectedIds, isChecked = id => selectedIds?.includes(id), onToggle, onClear, onSelectAll,
   emptyText, searchLabel = 'Search lists', rowStyle, maxHeight, first,
 }) {
   const [shown, setShown] = useState(FIRST_BATCH);
@@ -54,6 +55,10 @@ export default function ListPicker({
     : items.slice(0, batched ? shown : items.length);
   const remaining = searching ? 0 : items.length - visible.length;
   const picked = filtering ? items.filter(item => selectedIds.includes(item.id)) : [];
+  // A single list is cleared by unticking it.
+  const canClear = filtering && picked.length > 0 && items.length > 1;
+  // Offered once there is more than one list to tick, and not while a search narrows what is in view.
+  const canSelectAll = filtering && !!onSelectAll && !searching && items.length > 1 && picked.length < items.length;
 
   const openSearch = () => { animate(); setSearchOpen(true); };
   const closeSearch = () => { animate(); setQuery(''); setSearchOpen(false); };
@@ -119,7 +124,7 @@ export default function ListPicker({
               </TouchableOpacity>
             </View>
           )}
-          {(remaining > 0 || (filtering && picked.length > 0)) && (
+          {(remaining > 0 || canClear || canSelectAll) && (
             <View style={styles.links}>
               {remaining > 0 && (
                 <TouchableOpacity style={shared.inlineAction} accessibilityRole="button"
@@ -127,8 +132,15 @@ export default function ListPicker({
                   <Text style={shared.actionText}>Show {Math.min(NEXT_BATCH, remaining)} more</Text>
                 </TouchableOpacity>
               )}
-              {filtering && picked.length > 0 && (
-                <TouchableOpacity style={[shared.inlineAction, styles.clear]} accessibilityRole="button" onPress={onClear}>
+              {canSelectAll && (
+                <TouchableOpacity style={shared.inlineAction} accessibilityRole="button"
+                  accessibilityLabel={`Select all in ${title}`} onPress={onSelectAll}>
+                  <Text style={shared.actionText}>Select all</Text>
+                </TouchableOpacity>
+              )}
+              {canClear && (
+                <TouchableOpacity style={[shared.inlineAction, styles.clear]} accessibilityRole="button"
+                  accessibilityLabel={`Clear selection in ${title}`} onPress={onClear}>
                   <Text style={[shared.actionText, shared.underlined]}>Clear selection</Text>
                 </TouchableOpacity>
               )}

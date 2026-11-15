@@ -1,5 +1,5 @@
 // "All Vancouver spots": every spot SznLuv lists in the chosen city, one section per season, with the same
-// search, filters and map as a season page.
+// search, filters and map as a season page. 
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BackgroundLottie from '../components/BackgroundLottie';

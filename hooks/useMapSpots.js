@@ -2,7 +2,7 @@
 // seasons I kept, and the lists I follow. services/mapSpots.js decides which of them count.
 //
 // Kept cheap on purpose. Hearts, my lists, my spots and kept seasons use the listeners the app already runs.
-// A followed list is read once, and only when it is switched on for the map or picked in the filter. Someone
+// A followed list is read once, and only when it is picked in the filter. Someone
 // else's spot is read once, and only when its reference doesn't say where it is. Both are remembered for the
 // session and read again after five minutes, when the tab is opened or the app comes back. Moving the map
 // reads nothing.
@@ -14,7 +14,8 @@ import { ownerOfSpotId } from '../services/customSpotsState';
 import { subscribeFollowedLists } from '../services/follows';
 import { getPublicList } from '../services/lists';
 import {
-  eligibleRefs, mapSources, neededListIds, needsPublicCopy, pinnable, pruneSelection, selectableSources, toMapSpot,
+  DEFAULT_SELECTION, eligibleRefs, mapSources, neededListIds, needsPublicCopy, pinnable, pruneSelection,
+  selectableSources, selectionSummary, toMapSpot,
 } from '../services/mapSpots';
 import useMyLists from './useMyLists';
 import useMySpots from './useMySpots';
@@ -76,8 +77,8 @@ function usePublicCopies(uid, collection, load, ids, checkedAt) {
 
 const waiting = status => status === 'idle' || status === 'loading';
 
-// `selectedIds`: the lists picked in the map's filter (services/mapSpots.js source IDs).
-export default function useMapSpots(selectedIds = NONE) {
+// `selectedIds`: what is switched on in the map's filter (services/mapSpots.js source IDs).
+export default function useMapSpots(selectedIds = DEFAULT_SELECTION) {
   const { user } = useContext(AuthContext);
   const uid = user?.uid;
   const [attempt, setAttempt] = useState(0);
@@ -130,8 +131,9 @@ export default function useMapSpots(selectedIds = NONE) {
     return toMapSpot(ref, details && (!owner || details.ownerUid === owner) ? details : undefined);
   }).filter(Boolean)), [refs, mySpots.byId, publicSpots.version, uid]);
 
-  const savedCount = useMemo(() => eligibleRefs(sources, NONE).length, [sources]);
-  const options = useMemo(() => selectableSources(sources).map(({ id, title, caption }) => ({ id, title, caption })), [sources]);
+  const savedCount = useMemo(() => eligibleRefs(sources, DEFAULT_SELECTION).length, [sources]);
+  const options = useMemo(() => selectableSources(sources).map(({ id, kind, title, caption }) => ({ id, kind, title, caption })), [sources]);
+  const summary = useMemo(() => selectionSummary(sources, selection), [sources, selection]);
 
   const loading = !heartsReady || waiting(lists.status) || waiting(kept.status) || waiting(mySpots.status)
     || followsStatus === 'loading' || publicLists.loading || publicSpots.loading;
@@ -150,9 +152,10 @@ export default function useMapSpots(selectedIds = NONE) {
 
   return {
     pins,                 // spots with a place, one per spot, before search and the other filters
-    options,              // lists that can be picked in the filter
-    selection,            // the picked lists that still exist
-    savedCount,           // how many spots the default map holds, pinned or not
+    options,              // collections and lists that can be picked in the filter, each with its `kind`
+    selection,            // what is switched on and still exists
+    summary,              // the same, in a few words
+    savedCount,           // how many spots are hearted one by one, pinned or not
     spotCount: refs.length,
     status: loading && !failed ? 'loading' : 'ready',
     failed,
