@@ -64,7 +64,7 @@ const card = (id, title, owner, extra = {}) => ({
   cityId: 'vancouver', publishedAt: 1, updatedAt: 1, followerCount: 0, season: 'Fall', reason: 'personal', ...extra,
 });
 const publicList = (title, ownerUid, ownerUsername, now) => toPublicSnapshot(
-  addSpot(createList({ ownerUid, title, now }), farm), { ownerUsername, now });
+  addSpot(createList({ cover: { type: 'season', value: 'fall' }, ownerUid, title, now }), farm), { ownerUsername, now });
 const documents = (more = {}) => ({
   'users/audit': { username: 'audit', blocked: ['troll-uid'] },
   'favourites/audit': { listsMigratedAt: 1, 'Tynehead Hatchery': { isFavourite: true, season: 'Fall', savedAt: 5 } },

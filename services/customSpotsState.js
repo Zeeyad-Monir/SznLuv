@@ -18,7 +18,7 @@ const SPOT_LIMITS = { name: 60, description: 500, tips: 300, cost: 60, hours: 12
 
 // Keep categories people could save on custom spots before the Winter catalogue was curated.
 const SPOT_CATEGORIES = [
-  ...new Set([...catalogueSpots.map(spot => spot.category).filter(Boolean), 'Ice Skating', 'Christmas Tree Farms']),
+  ...new Set([...catalogueSpots.map(spot => spot.category).filter(Boolean), 'Beaches', 'Ice Skating', 'Christmas Tree Farms']),
   'Other',
 ];
 const SPOT_SEASONS = [

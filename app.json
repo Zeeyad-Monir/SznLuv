@@ -14,26 +14,31 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.zeeyad.sznluv",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SznLuv uses your location to find nearby date spots and show directions to venues.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app requires location access for enhanced navigation features."
       }
     },
     "android": {
+      "package": "com.zeeyad.sznluv",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "WEATHER_API_KEY": "92be9d8cdbac2f4865e8666ae541f316"
+      "WEATHER_API_KEY": "92be9d8cdbac2f4865e8666ae541f316",
+      "eas": {
+        "projectId": "120aa27a-b201-4e87-ac33-e969768fd147"
+      }
     },
     "plugins": [
       [
@@ -43,7 +48,9 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
-    ]
+      ],
+      "expo-sqlite"
+    ],
+    "owner": "zeeyad_monir"
   }
 }

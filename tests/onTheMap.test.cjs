@@ -17,7 +17,7 @@ const record = (ref, extra = {}) => ({
   ownerUid: 'audit', name: ref.name, ...(ref.address ? { address: ref.address } : {}),
   ...(Number.isFinite(ref.lat) ? { lat: ref.lat, lng: ref.lng } : {}), photos: [], publicListIds: [], createdAt: 1, updatedAt: 1, ...extra,
 });
-const draft = (title, refs = []) => refs.reduce((list, ref) => L.addSpot(list, ref), L.createList({ ownerUid: 'audit', title, now: 1 }));
+const draft = (title, refs = []) => refs.reduce((list, ref) => L.addSpot(list, ref), L.createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title, now: 1 }));
 // Already public: a copy written before the rule existed, so it can hold anything.
 const published = (id, list) => ({
   [`lists/${id}`]: { ...list, public: true, publishedAt: 100 },

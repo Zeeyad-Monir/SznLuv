@@ -9,7 +9,7 @@ import { colors, text } from './theme';
 const VIEWS = [{ value: 'spots', label: 'Spots' }, { value: 'map', label: 'Map' }];
 
 export default function ListBody({
-  sections, view, onViewChange, onOpen, isSaved, onSave, empty, editing, editProps, retry, sectionTitleStyle,
+  sections, view, onViewChange, onOpen, isSaved, onSave, empty, editing, editProps, retry, sectionTitleStyle, sectionSpacing,
 }) {
   const entries = sections.flatMap(section => section.entries);
   const showingMap = view === 'map' && !editing;
@@ -47,7 +47,7 @@ export default function ListBody({
         <>
           {entries.length === 0 && empty}
           {sections.map(({ title, entries: group }, sectionIndex) => (
-            <View key={title ?? sectionIndex}>
+            <View key={title ?? sectionIndex} style={sectionIndex > 0 ? sectionSpacing : undefined}>
               {!!title && <Text style={sectionTitleStyle} accessibilityRole="header">{title}</Text>}
               {group.map((entry, index) => (
                 <SpotCard key={entry.spot.key} spot={entry.spot} note={entry.note}

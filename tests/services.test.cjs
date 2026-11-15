@@ -103,8 +103,9 @@ test('spot navigation uses one route and passes identity and optional list attri
   assert.equal(navigated.length, 1, 'a second tap after navigation starts is ignored');
 });
 
-const { springSpotNames, winterSpotNames } = require('../services/seasonSpots');
-const otherSeasonSpotNames = [...winterSpotNames, ...springSpotNames, 'Sunset Beach', 'English Bay', 'Golden Sands', 'Grouse Grind', 'Coral Cove'];
+const { springSpotNames, summerCategories, winterSpotNames } = require('../services/seasonSpots');
+const summerSpotNames = summerCategories.flatMap(category => category.spots.map(spot => spot.name));
+const otherSeasonSpotNames = [...winterSpotNames, ...springSpotNames, ...summerSpotNames];
 test('fall spots: every detailed spot has the complete, consistently formatted record the venue page needs', () => {
   assert.equal(detailedFallSpots.length, 47);
   const placeIDs = new Set(), names = new Set();
@@ -137,8 +138,8 @@ test('fall spots: names are unique across seasons and the list matches the origi
   assert.deepEqual(fallCategories.map(category => category.spots.length), [12, 11, 10, 7, 10]);
   assert.ok(fallCategories.every(category => category.spots.every(spot => spot.name && spot.address)));
 });
-test('all catalogue spots open the shared details route, including sparse entries', () => {
-  for (const name of [...fallSpotNames, ...winterSpotNames, ...springSpotNames, 'Sunset Beach']) {
+test('all catalogue spots open the shared details route', () => {
+  for (const name of [...fallSpotNames, ...winterSpotNames, ...springSpotNames, ...summerSpotNames]) {
     const navigated = [];
     const spot = { k: 'c', name };
     openSpot({ navigate: (...args) => navigated.push(args) }, spot);

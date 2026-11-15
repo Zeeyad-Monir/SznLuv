@@ -6,7 +6,7 @@
 // IMPORTS SECTION
 // =========================
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 import {
   View,
@@ -19,11 +19,6 @@ import {
 // Importing navigation hook to navigate between screens
 import { useNavigation } from '@react-navigation/native';
 
-// Importing Firebase database functions
-import { db } from '../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
-import { fallSpotNames } from '../services/spots';
-import { winterSpotNames } from '../services/seasonSpots';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { GUTTER, text } from '../components/theme';
@@ -61,17 +56,8 @@ export default function SeasonsScreen() {
   // Initializing navigation hook to enable screen navigation
   const navigation = useNavigation();
 
-  // =========================
-  // STATE VARIABLES SECTION
-  // =========================
-
-  // Counts start from the local defaults so the cards are complete the moment the page arrives
-  const [fallCount, setFallCount] = useState(fallSpotNames.length);
-  const [summerCount, setSummerCount] = useState(3);
-
   const { city } = useCity();
   const collections = collectionsForCity(city.id);
-  const counts = { fall: fallCount, winter: winterSpotNames.length, summer: summerCount };
   const entrance = useEntrance(collections.length);
   // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.
   const { isSaved, toggleHeart } = useCollectionHeart();
@@ -80,41 +66,6 @@ export default function SeasonsScreen() {
   const openSeason = (route) => {
     if (canNavigate(navigation)) navigation.navigate(route);
   };
-
-  // =========================
-  // DATA FETCHING FUNCTIONS
-  // =========================
-
-  /**
-   * fetchDateCounts Function
-   *
-   * Fetches the count of active date ideas for each season from Firebase Firestore.
-   * If the count documents exist, it retrieves the counts; otherwise, sets default values.
-   */
-  const fetchDateCounts = async () => {
-    try {
-      // Fall count comes from the spot list itself (services/spots.js) so it always matches the Fall screen
-      setFallCount(fallSpotNames.length);
-
-      // Fetching Summer date count
-      const summerDatesRef = doc(db, 'dateCounts', 'summer');
-      const summerDatesSnap = await getDoc(summerDatesRef);
-      setSummerCount(summerDatesSnap.exists() ? summerDatesSnap.data().count : 3);
-    } catch (error) {
-      console.error('Error fetching date counts:', error); // Logging any errors
-      // Setting default counts in case of error
-      setFallCount(fallSpotNames.length);
-      setSummerCount(0);
-    }
-  };
-
-  // =========================
-  // USE EFFECTS SECTION
-  // =========================
-
-  useEffect(() => {
-    fetchDateCounts();
-  }, []);
 
   // =========================
   // RENDERING SECTION
@@ -133,7 +84,7 @@ export default function SeasonsScreen() {
             <Animated.View key={collection.id} style={entrance[index]}>
               <CollectionCard
                 title={collection.title}
-                count={collection.key === 'spring' ? collectionSpots(collection.id).length : counts[collection.key]}
+                count={collectionSpots(collection.id).length}
                 art={seasonalImages[collection.key]}
                 accessibilityLabel={`${collection.title} Season - View Active Date Ideas`}
                 onPress={() => openSeason(collection.screen)}

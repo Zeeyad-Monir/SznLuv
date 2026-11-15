@@ -9,7 +9,7 @@ import { springCategories, summerCategories, winterCategories } from '../service
 const seasons = {
   Fall: {
     categories: fallCategories, backgroundColor: '#F5AD70', ink: '#F5F5DC',
-    animation: require('../assets/fallingLeaves.json'), speed: 0.6, scale: 1.65, opacity: 0.3, fill: true,
+    animation: require('../assets/fallingLeaves.json'), speed: 0.6, opacity: 0.24, fill: true,
     search: { rankSearch: true },
   },
   Winter: {
@@ -19,12 +19,13 @@ const seasons = {
   },
   Spring: {
     categories: springCategories, backgroundColor: '#FFB6C1', ink: '#FFFFFF',
-    animation: require('../assets/flowerFalling2.json'), speed: 0.8, scale: 2.8, opacity: 0.3,
+    animation: require('../assets/flowerFalling2.json'), speed: 0.8, opacity: 0.24, fill: true,
     search: { rankSearch: true },
   },
   Summer: {
-    categories: summerCategories, backgroundColor: '#F8DD74', ink: '#FFF8F0',
-    animation: require('../assets/summerFalling.json'), speed: 0.3, scale: 1.8, opacity: 0.6,
+    categories: summerCategories, backgroundColor: '#EBD379', ink: '#FFF8F0',
+    animation: require('../assets/summerFalling.json'), speed: 0.3, opacity: 0.48, fill: true,
+    search: { rankSearch: true },
   },
 };
 
@@ -38,7 +39,7 @@ export default function SeasonSpotsScreen({ navigation, season }) {
     <SpotBrowser navigation={navigation} title={`${season} Dates`} sectionKey={season.toLowerCase()}
       sections={categories} search={search} backgroundColor={backgroundColor} ink={ink} spotMeta={townOnly}
       backdrop={fill ? (
-        // Spans the whole screen, top to bottom, so the leaves start falling from the very top edge.
+        // Spans the whole screen, top to bottom, so the animation runs from the very top edge to the bottom.
         <BackgroundLottie source={animation} speed={speed} resizeMode="cover" pointerEvents="none"
           style={{ ...StyleSheet.absoluteFillObject, opacity }} />
       ) : (

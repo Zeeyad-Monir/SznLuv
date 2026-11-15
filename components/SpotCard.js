@@ -5,6 +5,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HeartButton from './HeartButton';
 import StoragePhoto from './StoragePhoto';
+import SpotName from './SpotName';
 import { cardShadow, colors, text } from './theme';
 import spotImages from '../screens/spotImages';
 
@@ -48,9 +49,7 @@ export default function SpotCard({
           ? <Image source={bundledPhoto} style={styles.thumb} resizeMode="cover" accessible={false} />
           : <StoragePhoto key={thumbnail?.path} path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
         <View style={styles.words}>
-          <Text style={text.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} ellipsizeMode="tail">
-            {spot.name}
-          </Text>
+          <SpotName style={text.cardName}>{spot.name}</SpotName>
           {!!spot.meta && <Text style={[text.meta, styles.meta]} numberOfLines={1}>{spot.meta}</Text>}
           {!editing && !!note && <Text style={[text.body, styles.note]} numberOfLines={3}>{note}</Text>}
         </View>

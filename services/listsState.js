@@ -5,6 +5,7 @@ const { buildSearchTerms } = require('./listSearch');
 
 const LIMITS = { title: 25, description: 120, note: 140, spots: 50, spotName: 60 };
 
+// Colour covers are no longer offered: lists made before image covers keep theirs until the owner picks an image.
 const COLOURS = [
   { value: '#FFC1E3', name: 'Pink' },
   { value: '#A7C8FF', name: 'Blue' },
@@ -21,34 +22,49 @@ const SEASON_COVERS = [
   { value: 'spring', name: 'Spring', background: '#FF9FD2' },
   { value: 'summer', name: 'Summer', background: '#F8DD74' },
 ];
+// The cover images the app uses itself (art in components/covers.js IMAGE_ART), each with a soft colour
+// taken from the image for behind the list page.
+const IMAGE_COVERS = [
+  { value: 'seasonal', name: 'Seasonal', background: '#E2CEC1' },
+  { value: 'outdoors', name: 'Outdoors', background: '#B1C2B9' },
+  { value: 'unique-food', name: 'Food', background: '#F0B9AA' },
+  { value: 'night-out', name: 'Night out', background: '#B5AEC8' },
+  { value: 'rain-days', name: 'Rain days', background: '#B7B9C8' },
+  { value: 'golden-hour', name: 'Golden hour', background: '#CEBFC6' },
+  { value: 'table-for-one', name: 'Table for one', background: '#E0B4A2' },
+  { value: 'vancouver', name: 'Vancouver', background: '#AFB5C6' },
+  { value: 'seasons', name: 'Seasons', background: '#D3BFAC' },
+];
+// What a cover-less or unreadable list falls back to. New lists can't be saved without picking an image.
 const DEFAULT_COVER = { type: 'colour', value: COLOURS[1].value };
 
-function coverBackground(cover) {
-  if (cover?.type === 'season') {
-    return SEASON_COVERS.find(season => season.value === cover.value)?.background ?? DEFAULT_COVER.value;
-  }
-  return typeof cover?.value === 'string' ? cover.value : DEFAULT_COVER.value;
-}
+const sameCover = (a, b) => !!a && !!b && a.type === b.type && a.value === b.value;
 
-function validCover(cover) {
-  if (cover?.type === 'season') return SEASON_COVERS.some(season => season.value === cover.value);
-  return cover?.type === 'colour' && COLOURS.some(colour => colour.value === cover.value);
+const imageCover = cover => (cover?.type === 'season' ? SEASON_COVERS : cover?.type === 'image' ? IMAGE_COVERS : [])
+  .find(option => option.value === cover.value);
+const isImageCover = cover => !!imageCover(cover);
+
+function coverBackground(cover) {
+  if (cover?.type === 'season' || cover?.type === 'image') return imageCover(cover)?.background ?? DEFAULT_COVER.value;
+  return typeof cover?.value === 'string' ? cover.value : DEFAULT_COVER.value;
 }
 
 function listError(code, message) {
   return Object.assign(new Error(message), { code });
 }
 
-// `keepTitle` is the list's current title: one saved before titles were capped at 25 can stay as it is.
-function cleanDetails({ title, description = '', cover = DEFAULT_COVER }, keepTitle) {
+// `keep` is the list as it is now. A title saved before titles were capped at 25, or a colour cover from
+// before covers were images, can stay as it is until it is changed.
+function cleanDetails({ title, description = '', cover }, keep = {}) {
   const cleanTitle = String(title ?? '').trim();
   const cleanDescription = String(description ?? '').trim();
   if (!cleanTitle) throw listError('list/no-title', 'Give your list a title.');
-  if (cleanTitle.length > LIMITS.title && cleanTitle !== keepTitle) throw listError('list/title-too-long', `Titles can be up to ${LIMITS.title} characters.`);
+  if (cleanTitle.length > LIMITS.title && cleanTitle !== keep.title) throw listError('list/title-too-long', `Titles can be up to ${LIMITS.title} characters.`);
   if (cleanDescription.length > LIMITS.description) {
     throw listError('list/description-too-long', `Descriptions can be up to ${LIMITS.description} characters.`);
   }
-  return { title: cleanTitle, description: cleanDescription, cover: validCover(cover) ? cover : DEFAULT_COVER };
+  if (!isImageCover(cover) && !sameCover(cover, keep.cover)) throw listError('list/no-cover', 'Pick a cover image for your list.');
+  return { title: cleanTitle, description: cleanDescription, cover: { type: cover.type, value: cover.value } };
 }
 
 // `cityId` is the city the list was made in. Only lists carried over from before cities existed leave it
@@ -61,7 +77,7 @@ function createList({ ownerUid, title, description, cover, cityId = DEFAULT_CITY
   };
 }
 
-const editDetails = (list, details) => ({ ...list, ...cleanDetails({ ...list, ...details }, list.title) });
+const editDetails = (list, details) => ({ ...list, ...cleanDetails({ ...list, ...details }, list) });
 
 const indexOfSpot = (list, key) => list.items.findIndex(item => spotKey(item.spot) === key);
 const hasSpot = (list, ref) => indexOfSpot(list, spotKey(ref)) !== -1;
@@ -243,19 +259,23 @@ function migrateCollections(favourites, { uid, now }) {
   const { collections: _removed, ...rest } = favourites ?? {};
   const lists = collections.map((old, index) => ({
     id: migratedListId(uid, index),
-    data: createList({
-      ownerUid: uid,
-      title: String(old.title ?? '').trim().slice(0, LIMITS.title) || 'Untitled list',
-      cover: { type: 'colour', value: old.color },
-      items: [...new Set(old.dates ?? [])].filter(name => typeof name === 'string' && name).map(name => ({ spot: catalogueRef(name), note: '' })),
-      now: now + index, // Keeps the collections in their original order
-    }),
+    data: {
+      ...createList({
+        ownerUid: uid,
+        title: String(old.title ?? '').trim().slice(0, LIMITS.title) || 'Untitled list',
+        cover: { type: 'season', value: SEASON_COVERS[0].value }, // Replaced just below
+        items: [...new Set(old.dates ?? [])].filter(name => typeof name === 'string' && name).map(name => ({ spot: catalogueRef(name), note: '' })),
+        now: now + index, // Keeps the collections in their original order
+      }),
+      // An old collection keeps the colour it was given, like any list made before image covers.
+      cover: COLOURS.some(colour => colour.value === old.color) ? { type: 'colour', value: old.color } : DEFAULT_COVER,
+    },
   }));
   return { lists, favourites: { ...rest, listsMigratedAt: now } };
 }
 
 module.exports = {
-  LIMITS, COLOURS, SEASON_COVERS, DEFAULT_COVER, coverBackground,
+  LIMITS, COLOURS, SEASON_COVERS, IMAGE_COVERS, DEFAULT_COVER, sameCover, isImageCover, coverBackground,
   createList, editDetails, hasSpot, addSpot, removeSpot, insertSpot, moveSpot, setNote, copySpot,
   publicFields, hasUnpublishedChanges, exposure, newExposure, needsReview, assertPublishable,
   OFF_MAP, spotsOffTheMap, offTheMapMessage, assertOnTheMap, placeFrom, placeFromEntries,

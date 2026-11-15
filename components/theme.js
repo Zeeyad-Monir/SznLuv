@@ -104,6 +104,11 @@ const liftShadow = {
   shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 3,
 };
 
+// The smallest a spot's name is ever drawn, wherever it appears: the size "Canyon Lights at Capilano" settles
+// at on a season page's card. A name shrinks from its normal size down to this, then ends in "…"; the spot's
+// own page, a tap away, has it in full. components/SpotName.js applies it.
+const SPOT_NAME_MIN_SIZE = 16;
+
 const text = StyleSheet.create({
   // The one large line a page opens with ("What sounds good?").
   heroTitle: { fontSize: 37, lineHeight: 43, fontWeight: '800', letterSpacing: -0.6, color: colors.ink },
@@ -153,5 +158,5 @@ const spot = StyleSheet.create({
 
 module.exports = {
   colors, GUTTER, GRID_GAP, CARD_RADIUS, tileWidth, cardShadow, artFade, onArt, text, controls, spot,
-  glass, floatShadow, liftShadow, honey,
+  glass, floatShadow, liftShadow, honey, SPOT_NAME_MIN_SIZE,
 };

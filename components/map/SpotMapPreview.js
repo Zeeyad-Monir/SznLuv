@@ -6,13 +6,13 @@
 // measured afterwards. It is worked out from what the card holds: one or two lines of name, and the distance
 // line when there is one.
 //
-// The name never takes more than two lines. One too long for two lines at the normal size is drawn 25% smaller,
-// and one too long even for that ends in "…"; the spot's own page, a tap away, has it in full.
+// The name never takes more than two lines, and is never drawn smaller than SPOT_NAME_MIN_SIZE (which is its
+// normal size here): one too long for two lines ends in "…"; the spot's own page, a tap away, has it in full.
 import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Marker } from 'react-native-maps';
-import { colors } from '../theme';
+import { SPOT_NAME_MIN_SIZE, colors } from '../theme';
 
 const WIDTH = 236;
 const PADDING = 10;
@@ -25,10 +25,7 @@ export const PREVIEW_LIFT = 14;
 // About how many letters of a name fit on one line of the card at the normal size.
 const ONE_LINE = 19;
 export const NAME_MAX_LINES = 2; // The name never runs past this many lines
-export const NAME_SMALL_SCALE = 0.75; // How big a name too long for those lines is drawn, against the normal size
-const NAME_SIZE = 16;
-const SMALL_ONE_LINE = Math.floor(ONE_LINE / NAME_SMALL_SCALE);
-const SMALL_NAME_LINE = Math.round(NAME_LINE * NAME_SMALL_SCALE);
+const NAME_SIZE = SPOT_NAME_MIN_SIZE;
 
 // How many lines a name wraps to with `perLine` letters a line: whole words move down, and a word longer
 // than a line is broken across lines.
@@ -45,18 +42,14 @@ const linesFor = (name, perLine) => {
   return lines;
 };
 
-// How the name is drawn: its number of lines and whether it is the smaller size.
-export const nameFit = name => {
-  const lines = linesFor(name, ONE_LINE);
-  if (lines <= NAME_MAX_LINES) return { lines, small: false };
-  return { lines: Math.min(NAME_MAX_LINES, linesFor(name, SMALL_ONE_LINE)), small: true };
-};
-const nameHeight = ({ lines, small }) => lines * (small ? SMALL_NAME_LINE : NAME_LINE);
+// How the name is drawn: its number of lines. Past the last line it ends in "…".
+export const nameFit = name => ({ lines: Math.min(NAME_MAX_LINES, linesFor(name, ONE_LINE)) });
+const nameHeight = ({ lines }) => lines * NAME_LINE;
 const cardHeight = (name, distance) => 2 * PADDING + 2 + nameHeight(nameFit(name))
   + (distance ? GAP + DISTANCE_LINE : 0);
 // The most room the card ever takes, for keeping it on screen (services/mapGeometry.js nudgeIntoFrame).
 export const previewCardSize = ({ distance = true } = {}) => (
-  // Two lines at the normal size is the tallest a name gets: one that needs more is drawn smaller.
+  // Two lines is the tallest a name gets: one that needs more ends in "…".
   { width: WIDTH, height: cardHeight(`${'x'.repeat(ONE_LINE)} x`, distance) + TIP });
 export const PREVIEW_CARD = previewCardSize();
 
@@ -76,7 +69,7 @@ export default function SpotMapPreview({ spot, distance, onPress }) {
         <View style={[styles.tip, { top: height - TIP }]} />
         <View style={[styles.card, { height }]}>
           <View style={styles.words}>
-            <Text style={[styles.name, fit.small && styles.nameSmall]} numberOfLines={fit.lines} ellipsizeMode="tail" allowFontScaling={false}>{spot.name}</Text>
+            <Text style={styles.name} numberOfLines={fit.lines} ellipsizeMode="tail" allowFontScaling={false}>{spot.name}</Text>
             {!!distance && <Text style={styles.distance} numberOfLines={1} allowFontScaling={false}>{distance}</Text>}
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.ink} />
@@ -96,7 +89,6 @@ const styles = StyleSheet.create({
   },
   words: { flex: 1, gap: GAP },
   name: { fontSize: NAME_SIZE, lineHeight: NAME_LINE, fontWeight: '700', color: colors.ink },
-  nameSmall: { fontSize: NAME_SIZE * NAME_SMALL_SCALE, lineHeight: SMALL_NAME_LINE },
   distance: { fontSize: 14, lineHeight: DISTANCE_LINE, fontWeight: '600', color: colors.summary },
   // A square turned on its corner, tucked under the card, makes the pointer.
   tip: {

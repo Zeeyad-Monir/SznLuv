@@ -17,7 +17,7 @@ const SALMON = ['Tynehead Hatchery', 'Hoy Creek Hatchery', 'Kanaka Creek Fish Fe
 const HALLOWEEN = ['Burnaby Haunted Village', 'Fright Nights at Playland', 'Lost Souls of Gastown', 'Haunted Halloween Trolley'];
 const PUMPKINS = ['Aldor Family Farm', 'Richmond Country Farms', 'Westham Island Herb Farm', 'Hazelmere Pumpkin Patch'];
 const WALKS = ['Queen Elizabeth Park', 'Stanley Park', 'Deer Lake Park', 'Pacific Spirit Park'];
-const BEACHES = ['Sunset Beach', 'Golden Sands', 'Coral Cove'];
+const BEACHES = ['Kitsilano Pool', 'White Pine Beach at Sasamat Lake', 'Crescent Beach at Sunset'];
 
 // An index entry, as the trigger would write it. `days` ago published; `fb` is follows by days-ago.
 function entry(owner, title, names, { days = 60, followers = 0, fb = {}, description = 'A few favourites, worth the drive.', extra = {} } = {}) {

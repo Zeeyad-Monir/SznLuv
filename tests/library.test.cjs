@@ -14,7 +14,7 @@ const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront st
 // The record behind `steps`: what "My spots" and the spot page read.
 const stepsRecord = { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112, photos: [], publicListIds: [], createdAt: 1, updatedAt: 1 };
 const listDoc = (title, refs = [], extra = {}) => ({
-  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid: 'audit', title, now: 1 })), ...extra,
+  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title, now: 1 })), ...extra,
 });
 // ---------------------------------------------------------------- Directions (pure; own spots are in customSpots.test.cjs)
 
@@ -217,7 +217,7 @@ test('add to list: many lists start at five and every one can be found by search
   assert.deepEqual(h.documents.get('lists/l26').items, [{ spot: maan, note: '' }]);
 });
 
-test('new list: needs a title, saves once on a double tap, then opens the list', async () => {
+test('new list: needs a title and a cover image, saves once on a double tap, then opens the list', async () => {
   const h = createHarness({ documents: withLists({}) });
   const sheet = await mount(h, 'screens/ListDetailsSheet.js');
   const create = () => sheet.button('Create list');
@@ -225,7 +225,9 @@ test('new list: needs a title, saves once on a double tap, then opens the list',
 
   const [title, description] = sheet.all('TextInput');
   await act(async () => { title.props.onChangeText('  Road Trips '); description.props.onChangeText('Long drives.'); });
-  await sheet.press('Fall illustration cover');
+  assert.equal(create().props.disabled, true, 'a title alone is not enough: a cover image has to be picked');
+  assert.ok(!sheet.all('TouchableOpacity').some(node => /^(Pink|Blue) cover/.test(node.props.accessibilityLabel ?? '')), 'no colour covers');
+  await sheet.press('Fall cover image');
   assert.equal(create().props.disabled, false);
   let first, second;
   await act(async () => { first = create().props.onPress(); second = create().props.onPress(); await Promise.all([first, second]); });
@@ -246,6 +248,7 @@ test('new list from a spot starts with that spot and returns to the picker', asy
   const h = createHarness({ documents: withLists({}) });
   const sheet = await mount(h, 'screens/ListDetailsSheet.js', { params: { addSpot: maan } });
   await act(async () => sheet.all('TextInput')[0].props.onChangeText('Harvest'));
+  await sheet.press('Outdoors cover image');
   await sheet.press('Create list');
   const [, list] = [...h.documents].find(([key]) => key.startsWith('lists/'));
   assert.deepEqual(list.items, [{ spot: maan, note: '' }]);
@@ -259,11 +262,20 @@ test('list details: edits the title, description and cover of an existing list, 
   const [title, description] = sheet.all('TextInput');
   assert.deepEqual([title.props.value, description.props.value], ['Weekend', 'Old words']);
   await act(async () => title.props.onChangeText('Slow Sundays'));
-  await sheet.press('Pink cover');
+  await sheet.press('Night out cover image');
   await sheet.press('Save');
   const saved = h.documents.get('lists/a');
-  assert.deepEqual([saved.title, saved.description, saved.cover.value, saved.items.length], ['Slow Sundays', 'Old words', '#FFC1E3', 1]);
+  assert.deepEqual([saved.title, saved.description, saved.cover, saved.items.length], ['Slow Sundays', 'Old words', { type: 'image', value: 'night-out' }, 1]);
   assert.ok(h.calls.some(([name]) => name === 'goBack'));
+});
+
+test('list details: a list from before image covers can be renamed and keep its colour, or switch to an image', async () => {
+  const h = createHarness({ documents: withLists({ a: listDoc('Weekend', [farm], { cover: { type: 'colour', value: '#FFC1E3' } }) }) });
+  const sheet = await mount(h, 'screens/ListDetailsSheet.js', { params: { listId: 'a' } });
+  assert.equal(sheet.button('Save').props.disabled, false);
+  await act(async () => sheet.all('TextInput')[0].props.onChangeText('Slow Sundays'));
+  await sheet.press('Save');
+  assert.deepEqual(h.documents.get('lists/a').cover, { type: 'colour', value: '#FFC1E3' });
 });
 
 test('note: saves a trimmed note on the right spot and can clear it', async () => {
@@ -295,8 +307,8 @@ test('list page: shows the title, place, count, description and each spot with i
   assert.deepEqual(screen.texts().slice(0, 3), ['Golden Hour', 'Vancouver · 2 spots', 'Last light.']);
   assert.ok(screen.texts().includes('Langley · Fall') && screen.texts().includes('Dropped pin') && screen.texts().includes('Sit on the left.'));
   assert.ok(screen.button('Private list, change sharing'));
-  const coloured = screen.all('View').some(view => [view.props.style].flat(3).some(style => style?.backgroundColor === '#A7C8FF'));
-  assert.ok(coloured, 'the page takes the list\'s cover colour');
+  const coloured = screen.all('View').some(view => [view.props.style].flat(3).some(style => style?.backgroundColor === '#F4A460'));
+  assert.ok(coloured, 'the page takes the colour that goes with the list\'s cover image');
 
   await screen.press('View details for Aldor Family Farm');
   assert.deepEqual(h.navigations.at(-1), ['SpotDetailScreen', { spot: farm }]);
@@ -362,7 +374,7 @@ test('list page: add a spot searches every season, adds in place, and hands off 
   await flush();
   assert.ok(screen.button('Aldor Family Farm added'));
   assert.ok(screen.button('Add Waterfront steps'), 'own spots from other lists are offered');
-  assert.ok(screen.button('Add Robson Square Ice Rink') && screen.button('Add Sunset Beach'), 'all seasons are searched');
+  assert.ok(screen.button('Add Robson Square Ice Rink') && screen.button('Add Kitsilano Pool'), 'all seasons are searched');
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('maan'));
   await screen.press('Add Maan Farms');

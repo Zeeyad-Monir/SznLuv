@@ -68,7 +68,7 @@ test.after(() => env.cleanup());
 
 async function mayaPublishes(title = 'Golden Hour') {
   const { maya } = people;
-  const list = await maya.lists.createNewList('maya', { title });
+  const list = await maya.lists.createNewList('maya', { title, cover: { type: 'season', value: 'fall' } });
   await maya.lists.mutateList(list.id, current => addSpot(current, farm));
   await maya.lists.publishList('maya', 'maya', list.id);
   return list.id;
@@ -139,7 +139,7 @@ test('reverting discards draft edits; an empty list cannot be published', async 
   assert.deepEqual([draft.title, draft.items.length, draft.public], ['Golden Hour', 1, true]);
   assert.equal(hasUnpublishedChanges(draft, await maya.lists.getPublicList(id)), false);
 
-  const empty = await maya.lists.createNewList('maya', { title: 'Nothing yet' });
+  const empty = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Nothing yet' });
   await assert.rejects(maya.lists.publishList('maya', 'maya', empty.id), { code: 'list/empty' });
 });
 
@@ -307,7 +307,7 @@ test('a list of 25 spots I made publishes in one go, sharing each, within the ru
   assert.ok(made.every(ref => ref.id.startsWith('maya_')));
   await denied(getDoc(doc(alex.db, 'spots', made[0].id)));
 
-  const list = await maya.lists.createNewList('maya', { title: 'Twenty five', items: made.map(spot => ({ spot, note: '' })) });
+  const list = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Twenty five', items: made.map(spot => ({ spot, note: '' })) });
   await maya.lists.publishList('maya', 'maya', list.id);
   const shared = await alex.spots.getPublicSpot(made[24].id, { fresh: true });
   assert.deepEqual([shared.name, shared.ownerUsername, 'publicListIds' in shared], ['Spot 24', 'maya', false]);
@@ -320,8 +320,8 @@ test('a list of 25 spots I made publishes in one go, sharing each, within the ru
 test('reviews of a shared spot: one set across lists, gone from view once no public list has it', async () => {
   const { maya, alex } = people;
   const [spot] = await mayaMakes(1);
-  const first = await maya.lists.createNewList('maya', { title: 'Best Sunset Spots', items: [{ spot, note: '' }] });
-  const second = await maya.lists.createNewList('maya', { title: 'Evenings', items: [{ spot, note: '' }] });
+  const first = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Best Sunset Spots', items: [{ spot, note: '' }] });
+  const second = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Evenings', items: [{ spot, note: '' }] });
   const source = alex.reviews.reviewSource({ spotId: spot.id });
   const review = { uid: 'alex', username: 'alex', profileColor: '#FF0000', comment: 'Worth it', starRating: 5 };
 
@@ -344,7 +344,7 @@ test('reviews of a shared spot: one set across lists, gone from view once no pub
 test('editing a shared spot refreshes it in the public list and its public copy', async () => {
   const { maya, alex } = people;
   const [spot] = await mayaMakes(1);
-  const list = await maya.lists.createNewList('maya', { title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
+  const list = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
   await maya.lists.publishList('maya', 'maya', list.id);
   await maya.spots.updateSpot('maya', spot.id, { name: 'Sunset Lookout', lat: spot.lat, lng: spot.lng, description: 'New words' });
   const shown = await alex.lists.getPublicList(list.id);
@@ -360,9 +360,9 @@ test('editing a shared spot refreshes it in the public list and its public copy'
 test('deleting a shared spot leaves no trace of it in lists, Saved or public copies', async () => {
   const { maya, alex } = people;
   const [spot, other] = await mayaMakes(2);
-  const kept = await maya.lists.createNewList('maya', { title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
-  const alone = await maya.lists.createNewList('maya', { title: 'Only this', items: [{ spot, note: '' }] });
-  const unrelated = await maya.lists.createNewList('maya', { title: 'Other', items: [{ spot: other, note: '' }] });
+  const kept = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Golden Hour', items: [{ spot: farm, note: '' }, { spot, note: '' }] });
+  const alone = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Only this', items: [{ spot, note: '' }] });
+  const unrelated = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Other', items: [{ spot: other, note: '' }] });
   await maya.lists.publishList('maya', 'maya', kept.id);
   await maya.lists.publishList('maya', 'maya', alone.id);
   await maya.lists.publishList('maya', 'maya', unrelated.id);
@@ -381,7 +381,7 @@ test('deleting a shared spot leaves no trace of it in lists, Saved or public cop
 test('old own-spot references become records once, and running it again changes nothing', async () => {
   const { maya } = people;
   const old = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
-  const list = await maya.lists.createNewList('maya', { title: 'Old one', items: [{ spot: old, note: 'Left side' }] });
+  const list = await maya.lists.createNewList('maya', { cover: { type: 'season', value: 'fall' }, title: 'Old one', items: [{ spot: old, note: 'Left side' }] });
   const lists = async () => (await firstSnapshot((next, fail) => maya.lists.subscribeMyLists('maya', next, fail)));
   assert.equal(await maya.spots.migrateLegacySpots('maya', await lists()), 1);
   const moved = (await getDoc(doc(maya.db, 'lists', list.id))).data().items[0];

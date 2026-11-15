@@ -9,7 +9,6 @@ export const SEASON_ART = {
   summer: require('../assets/summer3.png'),
 };
 
-export const seasonArt = cover => (cover?.type === 'season' ? SEASON_ART[cover.value] : undefined);
 
 // A city's cover on the city picker, by the city's id in services/catalogue.js.
 export const CITY_ART = {
@@ -31,3 +30,17 @@ const COLLECTION_ART = {
 
 // Undefined when a key has no art: the card then draws its plain tinted background instead.
 export const collectionArt = key => COLLECTION_ART[key] ?? SEASON_ART[key];
+
+// The other cover images a list can use, by the value in services/listsState.js IMAGE_COVERS.
+export const IMAGE_ART = {
+  ...COLLECTION_ART,
+  vancouver: CITY_ART.vancouver,
+  seasons: require('../assets/Seasonal/SeasonalCoverIMG.png'),
+};
+
+// A list's cover image, or undefined for a colour cover from before covers were images.
+export const coverArt = cover => {
+  if (cover?.type === 'season') return SEASON_ART[cover.value];
+  if (cover?.type === 'image') return IMAGE_ART[cover.value];
+  return undefined;
+};

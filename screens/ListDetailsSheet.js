@@ -1,22 +1,29 @@
-// Bottom sheet for naming a new list or changing an existing one: title, optional description, cover.
+// Bottom sheet for naming a new list or changing an existing one: title, optional description, cover image.
+// A new list can't be created until a cover image is picked; it can be changed later from here.
 // Opened with { listId } to edit, { addSpot } to start a list with a spot already in it, or nothing.
 import React, { useContext, useRef, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SheetHeader from '../components/SheetHeader';
-import { SEASON_ART } from '../components/covers';
+import { coverArt } from '../components/covers';
 import { colors, controls } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCity } from '../contexts/CityContext';
 import useMyLists from '../hooks/useMyLists';
 import { storedRef } from '../services/customSpotsState';
 import { createNewList, mutateList } from '../services/lists';
-import { COLOURS, DEFAULT_COVER, LIMITS, SEASON_COVERS, editDetails } from '../services/listsState';
+import { IMAGE_COVERS, LIMITS, SEASON_COVERS, editDetails, isImageCover, sameCover } from '../services/listsState';
 import { EVENTS, track } from '../services/metrics';
 import { closeSheetAndOpenList } from '../navigation/openList';
 
-const sameCover = (a, b) => a?.type === b?.type && a?.value === b?.value;
+// Every cover image a list can use: the four season illustrations, then the app's own cover images.
+const COVER_OPTIONS = [
+  ...SEASON_COVERS.map(({ value, name }) => ({ type: 'season', value, name })),
+  ...IMAGE_COVERS.map(({ value, name }) => ({ type: 'image', value, name })),
+];
+const COLUMNS = 5;
+const GAP = 8;
 
 export default function ListDetailsSheet({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -43,18 +50,19 @@ function DetailsForm({ navigation, listId, addSpot, editing, heading }) {
   const { user } = useContext(AuthContext);
   const { city } = useCity();
   const insets = useSafeAreaInsets();
-  // Seven colours stay on one row: full size on current phones, a little smaller on narrow ones.
+  // Five covers to a row, sized to fill the sheet's width.
   const { width } = useWindowDimensions();
-  const swatch = width >= 390 ? 40 : 34;
-  const swatchSize = { width: swatch, height: swatch, borderRadius: swatch / 2 };
+  const thumb = Math.floor((width - 40 - GAP * (COLUMNS - 1)) / COLUMNS);
 
   const [title, setTitle] = useState(editing?.title ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
-  const [cover, setCover] = useState(editing?.cover ?? DEFAULT_COVER);
+  // A list made before image covers keeps its colour until an image is picked.
+  const [cover, setCover] = useState(editing?.cover ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const submitting = useRef(false);
-  const canSave = !!title.trim() && !saving;
+  const hasCover = isImageCover(cover) || (!!editing && sameCover(cover, editing.cover));
+  const canSave = !!title.trim() && hasCover && !saving;
 
   const save = async () => {
     if (submitting.current || !canSave) return;
@@ -99,30 +107,19 @@ function DetailsForm({ navigation, listId, addSpot, editing, heading }) {
         returnKeyType="done" accessibilityLabel="List description"
       />
 
-      <Text style={styles.label} accessibilityRole="header">Cover</Text>
-      <View style={styles.palette}>
-        {COLOURS.map(({ value, name }) => {
-          const option = { type: 'colour', value };
+      <Text style={styles.label} accessibilityRole="header">Cover image</Text>
+      {!isImageCover(cover) && (
+        <Text style={styles.hint}>{editing ? 'Swap this list’s colour cover for an image.' : 'Pick one to create your list. You can change it later.'}</Text>
+      )}
+      <View style={styles.grid}>
+        {COVER_OPTIONS.map(option => {
           const selected = sameCover(cover, option);
           return (
-            <TouchableOpacity key={value} hitSlop={5} onPress={() => setCover(option)}
-              style={[styles.swatch, swatchSize, { backgroundColor: value }, selected && styles.swatchSelected]}
-              accessibilityRole="button" accessibilityLabel={`${name} cover`} accessibilityState={{ selected }}>
-              {selected && <Ionicons name="checkmark" size={20} color={colors.ink} />}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <View style={[styles.palette, styles.artRow]}>
-        {SEASON_COVERS.map(({ value, name }) => {
-          const option = { type: 'season', value };
-          const selected = sameCover(cover, option);
-          return (
-            <TouchableOpacity key={value} hitSlop={4} onPress={() => setCover(option)}
-              style={[styles.swatch, styles.art, selected && styles.swatchSelected]}
-              accessibilityRole="button" accessibilityLabel={`${name} illustration cover`} accessibilityState={{ selected }}>
-              <Image source={SEASON_ART[value]} style={styles.artImage} />
-              {selected && <View style={styles.artCheck}><Ionicons name="checkmark" size={18} color={colors.ink} /></View>}
+            <TouchableOpacity key={`${option.type}:${option.value}`} hitSlop={3} onPress={() => setCover({ type: option.type, value: option.value })}
+              style={[styles.thumb, { width: thumb, height: thumb }, selected && styles.thumbSelected]}
+              accessibilityRole="button" accessibilityLabel={`${option.name} cover image`} accessibilityState={{ selected }}>
+              <Image source={coverArt(option)} style={styles.thumbImage} resizeMode="cover" />
+              {selected && <View style={styles.check}><Ionicons name="checkmark" size={18} color={colors.ink} /></View>}
             </TouchableOpacity>
           );
         })}
@@ -144,13 +141,15 @@ const styles = StyleSheet.create({
   sheet: { width: '100%', backgroundColor: '#fff', paddingHorizontal: 20 },
   input: { marginBottom: 12 },
   label: { marginTop: 4, marginBottom: 8, fontSize: 16, fontWeight: '700', color: '#323232' },
-  palette: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 12 },
-  artRow: { justifyContent: 'flex-start', gap: 10 },
-  swatch: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  swatchSelected: { borderColor: colors.ink },
-  art: { width: 48, height: 48, borderRadius: 24 },
-  artImage: { position: 'absolute', width: 44, height: 44, borderRadius: 22 },
-  artCheck: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)' },
+  hint: { marginTop: -4, marginBottom: 8, fontSize: 14, lineHeight: 20, color: colors.summary },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, marginBottom: 12 },
+  thumb: {
+    borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: 'transparent', backgroundColor: '#F1ECE4',
+  },
+  thumbSelected: { borderColor: colors.ink },
+  thumbImage: { ...StyleSheet.absoluteFillObject, width: undefined, height: undefined },
+  check: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)' },
   error: { marginBottom: 8, fontSize: 14, lineHeight: 20, color: colors.error },
   save: { marginTop: 8 },
   loading: { marginVertical: 24 },

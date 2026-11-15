@@ -10,6 +10,7 @@ import StoragePhoto from './StoragePhoto';
 import spotImages from '../screens/spotImages';
 import { resolveSpot } from '../services/catalogue';
 import { MAX_PICKS } from '../services/top4State';
+import SpotName from './SpotName';
 import { GRID_GAP, artFade, colors, liftShadow, onArt } from './theme';
 
 // A tile shows the place's cover photo when it has one; otherwise it takes the colour of its spot's season,
@@ -60,7 +61,7 @@ export default function Top4Grid({ picks, size, editable = false, onPressPick, o
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.rim]} />
             <Text style={[styles.rank, photo && styles.rankOnArt]} accessible={false}>{index + 1}</Text>
             {spot.own && <Ionicons name="location-sharp" size={18} color={photo ? colors.white : colors.ink} style={styles.pin} />}
-            <Text style={[styles.name, photo && onArt]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.8}>{spot.name}</Text>
+            <SpotName style={[styles.name, photo && onArt]} numberOfLines={3}>{spot.name}</SpotName>
             {!!spot.meta && <Text style={[styles.meta, photo && onArt]} numberOfLines={1}>{spot.locality || spot.meta}</Text>}
           </PressableScale>
         );

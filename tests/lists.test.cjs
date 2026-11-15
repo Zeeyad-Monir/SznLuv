@@ -17,7 +17,7 @@ const farm = catalogueRef('Aldor Family Farm');
 const maan = catalogueRef('Maan Farms');
 const steps = { k: 'x', id: 'steps1', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const cafe = { k: 'x', id: 'cafe1', name: 'Corner cafe', address: '12 Main St, Vancouver' };
-const base = (extra = {}) => lists.createList({ ownerUid: 'maya', title: 'Golden Hour', now: 100, ...extra });
+const base = (extra = {}) => lists.createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'maya', title: 'Golden Hour', now: 100, ...extra });
 
 // ---------------------------------------------------------------- Catalogue
 
@@ -27,7 +27,7 @@ test('catalogue: one entry per spot across all four seasons, each knowing its se
   assert.equal(seasonOf('Robson Square Ice Rink'), 'Winter');
   assert.equal(seasonOf('Nitobe Memorial Garden Spring Blossoms'), 'Spring');
   assert.equal(seasonOf('Nitobe Memorial Garden'), 'Fall');
-  assert.equal(seasonOf('Sunset Beach'), 'Summer');
+  assert.equal(seasonOf('Kitsilano Pool'), 'Summer');
   assert.equal(findCatalogueSpot('Aldor Family Farm').locality, 'Langley');
   assert.equal(locality('Main Mall, UBC, Vancouver'), 'Vancouver');
   assert.equal(locality('123 Ice Lane'), '');
@@ -70,7 +70,7 @@ test('a new list is private, trimmed, and rejects a missing or oversized title',
     [list.title, list.description, list.public, list.publishedAt, list.cityId, list.items.length, list.createdAt],
     ['Golden Hour', 'Last light.', false, null, 'vancouver', 0, 100],
   );
-  assert.deepEqual(list.cover, lists.DEFAULT_COVER);
+  assert.deepEqual(list.cover, { type: 'season', value: 'fall' });
   assert.throws(() => base({ title: '   ' }), { code: 'list/no-title' });
   assert.throws(() => base({ title: 'x'.repeat(26) }), { code: 'list/title-too-long' });
   assert.equal(base({ title: 'x'.repeat(25) }).title.length, 25);
@@ -79,14 +79,33 @@ test('a new list is private, trimmed, and rejects a missing or oversized title',
   assert.equal(lists.editDetails(legacy, { description: 'Still here.' }).title.length, 40);
   assert.throws(() => lists.editDetails(legacy, { title: 'y'.repeat(40) }), { code: 'list/title-too-long' });
   assert.throws(() => base({ description: 'x'.repeat(121) }), { code: 'list/description-too-long' });
-  assert.throws(() => lists.createList({ title: 'A', now: 1 }), { code: 'list/signed-out' });
-  assert.deepEqual(base({ cover: { type: 'colour', value: 'red' } }).cover, lists.DEFAULT_COVER);
-  assert.deepEqual(base({ cover: { type: 'season', value: 'fall' } }).cover, { type: 'season', value: 'fall' });
+  assert.throws(() => lists.createList({ cover: { type: 'season', value: 'fall' }, title: 'A', now: 1 }), { code: 'list/signed-out' });
+  assert.deepEqual(base({ cover: { type: 'season', value: 'spring' } }).cover, { type: 'season', value: 'spring' });
+});
+
+test('a new list needs a cover image: season illustrations and the app\'s own covers, never a colour', () => {
+  assert.throws(() => base({ cover: undefined }), { code: 'list/no-cover' });
+  assert.throws(() => base({ cover: { type: 'colour', value: '#FFC1E3' } }), { code: 'list/no-cover' });
+  assert.throws(() => base({ cover: { type: 'image', value: 'nope' } }), { code: 'list/no-cover' });
+  for (const { value } of lists.IMAGE_COVERS) assert.deepEqual(base({ cover: { type: 'image', value } }).cover, { type: 'image', value });
+  // Only the cover's type and value are kept.
+  assert.deepEqual(base({ cover: { type: 'image', value: 'outdoors', extra: 1 } }).cover, { type: 'image', value: 'outdoors' });
+});
+
+test('a list from before image covers keeps its colour through other edits, and can move to an image', () => {
+  const legacy = { ...base({}), cover: { type: 'colour', value: '#FFC1E3' } };
+  assert.deepEqual(lists.editDetails(legacy, { title: 'Renamed' }).cover, { type: 'colour', value: '#FFC1E3' });
+  assert.throws(() => lists.editDetails(legacy, { cover: { type: 'colour', value: '#A7C8FF' } }), { code: 'list/no-cover' });
+  const moved = lists.editDetails(legacy, { cover: { type: 'image', value: 'night-out' } });
+  assert.deepEqual(moved.cover, { type: 'image', value: 'night-out' });
+  assert.throws(() => lists.editDetails(moved, { cover: { type: 'colour', value: '#FFC1E3' } }), { code: 'list/no-cover' });
 });
 
 test('covers give the list page its background: the colour itself, or the season\'s colour', () => {
   assert.equal(lists.coverBackground({ type: 'colour', value: '#FFC1E3' }), '#FFC1E3');
   assert.equal(lists.coverBackground({ type: 'season', value: 'winter' }), '#BBCDEC');
+  assert.equal(lists.coverBackground({ type: 'image', value: 'outdoors' }), '#B1C2B9');
+  assert.equal(lists.coverBackground({ type: 'image', value: 'gone' }), lists.DEFAULT_COVER.value);
   assert.equal(lists.coverBackground(undefined), lists.DEFAULT_COVER.value);
   assert.equal(lists.COLOURS.length, 7);
   assert.deepEqual(lists.SEASON_COVERS.map(cover => cover.value), ['fall', 'winter', 'spring', 'summer']);
@@ -226,7 +245,7 @@ test('migration turns each collection into a private list and removes the old fi
 // ---------------------------------------------------------------- Search
 
 const published = (title, ownerUid, ownerUsername, refs, extra = {}) => {
-  const draft = refs.reduce((current, ref) => lists.addSpot(current, ref), lists.createList({ ownerUid, title, now: 1, ...extra }));
+  const draft = refs.reduce((current, ref) => lists.addSpot(current, ref), lists.createList({ cover: { type: 'season', value: 'fall' }, ownerUid, title, now: 1, ...extra }));
   return { id: title, ...lists.toPublicSnapshot(draft, { ownerUsername, now: extra.now ?? 1 }) };
 };
 
@@ -429,7 +448,8 @@ test('spot card: opens the spot, saves with the heart, and offers the save to Vo
   assert.deepEqual(card.props.accessibilityActions, [{ name: 'save', label: 'Save spot' }]);
   await act(async () => { card.props.onPress(); heart.props.onPress(); card.props.onAccessibilityAction({ nativeEvent: { actionName: 'save' } }); });
   assert.deepEqual(log, ['open', 'save', 'save']);
-  assert.deepEqual(renderer.root.findAllByType('Text').map(node => node.props.children), ['Aldor Family Farm', 'Langley · Fall', 'Go around 7.']);
+  const shown = renderer.root.findAllByType('Text').filter(node => node.props.testID !== 'spot-name-probe');
+  assert.deepEqual(shown.map(node => node.props.children), ['Aldor Family Farm', 'Langley · Fall', 'Go around 7.']);
 });
 
 test('spot card: edit mode swaps the heart for note, move and remove controls', async () => {
@@ -467,4 +487,38 @@ test('spot card: a spot no longer in the app is dimmed and cannot be opened or s
   assert.equal(buttons.length, 1);
   assert.equal(buttons[0].props.disabled, true);
   assert.equal(buttons[0].props.accessibilityLabel, 'Closed Farm, no longer listed');
+});
+
+test('spot name: shrinks to fit down to 16pt, then stays there and ends in “…”', async () => {
+  const React = require('react');
+  const h = createHarness();
+  const { SPOT_NAME_MIN_SIZE } = h.load('components/theme.js');
+  const SpotName = h.load('components/SpotName.js').default;
+  const style = { fontSize: 22, fontWeight: '700' };
+  const renderer = await h.renderElement(React.createElement(SpotName, { style }, 'Britannia Shipyards Heritage Holidays'));
+  const probe = () => renderer.root.findAllByType('Text').find(node => node.props.testID === 'spot-name-probe');
+  const shown = () => renderer.root.findAllByType('Text').find(node => node.props.testID !== 'spot-name-probe');
+  const size = node => [].concat(node.props.style).flat().filter(Boolean).reduce((all, one) => ({ ...all, ...one }), {}).fontSize;
+  assert.equal(SPOT_NAME_MIN_SIZE, 16);
+  assert.equal(size(probe()), 16, 'the hidden copy is laid out at the smallest size');
+  assert.equal(probe().props.accessible, false);
+
+  // It fits on one line at 16pt: the name shrinks only as far as it needs, never below 16pt.
+  await act(async () => probe().props.onTextLayout({ nativeEvent: { lines: [{}] } }));
+  assert.equal(shown().props.adjustsFontSizeToFit, true);
+  assert.equal(shown().props.minimumFontScale, 16 / 22);
+  assert.equal(size(shown()), 22);
+
+  // Too long even at 16pt: drawn at 16pt on one line, ending in “…”.
+  await act(async () => probe().props.onTextLayout({ nativeEvent: { lines: [{}, {}] } }));
+  assert.equal(shown().props.adjustsFontSizeToFit, undefined);
+  assert.equal(size(shown()), 16);
+  assert.equal(shown().props.numberOfLines, 1);
+  assert.equal(shown().props.ellipsizeMode, 'tail');
+
+  // The spot's own page wraps instead, so its name is always whole.
+  const page = await h.renderElement(React.createElement(SpotName, { style, wrap: true }, 'Britannia Shipyards Heritage Holidays'));
+  const pageProbe = page.root.findAllByType('Text').find(node => node.props.testID === 'spot-name-probe');
+  await act(async () => pageProbe.props.onTextLayout({ nativeEvent: { lines: [{}, {}] } }));
+  assert.equal(page.root.findAllByType('Text').find(node => node.props.testID !== 'spot-name-probe').props.numberOfLines, 0);
 });

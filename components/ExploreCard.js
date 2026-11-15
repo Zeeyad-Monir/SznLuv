@@ -1,12 +1,12 @@
 // A public list on Explore: the large featured card ('hero') or a grid tile ('tile').
-// Season covers show their illustration under a dark fade with white words; colour covers keep their colour
+// Image covers show their picture under a dark fade with white words; colour covers (lists from before images) keep their colour
 // under a soft light wash with dark words, so pastel covers stay readable. The heart in the corner follows the
 // list. Like CollectionCard, it sits beside the card's touchable, so tapping it never opens the list.
 import React from 'react';
 import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { coverBackground } from '../services/listsState';
-import { seasonArt } from './covers';
+import { coverArt } from './covers';
 import HeartButton from './HeartButton';
 import { spotCount } from './ListTile';
 import { artFade, cardShadow, colors, onArt } from './theme';
@@ -20,7 +20,7 @@ export const exploreCardLabel = list => {
 
 export default function ExploreCard({ list, variant = 'tile', width, height, followed, onPress, onToggleFollow, onLayout }) {
   const hero = variant === 'hero';
-  const art = seasonArt(list.cover);
+  const art = coverArt(list.cover);
   const count = list.spotCount ?? list.items?.length ?? 0;
   const label = exploreCardLabel(list);
   const words = (

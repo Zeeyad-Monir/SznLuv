@@ -52,6 +52,7 @@ export default function SpotBrowser({
           <ListBody sections={listed} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
             onOpen={ref => { Keyboard.dismiss(); openSpot(navigation, ref); }}
             sectionTitleStyle={[styles.sectionTitle, { color: ink }]}
+            sectionSpacing={styles.sectionSpacing}
             empty={<SpotEmptyState discovery={discovery} />} />
         </Animated.View>
       </ScrollView>
@@ -67,4 +68,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionTitle: { fontSize: 20, fontWeight: '600', marginBottom: 15 },
+  sectionSpacing: { marginTop: 24.144896 }, // Includes the preceding card's 16-point bottom margin.
 });

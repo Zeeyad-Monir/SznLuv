@@ -9,6 +9,7 @@ import PhotoGallery from '../components/spot/PhotoGallery';
 import ReadMoreText from '../components/spot/ReadMoreText';
 import SpotLocation from '../components/spot/SpotLocation';
 import SpotWeather from '../components/spot/SpotWeather';
+import SpotName from '../components/SpotName';
 import { colors, controls, honey, spot as spotStyle } from '../components/theme';
 import { AuthContext } from '../contexts/AuthContext';
 import useDeleteSpot from '../hooks/useDeleteSpot';
@@ -184,9 +185,8 @@ function SpotPage({
             <View style={styles.titleRow}>
               {/* Balances the menu button so the title sits in the true centre. */}
               {!!onMenu && <View style={styles.more} accessible={false} />}
-              <Text style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                {name}
-              </Text>
+              {/* This page always shows the whole name: one too long for a line at the smallest size wraps. */}
+              <SpotName style={styles.title} boxStyle={styles.titleBox} wrap accessibilityRole="header">{name}</SpotName>
               {!!onMenu && (
                 <TouchableOpacity style={styles.more} onPress={onMenu} accessibilityRole="button" accessibilityLabel="More options">
                   <Ionicons name="ellipsis-horizontal" size={22} color={honey.ink} />
@@ -288,7 +288,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: honey.page },
   content: { paddingHorizontal: 20, paddingTop: SCREEN_CONTENT_TOP_GAP, paddingBottom: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  title: { flex: 1, fontSize: 32, fontWeight: '800', color: honey.ink, textAlign: 'center', letterSpacing: -0.4 },
+  titleBox: { flex: 1 },
+  title: { fontSize: 32, fontWeight: '800', color: honey.ink, textAlign: 'center', letterSpacing: -0.4 },
   more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta: { marginTop: 4, textAlign: 'center' },
   photos: { marginTop: 16 },

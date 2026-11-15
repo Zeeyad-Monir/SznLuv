@@ -136,7 +136,12 @@ for (const [season, search, expected] of [
   ['Spring', 'lambing season', 'Maplewood Farm Spring Lambs'],
   ['Spring', 'Lysichiton americanus', 'Campbell Valley Spring Swamp Lanterns'],
   ['Spring', 'Tri-City Dust Devils', 'Vancouver Canadians Opening Weekend'],
-  ['Summer', 'ocean drive', 'Sunset Beach'],
+  ['Spring', 'Echo Eagle', 'Hoppy Heights at Capilano'],
+  ['Spring', 'babka', 'New Westminster Ukrainian Easter Market'],
+  ['Spring', 'Erythronium oregonum', 'Lighthouse Park Fawn Lilies'],
+  ['Spring', 'maypole', 'Fort Langley May Day'],
+  ['Summer', 'saltwater laps', 'Kitsilano Pool'],
+  ['Summer', 'taiko drums', 'Powell Street Festival'],
 ]) {
   test(`${season} finds ${expected} and shows a recoverable empty state`, async () => {
     const h = createHarness();

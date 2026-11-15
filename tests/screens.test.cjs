@@ -758,7 +758,8 @@ test('Fall screen lists every spot in category order and opens the right venue p
 });
 test('catalogue spots without a bundled photo show the placeholder on the card and detail', async () => {
   const h = createHarness();
-  const name = 'Sunset Beach';
+  const name = 'Kitsilano Pool';
+  delete h.load('screens/spotImages.js').default[name];
   const list = await h.render('screens/SummerDatesScreen.js');
   const card = list.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
   assert.ok(card);
@@ -783,9 +784,10 @@ for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
     const cards = renderer.root.findAllByType(h.load('components/SpotCard.js').default);
     assert.ok(cards.length > 0, 'cards render');
     for (const card of cards) {
-      const title = card.findAllByType('Text').find(node => node.props.children === card.props.spot.name);
+      const title = card.findAllByType('Text').find(node => node.props.children === card.props.spot.name && node.props.testID !== 'spot-name-probe');
       assert.equal(title.props.numberOfLines, 1, 'long titles stay on one line');
       assert.equal(title.props.adjustsFontSizeToFit, true, 'long titles shrink to fit');
+      assert.equal(title.props.ellipsizeMode, 'tail', 'and end in “…” once they reach the smallest size');
       assert.ok(!card.props.spot.meta.includes(season), `the ${season} screen doesn't repeat the season on its cards`);
       const heart = card.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `Save ${card.props.spot.name}`);
       assert.ok(heart, 'each card has its own save control');

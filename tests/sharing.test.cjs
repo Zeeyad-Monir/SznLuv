@@ -14,7 +14,7 @@ const stepsRecord = { ownerUid: 'audit', name: 'Waterfront steps', lat: 49.28651
 // The same kind of place, made by Maya: visitors get it linked by ID and name, never copied.
 const mayaSteps = { k: 'x', id: 'maya-uid_steps1', owner: 'maya-uid', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const draft = (title, refs = [], extra = {}) => ({
-  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid: 'audit', title, now: 1 })), ...extra,
+  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title, now: 1 })), ...extra,
 });
 const publicCopy = (list, ownerUsername, now = 100) => toPublicSnapshot(list, { ownerUsername, now });
 // A list that is already public: the draft and its matching public copy.
@@ -24,7 +24,7 @@ const published = (id, list, ownerUsername = 'audit', now = 100) => ({
 });
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
 const someoneElse = (title, refs, ownerUid, ownerUsername, now = 100) => publicCopy(
-  refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid, title, now: 1 })), ownerUsername, now,
+  refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid, title, now: 1 })), ownerUsername, now,
 );
 
 // ---------------------------------------------------------------- Sharing sheet

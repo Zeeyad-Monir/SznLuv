@@ -12,7 +12,7 @@ const maan = catalogueRef('Maan Farms');
 const rink = catalogueRef('Robson Square Ice Rink');
 const steps = { k: 'x', id: 'audit_steps1', owner: 'audit', name: 'Waterfront steps', lat: 49.28651, lng: -123.112 };
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
-const draft = (title, refs = [], ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid, title, now: 1 }));
+const draft = (title, refs = [], ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid, title, now: 1 }));
 const publicCopy = (title, refs, ownerUid, ownerUsername, now = 100) => toPublicSnapshot(draft(title, refs, ownerUid), { ownerUsername, now });
 const maya = {
   'profiles/maya-uid': { username: 'maya', avatarColor: '#A7C8FF', bio: 'Long evenings.', top4: { vancouver: [farm, steps] } },
@@ -291,11 +291,11 @@ test('profile: who-can-see-Top-4 is one quiet line with a small switch, and Shar
   assert.ok(ancestorWith(share, style => style.width === 48 && style.height === 48), 'round, 48pt');
   assert.ok(screen.button('Edit profile'));
 
-  // A place with a cover photo shows it; one without keeps its season colour.
+  // A place with a cover photo shows it; a retired catalogue reference has no cover.
   const tileImages = label => screen.button(label).findAllByType('Image').map(node => String(node.props.source));
   assert.equal(tileImages('Number 1: Aldor Family Farm, Langley · Fall').length, 1);
   assert.match(tileImages('Number 1: Aldor Family Farm, Langley · Fall')[0], /FamilyFarm\.jpg$/);
-  assert.deepEqual(tileImages('Number 2: Sunset Beach, Summer'), []);
+  assert.deepEqual(tileImages('Number 2: Sunset Beach, No longer listed'), []);
   // The photo is sized to the square tile, so "cover" crops it around the centre instead of showing a corner.
   const photo = flatStyle(screen.button('Number 1: Aldor Family Farm, Langley · Fall').findAllByType('Image')[0]);
   assert.equal(typeof photo.width, 'number');
@@ -537,7 +537,8 @@ test('list page: Spots and Map handle zero, one and multiple pins in spot order'
   assert.equal(zero.all('MapView').length, 0);
   assert.ok(zero.texts().includes('No locations to map'));
   await zero.press('Back to Spots');
-  assert.ok(zero.button('View details for Sunset Beach'));
+  assert.ok(zero.texts().includes('Sunset Beach'));
+  assert.equal(zero.button('View details for Sunset Beach'), undefined);
   await act(async () => zero.renderer.unmount());
 });
 

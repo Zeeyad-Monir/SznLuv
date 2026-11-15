@@ -13,7 +13,7 @@ const publicCafe = {
   description: 'Quiet patio', address: '12 Main St', photos: [{ id: 'p1', path: 'spotPhotos/maya/maya_cafe/p1.jpg' }],
 };
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
-const list = [farm, cafe].reduce((draft, ref) => addSpot(draft, ref), createList({ title: 'Weekend', ownerUid: 'maya', now: 1 }));
+const list = [farm, cafe].reduce((draft, ref) => addSpot(draft, ref), createList({ cover: { type: 'season', value: 'fall' }, title: 'Weekend', ownerUid: 'maya', now: 1 }));
 const published = toPublicSnapshot(list, { ownerUsername: 'maya', now: 2 });
 const openList = h => mount(h, 'screens/ListScreen.js', { params: { listId: 'weekend' } });
 
@@ -157,21 +157,19 @@ test('the shared detail layout orders venue and personal content and offers addr
   assert.deepEqual(h.navigations.at(-1), ['OwnSpotScreen', { spotId: 'audit_cafe' }]);
   const sparse = await open(catalogueRef('Sunset Beach'));
   assert.ok(sparse.texts().includes('Sunset Beach'));
+  assert.ok(sparse.texts().includes('This spot isn’t available'));
   assert.equal(sparse.button('Directions'), undefined);
   // Every spot page has the same cards in the same order; anything missing reads N/A.
   const cards = ['About', 'Hours', 'Cost', 'Best season', 'Good to know'];
   const notAvailable = screen => screen.all('Text').filter(node => node.props.children === 'N/A')
     .map(node => node.props.accessibilityLabel);
-  for (const screen of [venue, personal, sparse]) {
+  for (const screen of [venue, personal]) {
     const positions = cards.map(label => screen.texts().indexOf(label));
     assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])), String(positions));
   }
   assert.deepEqual(notAvailable(venue), []);
   assert.deepEqual(notAvailable(personal), ['Cost: not available', 'Best season: not available', 'Website: not available']);
-  assert.deepEqual(notAvailable(sparse), [
-    'About: not available', 'Hours: not available', 'Cost: not available', 'Good to know: not available', 'Website: not available',
-  ]);
-  assert.ok(sparse.texts().includes('Website'));
+  assert.equal(sparse.button('Official website'), undefined);
   await act(async () => { venue.renderer.unmount(); personal.renderer.unmount(); sparse.renderer.unmount(); });
 });
 

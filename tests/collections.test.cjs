@@ -1,12 +1,15 @@
 // Collections the app makes (each city's seasons): their IDs, the hearts on the season cards, and My lists.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { existsSync } = require('node:fs');
 const { createHarness, act } = require('./renderHarness.cjs');
 const { mount, quiet, flush, pinNames, pinNamed, mapPreview } = require('./support.cjs');
 const { COLLECTIONS, collectionById, collectionsForCity, collectionSpots, collectionCaption } = require('../services/collections');
 const { catalogueSections } = require('../services/catalogue');
 const { fallSpotNames } = require('../services/spots');
-const { springCategories, springSpotNames, winterCategories, winterSpotNames } = require('../services/seasonSpots');
+const { springCategories, springSpotNames, summerCategories, winterCategories, winterSpotNames } = require('../services/seasonSpots');
+
+const summerSpotNames = summerCategories.flatMap(category => category.spots.map(spot => spot.name));
 
 const kept = h => [...h.documents.keys()].filter(key => key.startsWith('users/audit/savedCollections/'));
 
@@ -32,13 +35,17 @@ test('collections: spots are read live from the catalogue, never copied', () => 
   assert.equal(collectionCaption('gone'), '');
 });
 
-test('Spring cover counts catalogue spots even when Firestore has the old placeholder count', async () => {
-  const h = createHarness({ documents: { 'dateCounts/spring': { count: 4 } } });
+test('season cards count catalogue spots even when Firestore has old placeholder counts', async () => {
+  const h = createHarness({
+    documents: { 'dateCounts/spring': { count: 4 }, 'dateCounts/summer': { count: 3 } },
+  });
   const screen = await mount(h, 'screens/SeasonsScreen.js');
-  const cover = screen.button('Spring Season - View Active Date Ideas');
-  assert.ok(cover);
-  assert.deepEqual(cover.findAllByType('Text').map(node => node.children.join('')),
-    ['Spring', `${collectionSpots('vancouver-spring').length} Active Ideas`]);
+  for (const { id, title } of collectionsForCity('vancouver')) {
+    const cover = screen.button(`${title} Season - View Active Date Ideas`);
+    assert.ok(cover);
+    assert.deepEqual(cover.findAllByType('Text').map(node => node.children.join('')),
+      [title, `${collectionSpots(id).length} Active Ideas`]);
+  }
   await act(async () => screen.renderer.unmount());
 });
 
@@ -81,68 +88,74 @@ test('Winter browses, maps and opens all fifty complete spot pages', async () =>
   await act(async () => { detail.renderer.unmount(); screen.renderer.unmount(); });
 });
 
-test('Spring cards, category filters and map open all thirty complete venue records', async () => {
-  const h = createHarness();
-  const screen = await mount(h, 'screens/SpringDatesScreen.js');
-  const spots = collectionSpots('vancouver-spring');
-  assert.equal(collectionCaption('vancouver-spring'), 'Vancouver · 30 spots');
-  assert.deepEqual(springCategories.map(category => category.spots.length), [7, 7, 6, 10]);
-  assert.deepEqual(spots.map(spot => spot.name), springSpotNames);
-  assert.equal(new Set(spots.map(spot => spot.placeID)).size, 30);
-  assert.ok(!spots.some(spot => spot.placeholderAddress));
+for (const [season, categories, expectedNames, categorySizes] of [
+  ['Spring', springCategories, springSpotNames, [11, 8, 9, 18, 4]],
+  ['Summer', summerCategories, summerSpotNames, [4, 2, 4]],
+]) {
+  test(`${season} cards, category filters and map open complete venue records`, async () => {
+    const h = createHarness();
+    const key = season.toLowerCase();
+    const screen = await mount(h, `screens/${season}DatesScreen.js`);
+    const spots = collectionSpots(`vancouver-${key}`);
+    const count = categorySizes.reduce((total, size) => total + size, 0);
+    assert.equal(collectionCaption(`vancouver-${key}`), `Vancouver · ${count} spots`);
+    assert.deepEqual(categories.map(category => category.spots.length), categorySizes);
+    assert.deepEqual(spots.map(spot => spot.name), expectedNames);
+    assert.equal(new Set(spots.map(spot => spot.placeID)).size, count);
+    assert.ok(!spots.some(spot => spot.placeholderAddress));
 
-  const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
-  for (const spot of spots) {
-    assert.match(String(photos[spot.name]), /Seasonal\/spring\/.+\.jpg$/);
-    assert.ok(credits[spot.name]?.licenseUrl && credits[spot.name]?.sourceUrl, spot.name);
-    assert.ok(screen.button(`View details for ${spot.name}`), spot.name);
-  }
-
-  await screen.press('Filter spots');
-  await screen.press('Trails & Tides');
-  await screen.press('Apply Filters');
-  await screen.press('Map');
-  assert.deepEqual(pinNames(screen), springCategories[1].spots.map(spot => spot.name));
-  await screen.press('Clear filters');
-  await screen.press('Filter spots');
-  await screen.press('Spring Wildlife & Farms');
-  await screen.press('Apply Filters');
-  assert.deepEqual(pinNames(screen), springCategories[2].spots.map(spot => spot.name));
-  await screen.press('Clear filters');
-  assert.deepEqual(pinNames(screen), springSpotNames);
-
-  for (const spot of spots) {
-    const pin = pinNamed(screen, spot.name);
-    assert.deepEqual(pin.props.coordinate, { latitude: spot.latitude, longitude: spot.longitude });
-    await act(async () => pin.props.onPress());
-    await act(async () => mapPreview(screen).props.onPress());
-    const [route, params] = h.navigations.at(-1);
-    assert.equal(route, 'SpotDetailScreen');
-    assert.deepEqual(params, { spot: { k: 'c', name: spot.name } });
-    const detail = await mount(h, 'screens/SpotDetailScreen.js', { params });
-    assert.ok(detail.texts().includes(spot.title));
-    assert.ok(detail.texts().includes(spot.hours));
-    assert.ok(detail.texts().includes(spot.cost));
-    assert.ok(detail.all('Image').some(image => image.props.source === photos[spot.name]));
-    await detail.press('Official website');
-    assert.deepEqual(h.calls.at(-1), ['openURL', spot.websiteUrl]);
-    if (spot.bookingUrl) {
-      await detail.press('Tickets & booking');
-      assert.deepEqual(h.calls.at(-1), ['openURL', spot.bookingUrl]);
+    const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
+    for (const spot of spots) {
+      assert.ok(existsSync(photos[spot.name]), spot.name);
+      assert.match(String(photos[spot.name]), new RegExp(`Seasonal/${key}/.+\\.jpg$`));
+      assert.ok(credits[spot.name]?.licenseUrl && credits[spot.name]?.sourceUrl, spot.name);
+      const card = screen.button(`View details for ${spot.name}`);
+      assert.ok(card?.findAllByType('Image').some(image => image.props.source === photos[spot.name]), spot.name);
     }
-    await detail.press('Directions');
-    assert.ok(h.calls.at(-1)[1].endsWith(encodeURIComponent(`${spot.latitude},${spot.longitude}`)));
-    await act(async () => detail.renderer.unmount());
-  }
-  await act(async () => screen.renderer.unmount());
-});
+
+    await screen.press('Map');
+    for (const category of categories) {
+      await screen.press('Filter spots');
+      await screen.press(category.title);
+      await screen.press('Apply Filters');
+      assert.deepEqual(pinNames(screen), category.spots.map(spot => spot.name));
+      await screen.press('Clear filters');
+    }
+    assert.deepEqual(pinNames(screen), expectedNames);
+
+    for (const spot of spots) {
+      const pin = pinNamed(screen, spot.name);
+      assert.deepEqual(pin.props.coordinate, { latitude: spot.latitude, longitude: spot.longitude });
+      await act(async () => pin.props.onPress());
+      await act(async () => mapPreview(screen).props.onPress());
+      const [route, params] = h.navigations.at(-1);
+      assert.equal(route, 'SpotDetailScreen');
+      assert.deepEqual(params, { spot: { k: 'c', name: spot.name } });
+      const detail = await mount(h, 'screens/SpotDetailScreen.js', { params });
+      assert.ok(detail.texts().includes(spot.title));
+      assert.ok(detail.texts().includes(spot.hours));
+      assert.ok(detail.texts().includes(spot.cost));
+      assert.ok(detail.all('Image').some(image => image.props.source === photos[spot.name]));
+      await detail.press('Official website');
+      assert.deepEqual(h.calls.at(-1), ['openURL', spot.websiteUrl]);
+      if (spot.bookingUrl) {
+        await detail.press('Tickets & booking');
+        assert.deepEqual(h.calls.at(-1), ['openURL', spot.bookingUrl]);
+      }
+      await detail.press('Directions');
+      assert.ok(h.calls.at(-1)[1].endsWith(encodeURIComponent(`${spot.latitude},${spot.longitude}`)));
+      await act(async () => detail.renderer.unmount());
+    }
+    await act(async () => screen.renderer.unmount());
+  });
+}
 
 test('every catalogue spot with real data has the same detail fields as the Winter template', () => {
   const { catalogueSpots, findCatalogueSpot } = require('../services/catalogue');
   const { findSpotByName } = require('../services/spots');
   const spots = catalogueSpots.filter(spot => !spot.placeholderAddress)
     .map(spot => ({ ...findCatalogueSpot(spot.name), ...findSpotByName(spot.name) }));
-  assert.equal(spots.length, fallSpotNames.length + winterSpotNames.length + springSpotNames.length);
+  assert.equal(spots.length, fallSpotNames.length + winterSpotNames.length + springSpotNames.length + summerSpotNames.length);
   for (const spot of spots) {
     assert.ok(spot.tagline && spot.hours && spot.cost && spot.websiteUrl, spot.name);
     assert.equal(spot.about.length, 3, spot.name);
@@ -234,7 +247,7 @@ test('My lists shows kept collections apart from lists, opens them, and can let 
   assert.ok(texts.includes('Collections'), texts.join(' | '));
   const fallTile = `Fall, Vancouver · ${fallSpotNames.length} spots`;
   assert.ok(screen.button(fallTile));
-  assert.ok(screen.button('Summer, Vancouver · 3 spots'));
+  assert.ok(screen.button('Summer, Vancouver · 10 spots'));
   assert.ok(texts.indexOf('Fall') < texts.indexOf('Summer'), 'oldest first');
   assert.ok(!texts.join(' ').includes('retired'), 'a collection the app no longer makes is left out');
   assert.ok(texts.includes('No lists yet'), 'lists keep their own empty state');
@@ -244,7 +257,7 @@ test('My lists shows kept collections apart from lists, opens them, and can let 
 
   await screen.press('Remove Summer collection from My lists');
   assert.equal(h.documents.get('users/audit/savedCollections/vancouver-summer'), undefined);
-  assert.equal(screen.button('Summer, Vancouver · 3 spots'), undefined);
+  assert.equal(screen.button('Summer, Vancouver · 10 spots'), undefined);
   assert.deepEqual(screen.snackbar(), ['Removed Summer from My lists', 'Undo']);
 });
 

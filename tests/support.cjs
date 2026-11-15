@@ -20,7 +20,7 @@ async function mount(h, relative, { params, props, user = { uid: 'audit', email:
           React.createElement(SnackbarProvider, null,
             React.createElement(Component, { navigation: h.navigation, route: { params: params ?? {} }, ...props })))))), { location });
   await flush();
-  const all = type => renderer.root.findAllByType(type);
+  const all = type => renderer.root.findAllByType(type).filter(node => !isProbe(node));
   const button = label => all('TouchableOpacity').find(node => node.props.accessibilityLabel === label)
     ?? all('TouchableOpacity').find(node => JSON.stringify(textOf(node)) === JSON.stringify([label]));
   const texts = () => textOf(renderer.root);
@@ -36,6 +36,9 @@ async function mount(h, relative, { params, props, user = { uid: 'audit', email:
   };
   return { renderer, all, button, texts, press, snackbar };
 }
+// The hidden copy of a spot's name that components/SpotName.js measures with: no one sees or hears it, so the
+// tests leave it out too.
+const isProbe = node => node.props?.testID === 'spot-name-probe';
 // Every piece of text under `node`, one entry per outermost Text, with nested Text joined in.
 function textOf(node) {
   const flatten = instance => instance.children.map(child => (typeof child === 'string' ? child : flatten(child))).join('');
@@ -43,7 +46,7 @@ function textOf(node) {
     for (let parent = instance.parent; parent && parent !== node.parent; parent = parent.parent) if (parent.type === 'Text') return true;
     return false;
   };
-  return node.findAll(instance => instance.type === 'Text' && !insideText(instance)).map(flatten).filter(Boolean);
+  return node.findAll(instance => instance.type === 'Text' && !insideText(instance) && !isProbe(instance)).map(flatten).filter(Boolean);
 }
 const quiet = async run => {
   const real = console.error;

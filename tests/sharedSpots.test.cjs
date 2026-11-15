@@ -14,7 +14,7 @@ const record = (extra = {}) => ({
   ownerUid: 'audit', name: 'Hidden Sunset Viewpoint', lat: 49.2865, lng: -123.112, photos: [], publicListIds: [], createdAt: 1, updatedAt: 1, ...extra,
 });
 const listDoc = (title, refs = [], extra = {}) => ({
-  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid: 'audit', title, now: 1 })), ...extra,
+  ...refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title, now: 1 })), ...extra,
 });
 const base = { 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1 } };
 

@@ -15,7 +15,7 @@ const mayaSteps = { k: 'x', id: 'maya-uid_steps1', owner: 'maya-uid', name: 'May
 // Someone else's spot inside Maya's list: her list only links it, so where it is comes from its public copy.
 const pier = { k: 'x', id: 'sam-uid_pier', owner: 'sam-uid', name: 'Old pier' };
 const heart = (season = 'Fall') => ({ isFavourite: true, season, location: '', savedAt: 1 });
-const listOf = (title, refs, ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ ownerUid, title, now: 1 }));
+const listOf = (title, refs, ownerUid = 'audit') => refs.reduce((list, ref) => addSpot(list, ref), createList({ cover: { type: 'season', value: 'fall' }, ownerUid, title, now: 1 }));
 const pointer = { ownerUid: 'maya-uid', ownerUsername: 'maya', title: 'Golden Hour', publishedAt: 100, followedAt: 5, lastOpenedAt: 5 };
 
 const saved = {
@@ -377,8 +377,8 @@ test('map filter: lists combine with categories and search, and Reset clears eve
 
 test('map filter: many lists show five, reveal more in batches, and every one can be searched', async () => {
   const many = { ...saved };
-  for (let n = 1; n <= 120; n += 1) many[`lists/l${n}`] = addSpot(createList({ ownerUid: 'audit', title: `Trip ${n}`, now: n + 1 }), maan);
-  many['lists/again'] = createList({ ownerUid: 'audit', title: 'Trip 1', now: 500 }); // the same name, told apart by its caption
+  for (let n = 1; n <= 120; n += 1) many[`lists/l${n}`] = addSpot(createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title: `Trip ${n}`, now: n + 1 }), maan);
+  many['lists/again'] = createList({ cover: { type: 'season', value: 'fall' }, ownerUid: 'audit', title: 'Trip 1', now: 500 }); // the same name, told apart by its caption
   const { screen } = await openMap(many);
   await screen.press('Filter spots');
   const rows = () => screen.all('TouchableOpacity').filter(node => node.props.accessibilityRole === 'checkbox')
@@ -435,7 +435,7 @@ test('map: says so kindly when nothing is saved, and when the saved spots have n
   await empty.screen.press('Explore spots');
   assert.deepEqual(empty.h.navigations.at(-1), ['HomeTab', { screen: 'SeasonsScreen', initial: false }]);
 
-  // A placeholder from Summer still has no map coordinates.
+  // A saved reference to a retired Summer placeholder has no map coordinates.
   const unplaced = await openMap({ 'users/audit': { username: 'audit' }, 'favourites/audit': { listsMigratedAt: 1, 'Sunset Beach': heart('Summer') } });
   await unplaced.spreadOut();
   await unplaced.look();
@@ -496,19 +496,17 @@ test('map: a followed list that was deleted or made private stops adding pins, w
   assert.deepEqual(rows().map(node => node.props.accessibilityLabel), ['Weekend, 2 spots'], 'it is no longer offered in the filter');
 });
 
-test('map: a preview name takes at most two lines, shrinks by a quarter when it must, then ends in “…”', async () => {
+test('map: a preview name takes at most two lines at its normal size, then ends in “…”', async () => {
   const h = createHarness();
-  const { nameFit, NAME_MAX_LINES, NAME_SMALL_SCALE, PREVIEW_CARD, previewCardSize } = h.load('components/map/SpotMapPreview.js');
+  const { nameFit, NAME_MAX_LINES, PREVIEW_CARD, previewCardSize } = h.load('components/map/SpotMapPreview.js');
   assert.equal(NAME_MAX_LINES, 2);
-  assert.equal(NAME_SMALL_SCALE, 0.75);
-  assert.deepEqual(nameFit('Maan Farms'), { lines: 1, small: false });
-  assert.deepEqual(nameFit('Laity Pumpkin Patch'), { lines: 1, small: false });
-  assert.deepEqual(nameFit('Aldor Family Farm Corn Maze'), { lines: 2, small: false });
-  // Too long for two lines at the normal size, but it fits at three quarters of it.
-  assert.deepEqual(nameFit('Burnaby Village Museum Heritage Christmas'), { lines: 2, small: true });
-  // Too long even then: still two small lines, and the rest is cut off.
-  assert.deepEqual(nameFit('The Very Long Name Of A Spot That Goes On And On Past Two Lines'), { lines: 2, small: true });
-  assert.deepEqual(nameFit('Supercalifragilisticexpialidociousness'), { lines: 2, small: false }, 'one long word breaks across two lines');
+  assert.deepEqual(nameFit('Maan Farms'), { lines: 1 });
+  assert.deepEqual(nameFit('Laity Pumpkin Patch'), { lines: 1 });
+  assert.deepEqual(nameFit('Aldor Family Farm Corn Maze'), { lines: 2 });
+  // Too long for two lines: it is never drawn smaller, so it ends in “…”.
+  assert.deepEqual(nameFit('Burnaby Village Museum Heritage Christmas'), { lines: 2 });
+  assert.deepEqual(nameFit('The Very Long Name Of A Spot That Goes On And On Past Two Lines'), { lines: 2 });
+  assert.deepEqual(nameFit('Supercalifragilisticexpialidociousness'), { lines: 2 }, 'one long word breaks across two lines');
 
   const card = name => h.load('components/map/SpotMapPreview.js').default({ spot: { name, latitude: 49, longitude: -123 }, onPress() {} });
   const nameText = name => {
@@ -516,6 +514,6 @@ test('map: a preview name takes at most two lines, shrinks by a quarter when it 
     return { lines: words.props.numberOfLines, size: [].concat(words.props.style).filter(Boolean).reduce((all, one) => ({ ...all, ...one }), {}).fontSize };
   };
   assert.deepEqual(nameText('Maan Farms'), { lines: 1, size: 16 });
-  assert.deepEqual(nameText('Burnaby Village Museum Heritage Christmas'), { lines: 2, size: 12 });
+  assert.deepEqual(nameText('Burnaby Village Museum Heritage Christmas'), { lines: 2, size: 16 });
   assert.ok(PREVIEW_CARD.height >= previewCardSize({ distance: false }).height, 'the room kept for the card covers every name');
 });

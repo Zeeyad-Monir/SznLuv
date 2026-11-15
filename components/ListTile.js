@@ -1,15 +1,15 @@
-// A square tile for a list in the library: its cover colour or season illustration, title and spot count.
+// A square tile for a list in the library: its cover image (or a colour, on lists from before images), title and spot count.
 import React from 'react';
 import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { coverBackground } from '../services/listsState';
-import { seasonArt } from './covers';
+import { coverArt } from './covers';
 import { cardShadow, colors } from './theme';
 
 export const spotCount = count => `${count} ${count === 1 ? 'spot' : 'spots'}`;
 
 export default function ListTile({ list, size, onPress, caption, updated = false }) {
-  const art = seasonArt(list.cover);
+  const art = coverArt(list.cover);
   const draft = 'public' in list;
   const count = draft ? list.items?.length : list.spotCount ?? list.items?.length;
   const footer = caption ?? (count == null ? null : spotCount(count));
