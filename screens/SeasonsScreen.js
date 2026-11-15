@@ -54,7 +54,7 @@ export default function SeasonsScreen() {
   const { city } = useCity();
   const collections = collectionsForCity(city.id);
   const entrance = useEntrance(collections.length);
-  // Each card's heart keeps that whole collection in My lists, apart from the spots' own hearts.
+  // Each card's heart keeps that whole collection in Saved, apart from the spots' own hearts.
   const { isSaved, toggleHeart } = useCollectionHeart();
 
   // Two quick taps on different cards must not push two pages

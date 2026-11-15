@@ -1,28 +1,28 @@
-// The library. "Saved" holds single places: spots the user hearted. "My lists" holds collections: the
-// lists they made and the seasonal collections they chose to keep. "Following" is other people's lists.
+// The library. "Saved" holds what the user hearted: whole collections (a season) and single spots, each with
+// a "View all" page. "My lists" holds the lists they made. "Following" is other people's lists.
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+  ActivityIndicator, Animated, FlatList, Keyboard, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useScrollToTop } from '@react-navigation/native';
 import EmptyCard from '../components/EmptyCard';
 import ListTile, { NewListTile } from '../components/ListTile';
 import SegmentPill from '../components/SegmentPill';
-import HeartButton from '../components/HeartButton';
-import SpotCard from '../components/SpotCard';
+import AddOwnSpotBanner from '../components/AddOwnSpotBanner';
+import SavedCollectionCard from '../components/SavedCollectionCard';
+import SavedControls, { isNarrowed } from '../components/SavedControls';
+import SavedSectionHeader from '../components/SavedSectionHeader';
+import SavedSpotRow from '../components/SavedSpotRow';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GRID_GAP, GUTTER, colors, tileWidth } from '../components/theme';
 import useEntrance, { useItemEntrance } from '../hooks/useEntrance';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCity } from '../contexts/CityContext';
 import useMyLists from '../hooks/useMyLists';
-import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
-import useMySpots from '../hooks/useMySpots';
-import useSpotEntries from '../hooks/useSpotEntries';
-import { savedCustomSpots } from '../services/customSpotsState';
-import useSavedCollections, { useCollectionHeart } from '../hooks/useSavedCollections';
-import { catalogueRef, resolveSpot } from '../services/catalogue';
-import { collectionById, collectionCaption } from '../services/collections';
+import useSavedLibrary from '../hooks/useSavedLibrary';
+import useSavedQuery from '../hooks/useSavedQuery';
+import { openCollection } from '../services/collections';
+import { filterSaved } from '../services/savedLibrary';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import PersonRow from '../components/PersonRow';
@@ -35,7 +35,6 @@ const SEGMENTS = [
   { value: 'lists', label: 'My lists' },
   { value: 'following', label: 'Following' },
 ];
-const SEASON_ORDER = ['Fall', 'Winter', 'Spring', 'Summer'];
 
 // Coming back to the library shows the side you were last on, for as long as the app stays open.
 let lastSegment = 'saved';
@@ -69,7 +68,8 @@ export default function Favourites({ route }) {
 
   return (
     <SignedInScreen style={styles.container}>
-      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}>
+      <ScrollView ref={scrollRef} contentContainerStyle={floatingScrollStyle}
+        keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Animated.View style={entrance[0]}>
           <SegmentPill options={SEGMENTS} value={segment} onChange={choose} style={styles.segments} />
         </Animated.View>
@@ -78,7 +78,6 @@ export default function Favourites({ route }) {
           <Saved onExplore={() => navigation.navigate('HomeTab', { screen: 'SeasonsScreen', initial: false })} />
         ) : segment === 'lists' ? (
           <MyLists size={size} onOpen={list => open('ListScreen', { listId: list.id })}
-            onOpenCollection={collection => open(collection.screen)}
             onCreate={() => navigation.navigate('ListDetails')} />
         ) : (
           <Following size={size} onOpen={list => open('ListScreen', { listId: list.id })}
@@ -90,94 +89,135 @@ export default function Favourites({ route }) {
   );
 }
 
-// Single places: the spots the user made and saved, then the app's spots they hearted, by season.
-// Removing one from here offers Undo, and never deletes a spot the user made.
+// Saved: single spots the user hearted, then whole collections they kept. Each is a preview with "View all";
+// the search and filters at the top narrow both, and carry over to the full pages.
+const SPOT_PREVIEW = 5;
+const CAROUSEL_GAP = 12;
+const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+
 function Saved({ onExplore }) {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const { city } = useCity();
-  const [favourites, setFavourites] = useFavouriteSpots();
-  const { toggleFavouriteSpot, toggleCustomSpot } = useSaveSpot(favourites, setFavourites);
-  const privateSpots = useMySpots();
+  const library = useSavedLibrary();
+  const savedQuery = useSavedQuery();
+  const { query, filters } = savedQuery;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const narrowed = isNarrowed(query, filters);
 
-  // Newest first, so a spot just made is at the top. Someone else's is shown from its public copy.
-  const refs = savedCustomSpots(favourites)
-    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0) || String(a.name).localeCompare(String(b.name)))
-    .map(({ id, owner, name }) => ({ k: 'x', id, owner, name }));
-  const { entries: custom } = useSpotEntries(refs, { privateSpots });
-  const groups = SEASON_ORDER.map(season => ({
-    season,
-    entries: Object.entries(favourites)
-      .filter(([, entry]) => entry?.isFavourite && entry.season === season)
-      .map(([name, entry]) => ({ name, entry }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  })).filter(group => group.entries.length);
-  const keys = [...custom.map(({ ref }) => ref.id), ...groups.flatMap(group => group.entries.map(({ name }) => name))];
-  const entrance = useItemEntrance(keys);
+  const collections = filterSaved(library.collections, { ...filters, type: 'all', query });
+  const spots = filterSaved(library.spots, { ...filters, query });
+  const preview = spots.slice(0, SPOT_PREVIEW);
+  const entrance = useItemEntrance(preview.map(item => item.key));
 
-  const addOwn = (
-    <TouchableOpacity style={styles.addOwn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Add Your Own Spot"
-      onPress={() => { if (canNavigate(navigation)) navigation.navigate('OwnSpotScreen', { from: 'saved' }); }}>
-      <Icon name="add-location-alt" size={22} color={colors.ink} />
-      <Text style={styles.addOwnText}>Add Your Own Spot</Text>
-    </TouchableOpacity>
-  );
+  // About two and a half cards across, so the row plainly scrolls.
+  const cardWidth = Math.round((width - GUTTER) * 0.4);
+  const cardHeight = Math.round(cardWidth * 0.84);
 
-  if (!custom.length && !groups.length) {
+  const go = (route, params) => {
+    if (!canNavigate(navigation)) return;
+    Keyboard.dismiss();
+    if (params) navigation.navigate(route, params);
+    else navigation.navigate(route);
+  };
+  const openItem = item => { Keyboard.dismiss(); openSpot(navigation, item.ref); };
+  const openCollectionItem = item => {
+    const { screen, params } = openCollection(item.collection);
+    go(screen, params);
+  };
+  const addOwn = <AddOwnSpotBanner onPress={() => go('OwnSpotScreen', { from: 'saved' })} />;
+
+  const collectionsLoading = library.collectionsStatus === 'loading' || library.collectionsStatus === 'idle';
+  if (library.spotsLoaded && !collectionsLoading && !library.spots.length && !library.collections.length) {
     return (
       <>
         {addOwn}
         <EmptyCard icon="favorite-border" title="Nothing saved yet" style={styles.afterAction}
-          text="Tap the heart on any spot to keep it here, or add a place of your own." actionLabel={`Explore ${city.name}`} onAction={onExplore} />
+          text="Tap the heart on any spot or season to keep it here, or add a place of your own." actionLabel={`Explore ${city.name}`} onAction={onExplore} />
       </>
     );
   }
+
+  const collectionCount = narrowed
+    ? plural(collections.length, 'match', 'matches')
+    : plural(library.collections.length, 'collection');
+  const spotCount = narrowed ? plural(spots.length, 'match', 'matches') : plural(library.spots.length, 'spot');
+
+  let collectionBody;
+  if (library.collectionsStatus === 'error' && !library.collections.length) {
+    collectionBody = (
+      <TouchableOpacity style={styles.inlineRetry} onPress={library.retryCollections} accessibilityRole="button">
+        <Text style={styles.notice}>Couldn’t load your saved collections. Tap to try again.</Text>
+      </TouchableOpacity>
+    );
+  } else if (collectionsLoading) {
+    collectionBody = <View style={{ height: cardHeight }} />;
+  } else if (!library.collections.length) {
+    collectionBody = (
+      <TouchableOpacity style={styles.hint} onPress={onExplore} accessibilityRole="button" accessibilityLabel="Browse seasons">
+        <Icon name="favorite-border" size={22} color={colors.muted} accessible={false} importantForAccessibility="no" />
+        <Text style={styles.hintText}>Heart a season to keep the whole collection here.</Text>
+        <Icon name="chevron-right" size={20} color={colors.muted} accessible={false} importantForAccessibility="no" />
+      </TouchableOpacity>
+    );
+  } else if (!collections.length) {
+    collectionBody = <Text style={styles.noMatch}>No collections match.</Text>;
+  } else {
+    collectionBody = (
+      <FlatList horizontal data={collections} keyExtractor={item => item.key} showsHorizontalScrollIndicator={false}
+        style={styles.carousel} contentContainerStyle={styles.carouselContent}
+        snapToInterval={cardWidth + CAROUSEL_GAP} decelerationRate="fast" keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => (
+          <SavedCollectionCard item={item} width={cardWidth} height={cardHeight} compact
+            onPress={() => openCollectionItem(item)} onToggle={() => library.toggleCollection(item)} />
+        )} />
+    );
+  }
+
+  let spotBody;
+  if (!library.spotsLoaded) spotBody = <ActivityIndicator style={styles.loading} color={colors.ink} />;
+  else if (!library.spots.length) spotBody = <Text style={styles.noMatch}>Tap the heart on any spot to keep it here.</Text>;
+  else if (!spots.length) spotBody = <Text style={styles.noMatch}>No spots match.</Text>;
+  else {
+    spotBody = (
+      <>
+        {preview.map(item => (
+          <Animated.View key={item.key} style={entrance.styleFor(item.key)}>
+            <SavedSpotRow item={item} onOpen={openItem} onToggle={library.toggleSpot} />
+          </Animated.View>
+        ))}
+        {spots.length > SPOT_PREVIEW && (
+          <TouchableOpacity style={styles.more} onPress={() => go('SavedSpots')} accessibilityRole="button">
+            <Text style={styles.moreText}>See all {plural(spots.length, narrowed ? 'match' : 'spot', narrowed ? 'matches' : 'spots')}</Text>
+            <Icon name="arrow-forward" size={18} color={colors.ink} accessible={false} importantForAccessibility="no" />
+          </TouchableOpacity>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
-      {addOwn}
-      {custom.length > 0 && (
-        <View>
-          <Text style={styles.sectionLabel} accessibilityRole="header">Your spots</Text>
-          {custom.map(({ ref, spot, details, status }) => (
-            <Animated.View key={ref.id} style={entrance.styleFor(ref.id)}>
-              <SpotCard spot={status === 'unavailable' ? { ...spot, meta: 'No longer shared' } : spot}
-                saved thumbnail={details?.photos?.[0]} onPress={() => openSpot(navigation, ref)}
-                onToggleSave={() => toggleCustomSpot(ref)} />
-            </Animated.View>
-          ))}
-        </View>
-      )}
-      {groups.map(({ season, entries }) => (
-        <View key={season}>
-          <Text style={styles.sectionLabel} accessibilityRole="header">{season}</Text>
-          {entries.map(({ name, entry }) => {
-            // A spot SznLuv no longer lists stays here, so it can still be removed.
-            const resolved = resolveSpot(catalogueRef(name));
-            const spot = { ...resolved, missing: false };
-            return (
-              <Animated.View key={name} style={entrance.styleFor(name)}>
-                <SpotCard spot={spot} saved
-                  onPress={() => openSpot(navigation, catalogueRef(name))}
-                  onToggleSave={() => toggleFavouriteSpot({ name, season: entry.season, address: entry.location })} />
-              </Animated.View>
-            );
-          })}
-        </View>
-      ))}
+      <SavedControls state={savedQuery} placeholder="Search your saved" sheetOpen={sheetOpen} setSheetOpen={setSheetOpen} style={styles.controls} />
+
+      <SavedSectionHeader title="Saved Spots" subtitle={spotCount}
+        viewAllCount={spots.length} onViewAll={() => go('SavedSpots')} />
+      <View style={styles.addOwn}>{addOwn}</View>
+      {spotBody}
+
+      <View style={styles.divider} />
+
+      <SavedSectionHeader title="Saved Collections" subtitle={collectionCount}
+        viewAllCount={collections.length} onViewAll={() => go('SavedCollections')} />
+      {collectionBody}
     </>
   );
 }
 
-// Collections the user kept with a heart, then the lists they made.
-function MyLists({ size, onOpen, onOpenCollection, onCreate }) {
+// The lists the user made.
+function MyLists({ size, onOpen, onCreate }) {
   const { lists, status, retry } = useMyLists();
-  const { saved, status: keptStatus, isSaved, retry: retryKept } = useSavedCollections();
-  const { toggleHeart } = useCollectionHeart();
-  // Oldest first, like lists. One the app no longer makes is left out rather than shown broken.
-  const kept = Object.keys(saved)
-    .sort((a, b) => (saved[a].savedAt ?? 0) - (saved[b].savedAt ?? 0))
-    .map(collectionById)
-    .filter(collection => collection && isSaved(collection.id));
-  const entrance = useItemEntrance([...kept.map(collection => collection.id), ...lists.map(list => list.id)], { ready: status === 'ready' });
+  const entrance = useItemEntrance(lists.map(list => list.id), { ready: status === 'ready' });
 
   if (status === 'error') {
     return (
@@ -185,58 +225,24 @@ function MyLists({ size, onOpen, onOpenCollection, onCreate }) {
         text="Check your connection and try again." actionLabel="Try again" onAction={retry} />
     );
   }
-  if (status !== 'ready' || keptStatus === 'loading' || keptStatus === 'idle') {
+  if (status !== 'ready') {
     return <ActivityIndicator style={styles.loading} size="large" color={colors.ink} />;
   }
-
-  const collections = kept.length > 0 && (
-    <>
-      <Text style={[styles.sectionLabel, styles.firstLabel]} accessibilityRole="header">Collections</Text>
-      <View style={styles.grid}>
-        {kept.map(collection => (
-          <Animated.View key={collection.id} style={entrance.styleFor(collection.id)}>
-            <ListTile list={{ title: collection.title, cover: { type: 'season', value: collection.key } }} size={size}
-              caption={collectionCaption(collection.id)} onPress={() => onOpenCollection(collection)} />
-            <HeartButton style={styles.tileHeart} saved size={20} hitSlop={8}
-              label={`Remove ${collection.title} collection from My lists`} onPress={() => toggleHeart(collection.id)} />
-          </Animated.View>
-        ))}
-      </View>
-    </>
-  );
-  const keptProblem = keptStatus === 'error' && (
-    <TouchableOpacity style={styles.inlineRetry} onPress={retryKept} accessibilityRole="button">
-      <Text style={styles.notice}>Couldn’t load your saved collections. Tap to try again.</Text>
-    </TouchableOpacity>
-  );
-
   if (!lists.length) {
     return (
-      <>
-        {keptProblem}
-        {collections}
-        {kept.length > 0 && <Text style={styles.sectionLabel} accessibilityRole="header">Your lists</Text>}
-        <EmptyCard icon="bookmark-border" title="No lists yet"
-          text={kept.length ? 'Make a list for a plan, a mood, or a whole season.'
-            : 'Make a list for a plan, a mood, or a whole season. Or tap the heart on a season to keep it here.'}
-          actionLabel="New list" onAction={onCreate} />
-      </>
+      <EmptyCard icon="bookmark-border" title="No lists yet"
+        text="Make a list for a plan, a mood, or a whole season." actionLabel="New list" onAction={onCreate} />
     );
   }
   return (
-    <>
-      {keptProblem}
-      {collections}
-      {kept.length > 0 && <Text style={styles.sectionLabel} accessibilityRole="header">Your lists</Text>}
-      <View style={styles.grid}>
-        <NewListTile size={size} onPress={onCreate} />
-        {lists.map(list => (
-          <Animated.View key={list.id} style={entrance.styleFor(list.id)}>
-            <ListTile list={list} size={size} onPress={() => onOpen(list)} />
-          </Animated.View>
-        ))}
-      </View>
-    </>
+    <View style={styles.grid}>
+      <NewListTile size={size} onPress={onCreate} />
+      {lists.map(list => (
+        <Animated.View key={list.id} style={entrance.styleFor(list.id)}>
+          <ListTile list={list} size={size} onPress={() => onOpen(list)} />
+        </Animated.View>
+      ))}
+    </View>
   );
 }
 
@@ -322,17 +328,26 @@ const styles = StyleSheet.create({
   // The switch opens the page, with the same gap below it as above it.
   segments: { marginBottom: SCREEN_CONTENT_TOP_GAP, backgroundColor: colors.librarySegmentTrack },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: GRID_GAP },
-  tileHeart: {
-    position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
   inlineRetry: { minHeight: 44, justifyContent: 'center' },
-  // An action, not a spot: the dashed outline of "New list", the full width of the cards below.
-  addOwn: {
-    minHeight: 52, marginBottom: 4, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    borderWidth: 2, borderStyle: 'dashed', borderColor: '#B9A88F', backgroundColor: 'rgba(255, 249, 241, 0.6)',
+  controls: { marginBottom: 26 },
+  // The row runs to the screen's edges, so cards slide out from under the margin rather than stopping at it.
+  // Its vertical padding leaves room for the cards' shadows.
+  carousel: { marginHorizontal: -GUTTER, marginVertical: -4 },
+  carouselContent: { paddingHorizontal: GUTTER, paddingVertical: 4, gap: CAROUSEL_GAP },
+  // The spots above end with their own 16-point gap, so 8 more makes 24 above the line as below it.
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, marginTop: 8, marginBottom: 24 },
+  addOwn: { marginBottom: 16 },
+  hint: {
+    minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderRadius: 14,
+    backgroundColor: colors.field, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.fieldBorder,
   },
-  addOwnText: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  hintText: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.muted },
+  noMatch: { paddingTop: 4, paddingBottom: 12, fontSize: 15, lineHeight: 21, fontWeight: '600', color: colors.muted },
+  more: {
+    minHeight: 48, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 24,
+    backgroundColor: colors.field, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.fieldBorder,
+  },
+  moreText: { fontSize: 15, fontWeight: '700', color: colors.ink },
   afterAction: { marginTop: 16 },
   loading: { marginTop: 32 },
 });

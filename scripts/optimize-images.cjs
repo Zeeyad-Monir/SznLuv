@@ -14,7 +14,7 @@ const COVERS = [
   'assets/VancouverFoodCollectionCover.png', 'assets/VancouverNightOutCollectionCover.png',
   'assets/VancouverRainDaysCollectionCover.png', 'assets/VancouverGoldenHourCollectionCover.png',
   'assets/VancouverTableForOneCollectionsCover.png', 'assets/cities/VancouverCoverIMG.png',
-  'assets/Seasonal/SeasonalCoverIMG.png',
+  'assets/Seasonal/SeasonalCoverIMG.png', 'assets/AddOwnSpotBanner.webp',
 ];
 const COVER_LONG_EDGE = 1200;
 const COVER_QUALITY = 85;

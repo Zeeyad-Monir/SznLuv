@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import EmptyCard from './EmptyCard';
 import ListMap, { mappable } from './ListMap';
@@ -7,6 +7,17 @@ import SpotCard from './SpotCard';
 import { colors, text } from './theme';
 
 const VIEWS = [{ value: 'spots', label: 'Spots' }, { value: 'map', label: 'Map' }];
+
+// A card on a page that is only browsed. It is drawn again only when its own spot or heart changes, so
+// saving one spot, or the saved spots arriving, doesn't redraw a whole page of cards.
+const BrowseCard = memo(function BrowseCard({ entry, saved, onSave, onOpen }) {
+  const save = useCallback(() => onSave(entry.ref), [onSave, entry]);
+  const open = useCallback(() => onOpen(entry.ref), [onOpen, entry]);
+  return (
+    <SpotCard spot={entry.spot} note={entry.note} thumbnail={entry.details?.photos?.[0]} saved={saved}
+      onToggleSave={save} onPress={open} />
+  );
+});
 
 export default function ListBody({
   sections, view, onViewChange, onOpen, isSaved, onSave, empty, editing, editProps, retry, sectionTitleStyle, sectionSpacing,
@@ -49,12 +60,14 @@ export default function ListBody({
           {sections.map(({ title, entries: group }, sectionIndex) => (
             <View key={title ?? sectionIndex} style={sectionIndex > 0 ? sectionSpacing : undefined}>
               {!!title && <Text style={sectionTitleStyle} accessibilityRole="header">{title}</Text>}
-              {group.map((entry, index) => (
+              {group.map((entry, index) => (!editing && !editProps ? (
+                <BrowseCard key={entry.spot.key} entry={entry} saved={isSaved(entry.ref)} onSave={onSave} onOpen={onOpen} />
+              ) : (
                 <SpotCard key={entry.spot.key} spot={entry.spot} note={entry.note}
                   thumbnail={entry.details?.photos?.[0]} saved={isSaved(entry.ref)}
                   onToggleSave={() => onSave(entry.ref)} onPress={() => onOpen(entry.ref)}
                   editing={editing} {...editProps?.(entry, index)} />
-              ))}
+              )))}
             </View>
           ))}
         </>

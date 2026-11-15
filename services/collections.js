@@ -1,5 +1,5 @@
 // Collections the app makes for each city: its seasons, and themes that cut across seasons (Outdoors).
-// A user keeps a season by tapping its heart, and it then appears in My lists. Home's cards, its featured
+// A user keeps a season by tapping its heart, and it then appears in Saved. Home's cards, its featured
 // card and "All spots" are all read from here. Plain CommonJS so it can be unit-tested directly.
 //
 // Every collection has an ID that is unique across cities ("vancouver-fall"), so two cities' Fall
@@ -188,5 +188,5 @@ function featuredRotation(cityId, date = new Date()) {
 
 module.exports = {
   COLLECTIONS, THEMES, collectionById, collectionsForCity, collectionSpots, collectionSections, citySpotSections,
-  collectionCaption, homeCollections, featuredRotation,
+  collectionCaption, homeCollections, featuredRotation, openCollection,
 };

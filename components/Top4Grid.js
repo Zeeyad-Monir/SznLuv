@@ -12,7 +12,7 @@ import spotImages from '../screens/spotImages';
 import { resolveSpot } from '../services/catalogue';
 import { MAX_PICKS } from '../services/top4State';
 import SpotName from './SpotName';
-import { GRID_GAP, artFade, colors, liftShadow, onArt } from './theme';
+import { GRID_GAP, colors, liftShadow, onArt } from './theme';
 
 // A tile shows the place's cover photo when it has one; otherwise it takes the colour of its spot's season,
 // and a place someone added themselves is cream.
@@ -22,6 +22,8 @@ const RADIUS = 15;
 const GLAZE = ['rgba(255, 255, 255, 0.45)', 'rgba(255, 255, 255, 0)'];
 // Over a photo the glaze is fainter, so it adds a sheen without washing the picture out.
 const PHOTO_GLAZE = ['rgba(255, 255, 255, 0.22)', 'rgba(255, 255, 255, 0)'];
+// A darker fade at the foot of a photo tile than the shared art fade, so the name and place pop off the washed photo.
+const BOTTOM_FADE = { colors: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.08)', 'rgba(0, 0, 0, 0.72)'], locations: [0, 0.4, 1] };
 
 // The place's own cover: the bundled photo of a catalogue spot, or the first photo of a place you added
 // (only on your own profile, where your spots are already loaded). Null keeps the season colour.
@@ -57,7 +59,8 @@ export default function Top4Grid({ picks, size, editable = false, onPressPick, o
             contentStyle={[styles.face, { backgroundColor: tint }]}
             accessibilityLabel={`Number ${index + 1}: ${spot.name}${spot.meta ? `, ${spot.meta}` : ''}`}>
             {photo}
-            {!!photo && <LinearGradient pointerEvents="none" colors={artFade.colors} locations={artFade.locations} style={StyleSheet.absoluteFill} />}
+            {!!photo && <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.wash]} />}
+            {!!photo && <LinearGradient pointerEvents="none" colors={BOTTOM_FADE.colors} locations={BOTTOM_FADE.locations} style={StyleSheet.absoluteFill} />}
             <LinearGradient pointerEvents="none" colors={photo ? PHOTO_GLAZE : GLAZE} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 0.6 }} style={StyleSheet.absoluteFill} />
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.rim]} />
             <Text style={[styles.rank, photo && styles.rankOnArt]} accessible={false}>{index + 1}</Text>
@@ -85,9 +88,11 @@ const styles = StyleSheet.create({
   face: { borderRadius: RADIUS, padding: 14, justifyContent: 'flex-end', overflow: 'hidden' },
   photo: { position: 'absolute', top: 0, left: 0 },
   rim: { borderRadius: RADIUS, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.55)' },
-  rank: { position: 'absolute', top: -6, right: 10, fontSize: 86, fontWeight: '800', color: 'rgba(255, 255, 255, 0.5)' },
-  // On a photo the numeral keeps its soft white but gains a shadow so it holds on light pictures.
-  rankOnArt: { color: 'rgba(255, 255, 255, 0.62)', textShadowColor: 'rgba(0, 0, 0, 0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  // A light white film over a photo, fading it back a touch; it sits under the dark fade so the name stays legible.
+  wash: { backgroundColor: 'rgba(255, 255, 255, 0.12)' },
+  rank: { position: 'absolute', top: -6, right: 10, fontSize: 86, fontWeight: '800', color: 'rgba(255, 255, 255, 0.65)' },
+  // On a photo the numeral is a brighter white with a shadow, so it pops even on light pictures.
+  rankOnArt: { color: 'rgba(255, 255, 255, 0.8)', textShadowColor: 'rgba(0, 0, 0, 0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   pin: { position: 'absolute', top: 12, left: 12 },
   name: { fontSize: 17, fontWeight: '700', color: colors.ink },
   meta: { marginTop: 2, fontSize: 13, fontWeight: '600', color: colors.summary },

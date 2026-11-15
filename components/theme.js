@@ -7,6 +7,8 @@ const colors = {
   library: '#F5E7D8',
   profile: '#FAF3E0',
   card: '#FFF8DC',
+  // The Saved pages' spot cards: `card` 2.5% darker, so they sit just apart from the cream page.
+  savedCard: '#F9F2D7',
   field: '#FFF9F1',
   fieldBorder: '#00000020',
   label: '#C2B697',

@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const React = require('react');
-const { createHarness, act } = require('./renderHarness.cjs');
+const { createHarness, act, settleFrames } = require('./renderHarness.cjs');
 const { citySpotSections } = require('../services/collections');
 const { fallCategories, legacyFallSpots, detailedFallSpots, fallSpotNames } = require('../services/spots');
 const {
@@ -203,6 +203,7 @@ test('draft filters discard on dismiss and applied state survives a season remou
   await change(input(renderer), 'waterfalls');
   assert.deepEqual(cards(renderer), ['Lynn Canyon Park']);
   await act(async () => selectSeason(() => Fall));
+  await settleFrames(); // the Fall page draws its fifty cards over a few frames
   assert.equal(input(renderer).props.value, '');
   assert.equal(cards(renderer).length, fallSpotNames.length);
   await act(async () => selectSeason(() => Winter));

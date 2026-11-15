@@ -8,7 +8,20 @@ const repo = path.resolve(__dirname, '..');
 const { findCity } = require('../services/catalogue');
 const { act } = TestRenderer;
 
-global.requestAnimationFrame ??= callback => setTimeout(callback, 0);
+// Frames still to run. A long list draws its rows over a few frames (hooks/useProgressiveCount.js), and a
+// test should see the page once it is whole, so rendering waits for them (settleFrames).
+const pendingFrames = new Set();
+global.requestAnimationFrame = callback => {
+  const frame = setTimeout(() => { pendingFrames.delete(frame); callback(); }, 0);
+  pendingFrames.add(frame);
+  return frame;
+};
+global.cancelAnimationFrame = frame => { pendingFrames.delete(frame); clearTimeout(frame); };
+async function settleFrames() {
+  for (let turn = 0; pendingFrames.size && turn < 50; turn += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+  }
+}
 global.cancelAnimationFrame ??= clearTimeout;
 
 function createHarness(options = {}) {
@@ -220,7 +233,9 @@ function createHarness(options = {}) {
       setAccessibilityFocus: tag => calls.push(['focusAccessibility', tag]),
     },
     SectionList: ({ sections = [], renderItem, ...props }) => React.createElement('SectionList', props, sections.flatMap(section => section.data.map((item, index) => React.createElement(React.Fragment, { key: section.title + index }, renderItem({ item, index, section }))))),
-    FlatList: ({ data = [], renderItem, ...props }) => React.createElement('FlatList', props, data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index })))),
+    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }) => React.createElement('FlatList', props,
+      ListHeaderComponent ?? null,
+      data.length ? data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index }))) : ListEmptyComponent ?? null),
   }, { get: (target, name) => name in target ? target[name] : String(name) });
   // A navigator's screens are only listed, not drawn, unless a test names them in `renderScreens`.
   function Screen({ name, component }) {
@@ -364,6 +379,7 @@ function createHarness(options = {}) {
         },
       });
     });
+    await settleFrames();
     return renderer;
   }
   function render(relative, { props, ...options } = {}) {
@@ -380,4 +396,4 @@ function createHarness(options = {}) {
   global.fetch = options.fetch || (async url => { calls.push(['fetch', String(url)]); return { ok: true, status: 200, json: async () => forecast }; });
   return { render, renderElement, load, menus, openUrl, alerts, leave, files, finishUploads, navigations, calls, dispatches, timings, navigation, documents, storage, auth, setUser, appState, keyboardEvent, accessibilityEvent, Screen };
 }
-module.exports = { createHarness, act };
+module.exports = { createHarness, act, settleFrames };

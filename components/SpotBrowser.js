@@ -5,18 +5,30 @@
 // `sections` is [{ title, spots }] and must keep the same identity between renders: the search index is
 // rebuilt whenever it changes. `sectionKey` names where this page's search text and filters are kept
 // (hooks/useSpotDiscovery.js), so they survive leaving the page and coming back.
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Animated, Keyboard, ScrollView, StyleSheet, Text } from 'react-native';
 import ListBody from './ListBody';
 import SpotDiscoveryControls, { SpotEmptyState } from './SpotDiscoveryControls';
 import { colors } from './theme';
 import useEntrance from '../hooks/useEntrance';
+import useProgressiveCount from '../hooks/useProgressiveCount';
 import useSaveSpot, { useFavouriteSpots } from '../hooks/useSaveSpot';
 import useSpotDiscovery from '../hooks/useSpotDiscovery';
 import { useFloatingScrollStyle } from '../navigation/floatingNavigationLayout';
 import { SCREEN_CONTENT_TOP_GAP, SignedInScreen } from '../navigation/topNavigationLayout';
 import { catalogueRef, resolveSpot } from '../services/catalogue';
 import { openSpot } from '../services/venueNavigation';
+
+// The first `count` spots, under their headings. A heading with none of its spots drawn yet waits with them.
+function firstEntries(sections, count) {
+  let left = count;
+  return sections.flatMap(section => {
+    if (left <= 0) return [];
+    const entries = section.entries.slice(0, left);
+    left -= entries.length;
+    return [entries.length === section.entries.length ? section : { ...section, entries }];
+  });
+}
 
 export default function SpotBrowser({
   navigation, title, sectionKey, sections, search, backgroundColor = colors.page, ink = colors.ink, backdrop, spotMeta,
@@ -29,7 +41,8 @@ export default function SpotBrowser({
     Alert.alert('Favourites unavailable', 'Check your connection and account access.');
   });
   const { saveRef, isSaved } = useSaveSpot(favourites, setFavourites);
-  const listed = discovery.sections.map(({ title: heading, spots }) => ({
+  // Kept between renders, so a card is drawn again only when something about its own spot changes.
+  const listed = useMemo(() => discovery.sections.map(({ title: heading, spots }) => ({
     title: heading,
     entries: spots.map(({ name }) => {
       const ref = catalogueRef(name);
@@ -37,7 +50,13 @@ export default function SpotBrowser({
       // `spotMeta` chooses the small line under a spot's name when the page already says the rest.
       return { ref, spot: spotMeta ? { ...spot, meta: spotMeta(spot) } : spot, status: 'ready' };
     }),
-  }));
+  })), [discovery.sections, spotMeta]);
+  // A page of fifty cards takes long enough to build that the tap seems ignored. It opens with the first
+  // screenful and the rest arrive as it slides in, before anyone can scroll to them.
+  const total = listed.reduce((sum, section) => sum + section.entries.length, 0);
+  const count = useProgressiveCount(total);
+  const shown = useMemo(() => (count >= total ? listed : firstEntries(listed, count)), [listed, count, total]);
+  const open = useCallback(ref => { Keyboard.dismiss(); openSpot(navigation, ref); }, [navigation]);
 
   return (
     <SignedInScreen style={[styles.container, { backgroundColor }]}>
@@ -49,8 +68,8 @@ export default function SpotBrowser({
       <ScrollView ref={discovery.listRef} contentContainerStyle={scrollStyle}
         keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Animated.View style={entrance[1]}>
-          <ListBody sections={listed} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
-            onOpen={ref => { Keyboard.dismiss(); openSpot(navigation, ref); }}
+          <ListBody sections={shown} view={view} onViewChange={setView} isSaved={isSaved} onSave={saveRef}
+            onOpen={open}
             sectionTitleStyle={[styles.sectionTitle, { color: ink }]}
             sectionSpacing={styles.sectionSpacing}
             empty={<SpotEmptyState discovery={discovery} />} />

@@ -41,6 +41,9 @@ export const IMAGE_ART = {
   seasons: require('../assets/optimized/SeasonalCoverIMG.jpg'),
 };
 
+// Behind the Saved page's "Add Your Own Spot" banner.
+export const ADD_SPOT_ART = require('../assets/optimized/AddOwnSpotBanner.jpg');
+
 // A list's cover image, or undefined for a colour cover from before covers were images.
 export const coverArt = cover => {
   if (cover?.type === 'season') return SEASON_ART[cover.value];

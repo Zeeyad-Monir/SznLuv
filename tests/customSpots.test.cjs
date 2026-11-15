@@ -157,8 +157,10 @@ test('Saved: Add Your Own Spot sits on top; your spots come first and open their
   const screen = await mount(h, 'screens/Favourites.js');
   const texts = screen.texts();
   assert.ok(texts.indexOf('Following') < texts.indexOf('Add Your Own Spot'), texts.join(' | '));
-  assert.ok(texts.indexOf('Add Your Own Spot') < texts.indexOf('Your spots') && texts.indexOf('Your spots') < texts.indexOf('Fall'));
+  assert.ok(texts.indexOf('Saved Spots') < texts.indexOf('Add Your Own Spot'), 'the banner opens the spots section');
+  assert.ok(texts.indexOf('Add Your Own Spot') < texts.indexOf('Hidden Sunset Viewpoint'), texts.join(' | '));
   assert.ok(texts.indexOf('Hidden Sunset Viewpoint') < texts.indexOf('Secret Lake Lookout'), 'newest first');
+  assert.ok(texts.indexOf('Secret Lake Lookout') < texts.indexOf('Maan Farms'), 'a spot saved before saves were dated goes last');
   assert.ok(texts.includes('Beaches') && texts.includes('North Vancouver'), 'someone else\'s spot is described from its public copy');
 
   await screen.press('Add Your Own Spot');
@@ -173,15 +175,17 @@ test('Saved: Add Your Own Spot sits on top; your spots come first and open their
   assert.equal(h.documents.get('favourites/audit')['x:audit_sunset'], undefined);
   assert.ok(h.documents.get('spots/audit_sunset'), 'the spot itself is kept');
   assert.deepEqual(screen.snackbar(), ['Removed from Saved', 'Undo']);
+  assert.ok(screen.button('Save Hidden Sunset Viewpoint'), 'it stays where it was, with an empty heart, until the page is left');
   await screen.press('Undo');
   assert.ok(h.documents.get('favourites/audit')['x:audit_sunset'].isFavourite);
+  assert.ok(screen.button('Remove Hidden Sunset Viewpoint from favourites'));
 });
 
 test('Saved: with nothing yet, the Add button stays above an invitation', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
   const screen = await mount(h, 'screens/Favourites.js');
   assert.ok(screen.button('Add Your Own Spot'));
-  assert.ok(screen.texts().includes('Tap the heart on any spot to keep it here, or add a place of your own.'));
+  assert.ok(screen.texts().includes('Tap the heart on any spot or season to keep it here, or add a place of your own.'));
 });
 
 // ---------------------------------------------------------------- The editor

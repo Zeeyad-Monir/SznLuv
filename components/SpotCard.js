@@ -1,5 +1,6 @@
 // The cream spot card from the season screens, for lists: heart, name, where it is, an optional note.
 // In edit mode the heart gives way to move and remove controls and the note becomes tappable.
+// `style` can recolour the card for one page; its size and spacing stay the same everywhere.
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -12,7 +13,7 @@ import spotThumbs from '../screens/spotThumbs';
 
 // Custom spots supply an authorized Storage photo. Catalogue spots use the small copy of their bundled photo.
 export default function SpotCard({
-  spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress,
+  spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress, style,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
   const disabled = spot.missing;
@@ -31,7 +32,7 @@ export default function SpotCard({
   })[nativeEvent.actionName]?.();
 
   return (
-    <View style={[styles.card, disabled && styles.cardMissing]}>
+    <View style={[styles.card, style, disabled && styles.cardMissing]}>
       {!editing && onToggleSave && !disabled && (
         <HeartButton style={styles.heart} saved={saved} onPress={toggleSave} hitSlop={0}
           label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />

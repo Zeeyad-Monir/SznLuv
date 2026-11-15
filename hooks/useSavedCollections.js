@@ -1,5 +1,5 @@
 // Collections the user chose to keep, from users/{uid}/savedCollections/{collectionId}. One live listener
-// for the whole app, so a heart on a season card and the tile in My lists always agree.
+// for the whole app, so a heart on a season card and its card in Saved always agree.
 // Nothing is read until a screen first asks, like hooks/useMyLists.js.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -105,12 +105,12 @@ export function useCollectionHeart() {
     if (Platform.OS === 'ios') selectionAsync().catch(() => {});
     if (saved) {
       snackbar.show({
-        message: `${title} saved to My lists`,
+        message: `Saved the ${title} collection`,
         actionLabel: 'View',
-        onAction: () => navigation.navigate('FavouritesTab', { screen: 'Favourites', params: { segment: 'lists' } }),
+        onAction: () => navigation.navigate('FavouritesTab', { screen: 'Favourites', params: { segment: 'saved' } }),
       });
     } else {
-      snackbar.show({ message: `Removed ${title} from My lists`, actionLabel: 'Undo', onAction: () => toggleHeart(id) });
+      snackbar.show({ message: `Removed the ${title} collection`, actionLabel: 'Undo', onAction: () => toggleHeart(id) });
     }
   }, [navigation, snackbar, toggle]);
 

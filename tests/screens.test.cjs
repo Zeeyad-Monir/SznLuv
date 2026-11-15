@@ -58,7 +58,7 @@ const auditedPhotoFiles = {
   'Hadden Park': { file: 'hadden-park.jpg', author: 'popejon2', license: 'CC BY 2.0' },
 };
 
-for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'CitySpotsScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
+for (const screen of ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'CitySpotsScreen', 'SeasonsScreen', 'FallDatesScreen', 'WinterDatesScreen', 'SpringDatesScreen', 'SummerDatesScreen', 'Favourites', 'SavedCollectionsScreen', 'SavedSpotsScreen', 'SeasonalFavourites', 'SpinTheWheel', 'SettingsScreen']) {
   test(`${screen} renders with an authenticated test profile`, async () => {
     const h = createHarness();
     const renderer = await h.render('screens/' + screen + '.js');
@@ -70,7 +70,7 @@ test('home hierarchy: Home > its collections and all spots; Seasonal > the four 
   async function pressCards(file) {
     const h = createHarness();
     const renderer = await h.render('screens/' + file + '.js');
-    const cards = renderer.root.findAllByType('TouchableOpacity').filter(node => !/collection (to|from) My lists$/.test(node.props.accessibilityLabel));
+    const cards = renderer.root.findAllByType('TouchableOpacity').filter(node => !/collection (to|from) Saved$/.test(node.props.accessibilityLabel));
     const results = {};
     for (const card of cards) {
       h.navigations.length = 0;

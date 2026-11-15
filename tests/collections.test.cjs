@@ -192,25 +192,25 @@ test('Fall spot pages show hours, cost and visit links like Winter', async () =>
 test('season card heart keeps the whole collection, without opening it or filling its spots\' hearts', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
   const screen = await mount(h, 'screens/SeasonsScreen.js');
-  await screen.press('Save Fall collection to My lists');
+  await screen.press('Save Fall collection to Saved');
   assert.deepEqual(h.navigations, [], 'the heart never opens the season');
   const saved = h.documents.get('users/audit/savedCollections/vancouver-fall');
   assert.equal(saved.collectionId, 'vancouver-fall');
   assert.equal(saved.cityId, 'vancouver');
   assert.equal(h.documents.get('favourites/audit'), undefined, 'no spot is saved on its own');
-  assert.ok(screen.button('Remove Fall collection from My lists'), 'the heart fills');
+  assert.ok(screen.button('Remove Fall collection from Saved'), 'the heart fills');
   assert.ok(h.calls.some(([name]) => name === 'selectionHaptic'));
-  assert.deepEqual(screen.snackbar(), ['Fall saved to My lists', 'View']);
+  assert.deepEqual(screen.snackbar(), ['Saved the Fall collection', 'View']);
   await screen.press('View');
-  assert.deepEqual(h.navigations.at(-1), ['FavouritesTab', { screen: 'Favourites', params: { segment: 'lists' } }]);
+  assert.deepEqual(h.navigations.at(-1), ['FavouritesTab', { screen: 'Favourites', params: { segment: 'saved' } }]);
 
   // The card itself still opens the season.
   await screen.press('Fall Season - View Active Date Ideas');
   assert.deepEqual(h.navigations.at(-1), ['FallDatesScreen']);
 
-  await screen.press('Remove Fall collection from My lists');
+  await screen.press('Remove Fall collection from Saved');
   assert.deepEqual(kept(h), []);
-  assert.deepEqual(screen.snackbar(), ['Removed Fall from My lists', 'Undo']);
+  assert.deepEqual(screen.snackbar(), ['Removed the Fall collection', 'Undo']);
   await screen.press('Undo');
   assert.deepEqual(kept(h), ['users/audit/savedCollections/vancouver-fall']);
 });
@@ -218,20 +218,20 @@ test('season card heart keeps the whole collection, without opening it or fillin
 test('season card hearts are independent, and rapid taps never make a second entry', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
   const screen = await mount(h, 'screens/SeasonsScreen.js');
-  const heart = screen.button('Save Winter collection to My lists');
+  const heart = screen.button('Save Winter collection to Saved');
   await act(async () => { heart.props.onPress(); heart.props.onPress(); heart.props.onPress(); });
   await flush();
   assert.deepEqual(kept(h), ['users/audit/savedCollections/vancouver-winter'], 'taps while saving are ignored');
-  assert.ok(screen.button('Save Fall collection to My lists'), 'other seasons are untouched');
-  assert.ok(screen.button('Remove Winter collection from My lists'));
+  assert.ok(screen.button('Save Fall collection to Saved'), 'other seasons are untouched');
+  assert.ok(screen.button('Remove Winter collection from Saved'));
 });
 
 test('a failed collection save puts the heart back and says so', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' } }, writeError: 'unavailable' });
   await quiet(async () => {
     const screen = await mount(h, 'screens/SeasonsScreen.js');
-    await screen.press('Save Spring collection to My lists');
-    assert.ok(screen.button('Save Spring collection to My lists'), 'the heart is empty again');
+    await screen.press('Save Spring collection to Saved');
+    assert.ok(screen.button('Save Spring collection to Saved'), 'the heart is empty again');
     assert.deepEqual(screen.snackbar(), ['Couldn’t save. Check your connection.']);
     assert.deepEqual(kept(h), []);
   });
@@ -239,35 +239,42 @@ test('a failed collection save puts the heart back and says so', async () => {
 
 // ---------------------------------------------------------------- My lists
 
-test('My lists shows kept collections apart from lists, opens them, and can let them go', async () => {
+test('Saved shows kept collections below its spots, newest first, opens them, and can let them go', async () => {
   const h = createHarness({ documents: {
     'users/audit': { username: 'audit' },
     'users/audit/savedCollections/vancouver-summer': { collectionId: 'vancouver-summer', cityId: 'vancouver', savedAt: 2 },
     'users/audit/savedCollections/vancouver-fall': { collectionId: 'vancouver-fall', cityId: 'vancouver', savedAt: 1 },
     'users/audit/savedCollections/retired-thing': { collectionId: 'retired-thing', cityId: 'vancouver', savedAt: 3 },
   } });
-  const screen = await mount(h, 'screens/Favourites.js', { params: { segment: 'lists' } });
+  const screen = await mount(h, 'screens/Favourites.js');
   const texts = screen.texts();
-  assert.ok(texts.includes('Collections'), texts.join(' | '));
+  assert.ok(texts.indexOf('Saved Spots') < texts.indexOf('Saved Collections'), 'spots first, then collections');
+  assert.ok(texts.includes('2 collections'));
   const fallTile = `Fall, Vancouver · ${fallSpotNames.length} spots`;
   assert.ok(screen.button(fallTile));
   assert.ok(screen.button('Summer, Vancouver · 10 spots'));
-  assert.ok(texts.indexOf('Fall') < texts.indexOf('Summer'), 'oldest first');
+  assert.ok(texts.indexOf('Summer') < texts.indexOf('Fall'), 'most recently saved first');
   assert.ok(!texts.join(' ').includes('retired'), 'a collection the app no longer makes is left out');
-  assert.ok(texts.includes('No lists yet'), 'lists keep their own empty state');
 
   await screen.press(fallTile);
   assert.deepEqual(h.navigations.at(-1), ['FallDatesScreen']);
+  await screen.press('View all 2 saved collections');
+  assert.deepEqual(h.navigations.at(-1), ['SavedCollections']);
 
-  await screen.press('Remove Summer collection from My lists');
+  await screen.press('Remove Summer collection from Saved');
   assert.equal(h.documents.get('users/audit/savedCollections/vancouver-summer'), undefined);
-  assert.equal(screen.button('Summer, Vancouver · 10 spots'), undefined);
-  assert.deepEqual(screen.snackbar(), ['Removed Summer from My lists', 'Undo']);
+  assert.ok(screen.button('Save Summer collection'), 'the card stays, with an empty heart, until the page is left');
+  assert.deepEqual(screen.snackbar(), ['Removed the Summer collection', 'Undo']);
+  await screen.press('Save Summer collection');
+  assert.ok(h.documents.get('users/audit/savedCollections/vancouver-summer'), 'a second tap keeps it again');
+
+  const lists = await mount(h, 'screens/Favourites.js', { params: { segment: 'lists' } });
+  assert.ok(!lists.texts().includes('Collections'), 'My lists holds only the lists the user made');
 });
 
-test('My lists with no lists and no collections suggests both ways to fill it', async () => {
+test('My lists with no lists invites the user to make one', async () => {
   const h = createHarness({ documents: { 'users/audit': { username: 'audit' } } });
   const screen = await mount(h, 'screens/Favourites.js', { params: { segment: 'lists' } });
-  assert.ok(screen.texts().includes('Make a list for a plan, a mood, or a whole season. Or tap the heart on a season to keep it here.'));
+  assert.ok(screen.texts().includes('Make a list for a plan, a mood, or a whole season.'));
   assert.ok(!screen.texts().includes('Collections'));
 });

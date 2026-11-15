@@ -33,7 +33,7 @@ test('opening the app reads and writes no lists until the library is opened', as
   assert.equal(JSON.stringify([...h.documents]), before);
 });
 
-test('library: Saved no longer shows season tiles; it lists hearted spots by season and opens them', async () => {
+test('library: Saved no longer shows season tiles; it lists hearted spots with their season and opens them', async () => {
   const h = createHarness({ documents: {
     'users/audit': { username: 'audit' },
     'favourites/audit': {
@@ -44,7 +44,7 @@ test('library: Saved no longer shows season tiles; it lists hearted spots by sea
   } });
   const screen = await mount(h, 'screens/Favourites.js');
   assert.equal(screen.button('View Fall Favourites'), undefined, 'no seasonal collection is shown unless the user keeps one');
-  assert.ok(screen.texts().includes('Fall'));
+  assert.ok(screen.texts().some(text => /· Fall$/.test(text)), screen.texts().join(' | '));
   assert.ok(screen.texts().includes('Maan Farms'));
   assert.ok(screen.texts().includes('No longer listed'), 'a spot SznLuv dropped stays, so it can be removed');
   await screen.press('View details for Maan Farms');

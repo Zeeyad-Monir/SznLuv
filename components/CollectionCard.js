@@ -1,5 +1,5 @@
 // A collection the app makes (a season today): its art, title and how many ideas it holds.
-// Tapping the card opens the collection; the heart in the corner keeps it in My lists. The heart sits
+// Tapping the card opens the collection; the heart in the corner keeps it in Saved. The heart sits
 // beside the card's touchable rather than inside it, so tapping the heart never opens the collection.
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,7 +20,7 @@ export default function CollectionCard({ title, count, art, tint, saved, onPress
         </ArtBackground>
       </TouchableOpacity>
       <HeartButton style={styles.heart} saved={saved} onPress={onToggleSave} size={24} hitSlop={6} idleColor={colors.muted}
-        label={saved ? `Remove ${title} collection from My lists` : `Save ${title} collection to My lists`} />
+        label={saved ? `Remove ${title} collection from Saved` : `Save ${title} collection to Saved`} />
     </View>
   );
 }

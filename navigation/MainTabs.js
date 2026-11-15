@@ -19,6 +19,8 @@ import SpringDatesScreen from '../screens/SpringDatesScreen';
 import SummerDatesScreen from '../screens/SummerDatesScreen';
 import Favourites from '../screens/Favourites';
 import SeasonalFavourites from '../screens/SeasonalFavourites';
+import SavedCollectionsScreen from '../screens/SavedCollectionsScreen';
+import SavedSpotsScreen from '../screens/SavedSpotsScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import ListScreen from '../screens/ListScreen';
 import OwnSpotScreen from '../screens/OwnSpotScreen';
@@ -33,6 +35,7 @@ import SpotDetailScreen from '../screens/SpotDetailScreen';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCity } from '../contexts/CityContext';
 import { SpotDiscoveryProvider } from '../hooks/useSpotDiscovery';
+import { SavedQueryProvider } from '../hooks/useSavedQuery';
 import { warmExploreFeed } from '../services/explore';
 import useReduceMotion from '../hooks/useReduceMotion';
 import { FloatingNavigationLayoutProvider } from './floatingNavigationLayout';
@@ -57,7 +60,7 @@ export const socialScreens = [
   ['PersonScreen', PersonScreen],
   ['OwnSpotScreen', OwnSpotScreen],
 ];
-// A collection's own page: from the season cards at home, and from My lists once it has been saved.
+// A collection's own page: from the season cards at home, and from Saved once it has been saved.
 export const collectionScreens = [
   ['FallDatesScreen', FallDatesScreen],
   ['WinterDatesScreen', WinterDatesScreen],
@@ -86,12 +89,18 @@ function HomeSection() {
 
 function FavouritesSection() {
   return (
-    <FavouritesStack.Navigator screenOptions={stackOptions}>
-      <FavouritesStack.Screen name="Favourites" component={Favourites} />
-      <FavouritesStack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
-      {renderCollections(FavouritesStack)}
-      {renderVenues(FavouritesStack)}
-    </FavouritesStack.Navigator>
+    // Search text and filters on Saved carry over to its "View all" pages and back.
+    <SavedQueryProvider>
+      <FavouritesStack.Navigator screenOptions={stackOptions}>
+        <FavouritesStack.Screen name="Favourites" component={Favourites} />
+        <FavouritesStack.Screen name="SavedCollections" component={SavedCollectionsScreen} />
+        <FavouritesStack.Screen name="SavedSpots" component={SavedSpotsScreen} />
+        <FavouritesStack.Screen name="SeasonalFavourites" component={SeasonalFavourites} />
+        <FavouritesStack.Screen name="CollectionSpots" component={CollectionSpotsScreen} />
+        {renderCollections(FavouritesStack)}
+        {renderVenues(FavouritesStack)}
+      </FavouritesStack.Navigator>
+    </SavedQueryProvider>
   );
 }
 
