@@ -1,7 +1,8 @@
 // A city on the city picker: its illustration with the name over it, and a tick once it is the one chosen.
 // One of a set of radio buttons: tapping it only selects, and the picker's button confirms.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ArtBackground } from './Art';
 import { Ionicons } from '@expo/vector-icons';
 import { CITY_ART } from './covers';
 import PressableScale from './PressableScale';
@@ -26,7 +27,7 @@ export default function CityCard({ city, selected, current, disabled, onPress })
       accessibilityRole="radio" accessibilityState={{ selected, checked: selected, disabled: !!disabled }}
       accessibilityLabel={current ? `${city.name}, your current city` : city.name}>
       {art ? (
-        <ImageBackground source={art} style={styles.fill} imageStyle={styles.image}>{words}</ImageBackground>
+        <ArtBackground source={art} style={styles.fill} imageStyle={styles.image}>{words}</ArtBackground>
       ) : <View style={styles.fill}>{words}</View>}
       <View pointerEvents="none" style={[styles.ring, selected && styles.ringSelected]} />
       <View pointerEvents="none" style={[styles.tick, selected && styles.tickSelected]}>

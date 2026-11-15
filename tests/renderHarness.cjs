@@ -267,6 +267,9 @@ function createHarness(options = {}) {
       Accuracy: { Balanced: 3, High: 4 },
     },
     'expo-linear-gradient': { LinearGradient: 'Gradient' },
+    // Bundled art (components/Art.js) draws through expo-image; in tests it is a plain Image.
+    'expo-image': { Image: Object.assign(props => React.createElement('Image', props), { prefetch: async () => true }) },
+    'react-native/Libraries/Image/resolveAssetSource': { __esModule: true, default: source => ({ uri: String(source) }) },
     'expo-blur': { BlurView: 'BlurView' },
     'expo-linking': {
       createURL: linkPath => 'sznluv://' + linkPath,

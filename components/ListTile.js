@@ -1,6 +1,7 @@
 // A square tile for a list in the library: its cover image (or a colour, on lists from before images), title and spot count.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ArtBackground } from './Art';
 import { Ionicons } from '@expo/vector-icons';
 import { coverBackground } from '../services/listsState';
 import { coverArt } from './covers';
@@ -37,7 +38,7 @@ export default function ListTile({ list, size, onPress, caption, updated = false
       accessibilityLabel={[list.title, privacy, footer, creator, updated && 'Updated'].filter(Boolean).join(', ')}
     >
       {art ? (
-        <ImageBackground source={art} style={styles.art} imageStyle={styles.artImage}>{body}</ImageBackground>
+        <ArtBackground source={art} style={styles.art} imageStyle={styles.artImage}>{body}</ArtBackground>
       ) : body}
     </TouchableOpacity>
   );

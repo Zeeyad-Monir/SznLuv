@@ -258,7 +258,7 @@ test('person: the header shows free stats and a backdrop from their #1 pick, fal
   assert.equal(screen.texts().includes('Top 4'), true);
   const art = byTestID(screen, 'profile-backdrop').findAllByType('Image');
   assert.equal(art.length, 1, 'a Fall #1 pick shows the fall illustration');
-  assert.match(String(art[0].props.source), /fall2\.png$/);
+  assert.match(String(art[0].props.source), /optimized\/fall2\.jpg$/);
 
   // A #1 pick with no season (a place they added) washes the backdrop in their avatar colour instead.
   h.documents.set('profiles/maya-uid', { ...maya['profiles/maya-uid'], top4: { vancouver: [steps, farm] } });

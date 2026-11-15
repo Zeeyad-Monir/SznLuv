@@ -1,7 +1,8 @@
 // A full-width card for someone's public list, on its cover image (or its colour, for lists from before
 // image covers): title, who made it, how many spots.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ArtBackground } from './Art';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { coverBackground } from '../services/listsState';
@@ -34,7 +35,7 @@ export default function ListCard({ list, onPress, updated = false }) {
       onPress={onPress} accessibilityRole="button"
       accessibilityLabel={`${list.title}, ${caption}${updated ? ', updated' : ''}`}>
       {art ? (
-        <ImageBackground source={art} style={styles.inner} imageStyle={styles.image} resizeMode="cover">{content}</ImageBackground>
+        <ArtBackground source={art} style={styles.inner} imageStyle={styles.image}>{content}</ArtBackground>
       ) : <View style={styles.inner}>{content}</View>}
     </TouchableOpacity>
   );

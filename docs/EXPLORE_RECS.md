@@ -51,6 +51,8 @@ No fixed fee; Blaze bills only above the free allowances.
 
 Explore itself now reads less than before: the newest and most-followed queries (about 100 documents per visit) only run when those sorts are chosen or the function is unreachable, and the Following chip's queries only when it is opened.
 
+One exception: when the ranking comes back with fewer than 17 lists (the trending card and sixteen beneath it), the page runs those same queries and tops itself up with the newest public lists that aren't ranked, followed, the viewer's own or from someone blocked. That covers a young index and the ten minutes a warm instance can lag behind a publish. It costs at most about 100 reads per visit and stops by itself once 17 lists are indexed.
+
 Limits: every function is capped at 3 instances (the scheduled one at 1), 256 MB, none kept warm. Set a budget alert on the project as well; Blaze alerts but does not cap.
 
 ## Deploying (not done; needs you)
@@ -58,7 +60,7 @@ Limits: every function is capped at 3 instances (the scheduled one at 1), 256 MB
 1. Upgrade the `sznluv` project to the Blaze plan and add a budget alert.
 2. Check the Firestore location in the console. `REGION` in `functions/index.js` and `FUNCTIONS_REGION` in `firebaseConfig.js` are both `us-central1`, which is right for a `nam5` database. Change both together if yours differs.
 3. `cd functions && npm install`
-4. `firebase deploy --only functions --project sznluv` (copies the catalogue into `functions/shared/` first).
+4. `firebase deploy --only functions --project sznluv` (copies the catalogue into `functions/shared/` first). Then check `firebase functions:list --project sznluv` shows all three: `getExploreFeed`, `onPublicListWritten` and `dailyExploreMaintenance`. Without `onPublicListWritten` a newly published list only reaches For you through the weekly check; if it is missing (a project's first Firestore trigger often fails while its Eventarc permissions settle), deploy it again with `--only functions:onPublicListWritten`.
 5. Deploy `firestore.rules` for the `events` collection. The warning at the top of that file still applies: compare with the live rules first.
 6. The index fills itself the first time the daily job runs (04:00 Vancouver time). To fill it sooner, run the job once from the Cloud Scheduler page in the Google Cloud console.
 

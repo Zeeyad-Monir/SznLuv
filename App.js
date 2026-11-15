@@ -21,6 +21,7 @@ import { firebaseErrorMessage } from './services/firebaseErrors';
 import { setMetricsSink } from './services/metrics';
 import { recordEvent, flushEvents, setEventsUser } from './services/events';
 import { forgetExploreFeed } from './services/explore';
+import { preloadArt } from './services/preloadArt';
 
 // Import screens
 import LoginScreen from './screens/LoginScreen';
@@ -47,6 +48,9 @@ import { SettingsProvider } from './screens/SettingsContext';
 
 // Create context to provide user authentication state throughout the app
 export { AuthContext } from './contexts/AuthContext';
+
+// Starts with the app, alongside sign-in, so the pictures are usually cached before the profile has loaded.
+const artPreloaded = preloadArt();
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -96,6 +100,8 @@ export default function App() {
   const [registrationError, setRegistrationError] = useState(null);
   const [profile, setProfile] = useState({ status: 'checking' });
   const [retry, setRetry] = useState(0);
+  const [artReady, setArtReady] = useState(false);
+  useEffect(() => { artPreloaded.then(() => setArtReady(true)); }, []);
 
   useEffect(() => onAuthStateChanged(auth, (currentUser) => {
     setProfile({ status: 'checking' });
@@ -168,7 +174,9 @@ export default function App() {
   // Only held when coming from auth: after a blocked retry, Login would be the wrong screen.
   const heldOnAuth = useRef(false);
   if (access !== 'loading') heldOnAuth.current = access === 'auth';
-  const shown = access === 'loading' && heldOnAuth.current ? 'auth' : access;
+  const settled = access === 'loading' && heldOnAuth.current ? 'auth' : access;
+  // Home waits for its pictures (two seconds at most, and no time at all once they are cached), so it opens complete.
+  const shown = settled === 'home' && !artReady ? 'loading' : settled;
 
   // A link can arrive at launch or while the app is open. It waits until someone is signed in:
   // tapped while signed out, it opens right after login.

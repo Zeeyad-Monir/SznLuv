@@ -1,10 +1,11 @@
 // Top 4: a person's favourite spots in a city, as a two-by-two grid of named tiles.
 // The owner also sees open slots to fill; a visitor sees only the picks that exist.
 import React from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { selectionAsync } from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import Art from './Art';
 import PressableScale from './PressableScale';
 import StoragePhoto from './StoragePhoto';
 import spotImages from '../screens/spotImages';
@@ -48,7 +49,7 @@ export default function Top4Grid({ picks, size, editable = false, onPressPick, o
         // and shows only its top-left corner. With one, "cover" fills the square and crops evenly around the centre.
         const frame = [styles.photo, { width: size, height: size }];
         const photo = cover && (cover.source
-          ? <Image source={cover.source} style={frame} resizeMode="cover" accessible={false} />
+          ? <Art source={cover.source} style={frame} />
           : <StoragePhoto path={cover.path} style={frame} fallback={<View />} />);
         return (
           <PressableScale key={spot.key} onPress={() => press(ref, index)}

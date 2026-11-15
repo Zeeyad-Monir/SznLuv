@@ -25,6 +25,7 @@ import { GUTTER, text } from '../components/theme';
 import useEntrance from '../hooks/useEntrance';
 import { useCollectionHeart } from '../hooks/useSavedCollections';
 import CollectionCard from '../components/CollectionCard';
+import { SEASON_ART, SEASON_TINT } from '../components/covers';
 import { useCity } from '../contexts/CityContext';
 import { collectionsForCity, collectionSpots } from '../services/collections';
 import { canNavigate } from '../services/venueNavigation';
@@ -33,13 +34,7 @@ import { canNavigate } from '../services/venueNavigation';
 // CONSTANTS SECTION
 // =========================
 
-// Importing seasonal images for different seasons
-const seasonalImages = {
-  fall: require('../assets/fall2.png'),
-  winter: require('../assets/winter2.png'),
-  spring: require('../assets/spring2.png'),
-  summer: require('../assets/summer3.png'),
-};
+// The season illustrations and their backing colours live with the rest of the app's art.
 
 // =========================
 // COMPONENT DEFINITION
@@ -85,7 +80,8 @@ export default function SeasonsScreen() {
               <CollectionCard
                 title={collection.title}
                 count={collectionSpots(collection.id).length}
-                art={seasonalImages[collection.key]}
+                art={SEASON_ART[collection.key]}
+                tint={SEASON_TINT[collection.key]}
                 accessibilityLabel={`${collection.title} Season - View Active Date Ideas`}
                 onPress={() => openSeason(collection.screen)}
                 saved={isSaved(collection.id)}

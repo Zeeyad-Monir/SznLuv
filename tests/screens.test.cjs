@@ -760,6 +760,7 @@ test('catalogue spots without a bundled photo show the placeholder on the card a
   const h = createHarness();
   const name = 'Kitsilano Pool';
   delete h.load('screens/spotImages.js').default[name];
+  delete h.load('screens/spotThumbs.js').default[name];
   const list = await h.render('screens/SummerDatesScreen.js');
   const card = list.root.findAllByType('TouchableOpacity').find(node => node.props.accessibilityLabel === `View details for ${name}`);
   assert.ok(card);
@@ -801,20 +802,22 @@ for (const season of ['Fall', 'Winter', 'Spring', 'Summer']) {
 test('the city and Seasonal cards use the cover images from the assets folder', async () => {
   const h = createHarness();
   const picker = await h.render('screens/CitySelectionScreen.js', { props: { route: { name: 'ChooseCity' } } });
-  const [cover, ...others] = picker.root.findAllByType('ImageBackground');
+  const [cover, ...others] = picker.root.findAllByType('Image');
   assert.equal(others.length, 0, 'one card per city');
-  assert.ok(String(cover.props.source).endsWith('assets/cities/VancouverCoverIMG.png'));
-  assert.equal(cover.props.imageStyle.opacity, 0.9, 'the city image opacity is 10% lower');
+  assert.ok(String(cover.props.source).endsWith('assets/optimized/VancouverCoverIMG.jpg'));
+  assert.equal(Object.assign({}, ...[cover.props.style].flat(Infinity).filter(Boolean)).opacity, 0.9, 'the city image opacity is 10% lower');
   const washes = picker.root.findAll(node => node.type === 'View' && node.props.pointerEvents === 'none' && node.props.style && node.props.style.backgroundColor === 'rgba(255, 255, 255, 0.2)');
   assert.equal(washes.length, 1, 'the city card has a thin white layer over the image');
   await act(async () => picker.unmount());
 
   const home = await h.render('screens/HomeScreen.js');
-  const featured = home.root.findAllByType('AnimatedImage').map(node => String(node.props.source));
-  const tiles = home.root.findAllByType('ImageBackground').map(node => String(node.props.source));
+  // The featured card's pictures come first on Home, then the collection tiles.
+  const pictures = home.root.findAllByType('Image').map(node => String(node.props.source));
+  const featured = pictures.slice(0, 3);
+  const tiles = pictures.slice(3);
   assert.equal(featured.length, 3, 'one picture per featured pick');
   assert.equal(tiles.length, 4, 'the four collections');
-  assert.ok(tiles[0].endsWith('assets/VancouverSeasonalCollectionCover.png'), 'Seasonal keeps its own illustration');
+  assert.ok(tiles[0].endsWith('assets/optimized/VancouverSeasonalCollectionCover.jpg'), 'Seasonal keeps its own illustration');
   const sources = [...featured, ...tiles];
   assert.equal(new Set(sources).size, sources.length, 'no two cards share an illustration');
   await act(async () => home.unmount());

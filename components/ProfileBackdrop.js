@@ -1,7 +1,8 @@
 // The soft art behind the top of a profile: the season illustration of the person's #1 pick,
 // or, with no seasonal #1, a wash of their avatar colour. Both melt into the cream page.
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Art from './Art';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SEASON_ART } from './covers';
 import { colors } from './theme';
@@ -20,7 +21,7 @@ export default function ProfileBackdrop({ season, avatarColor, style }) {
   return (
     <View pointerEvents="none" style={[styles.backdrop, style]} testID="profile-backdrop">
       {art
-        ? <Image source={art} style={[StyleSheet.absoluteFill, styles.art]} resizeMode="cover" accessible={false} />
+        ? <Art source={art} style={[StyleSheet.absoluteFill, styles.art]} />
         : <View style={[StyleSheet.absoluteFill, styles.wash, { backgroundColor: avatarColor || DEFAULT_AVATAR_COLOUR }]} />}
       <LinearGradient colors={MELT.colors} locations={MELT.locations} style={StyleSheet.absoluteFill} />
     </View>

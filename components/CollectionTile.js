@@ -2,7 +2,8 @@
 // A collection with nothing in it yet is drawn faded with a "Coming soon" label and is not a button, so
 // it never opens an empty page.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ArtBackground } from './Art';
 import { LinearGradient } from 'expo-linear-gradient';
 import { collectionArt } from './covers';
 import PressableScale from './PressableScale';
@@ -28,7 +29,7 @@ export default function CollectionTile({ collection, width, height, onPress }) {
     </>
   );
   const picture = art ? (
-    <ImageBackground source={art} style={styles.fill} imageStyle={styles.image}>{face}</ImageBackground>
+    <ArtBackground source={art} style={styles.fill} imageStyle={styles.image}>{face}</ArtBackground>
   ) : <View style={styles.fill}>{face}</View>;
 
   if (soon) {

@@ -82,7 +82,7 @@ test('explore: For you is the ranked feed, asked for once with what the app know
   const h = createHarness({ documents: documents(), exploreFeed: async () => ({ algo: 'recs-1', lists }) });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.ok(screen.texts().includes('Picked for you'));
-  assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana', 'After dark, 3 spots, by cy', 'Skate night, 3 spots, by dee']);
+  assert.deepEqual(labels(screen), ['Trending: By the water, 3 spots, by ana', 'After dark, 3 spots, by cy', 'Skate night, 3 spots, by dee']);
 
   const [request] = feedCalls(h);
   assert.equal(feedCalls(h).length, 1);
@@ -97,7 +97,7 @@ test('explore: For you is the ranked feed, asked for once with what the app know
   await screen.press('Winter');
   assert.deepEqual(labels(screen), ['Skate night, 3 spots, by dee'], 'season chips use the season the server worked out');
   await screen.press('For you');
-  await screen.press('Featured: By the water, 3 spots, by ana');
+  await screen.press('Trending: By the water, 3 spots, by ana');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'a' }]);
   assert.equal(feedCalls(h).length, 1, 'changing chips asks for nothing new');
 });
@@ -124,7 +124,7 @@ test('explore: the ranked feed pages on the device, and a pull asks for a new ra
   await flush();
   assert.equal(asked, 2);
   assert.notEqual(feedCalls(h)[1].nonce, '');
-  assert.equal(labels(screen)[0], 'Featured: List 44, 3 spots, by owner44');
+  assert.equal(labels(screen)[0], 'Trending: List 44, 3 spots, by owner44');
   assert.equal(labels(screen).length, 20, 'back to the first page');
 });
 
@@ -140,7 +140,7 @@ test('explore: Recommended is one of three sorts; Newest reads the newest lists 
   await screen.press('Newest');
   await screen.press('Apply');
   assert.ok(screen.texts().includes('New in Vancouver'));
-  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex', 'Older, 1 spot, by maya']);
+  assert.deepEqual(labels(screen), ['Trending: Just published, 1 spot, by alex', 'Older, 1 spot, by maya']);
   assert.ok(screen.button('Sort lists, changed'));
 });
 
@@ -150,14 +150,57 @@ test('explore: someone blocked after the feed was fetched is hidden from it', as
     exploreFeed: async () => ({ algo: 'recs-1', lists: [card('t', 'Spam', 'troll'), card('a', 'By the water', 'ana')] }),
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana']);
+  assert.deepEqual(labels(screen), ['Trending: By the water, 3 spots, by ana']);
+});
+
+test('explore: a short ranking is topped up with the newest public lists, up to the trending card and sixteen more', async () => {
+  // The index knows one list; twenty more are public, with the viewer's own, a blocked person's, one already
+  // followed and the ranked one itself among them.
+  const others = Object.fromEntries(Array.from({ length: 20 }, (_, n) => [`publicLists/p${n}`, publicList(`Public ${n}`, `owner${n}-uid`, `owner${n}`, 100 + n)]));
+  const h = createHarness({
+    documents: documents({
+      ...others,
+      'publicLists/a': publicList('By the water', 'ana-uid', 'ana', 900),
+      'publicLists/mine': publicList('My own', 'audit', 'audit', 800),
+      'publicLists/spam': publicList('Spam', 'troll-uid', 'troll', 700),
+      'publicLists/f1': publicList('Followed', 'maya-uid', 'maya', 600),
+    }),
+    exploreFeed: async () => ({ algo: 'recs-1', lists: [card('a', 'By the water', 'ana')] }),
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.ok(screen.texts().includes('Picked for you'));
+  const shown = labels(screen);
+  assert.equal(shown.length, 17);
+  assert.equal(shown[0], 'Trending: By the water, 3 spots, by ana', 'the ranked list still leads');
+  assert.deepEqual(shown.slice(1, 3), ['Public 19, 1 spot, by owner19', 'Public 18, 1 spot, by owner18'], 'then the newest');
+  assert.equal(new Set(shown).size, 17, 'nothing twice');
+  assert.equal(shown.some(label => /My own|Spam|Followed/.test(label)), false);
+  assert.equal(feedCalls(h).length, 1);
+});
+
+test('explore: a ranking that fills the page is left as it is', async () => {
+  const lists = Array.from({ length: 17 }, (_, n) => card(`l${n}`, `List ${n}`, `owner${n}`));
+  const h = createHarness({
+    documents: documents({ 'publicLists/n1': publicList('Just published', 'alex-uid', 'alex', 500) }),
+    exploreFeed: async () => ({ algo: 'recs-1', lists }),
+  });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.equal(labels(screen).length, 17);
+  assert.equal(labels(screen).some(label => /Just published/.test(label)), false);
+});
+
+test('explore: the trending card is the most followed list on the page, the best match among equals', async () => {
+  const lists = [card('a', 'By the water', 'ana'), card('b', 'After dark', 'cy', { followerCount: 4 }), card('c', 'Skate night', 'dee', { followerCount: 4 })];
+  const h = createHarness({ documents: documents(), exploreFeed: async () => ({ algo: 'recs-1', lists }) });
+  const screen = await mount(h, 'screens/ExploreScreen.js');
+  assert.deepEqual(labels(screen), ['Trending: After dark, 3 spots, by cy', 'By the water, 3 spots, by ana', 'Skate night, 3 spots, by dee']);
 });
 
 test('explore: without the function the page is the newest lists, and Recommended is not offered', async () => {
   const h = createHarness({ documents: documents({ 'publicLists/n1': publicList('Just published', 'alex-uid', 'alex', 500), 'publicLists/n0': publicList('Older', 'maya-uid', 'maya', 400) }) });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.ok(screen.texts().includes('New in Vancouver'));
-  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex', 'Older, 1 spot, by maya']);
+  assert.deepEqual(labels(screen), ['Trending: Just published, 1 spot, by alex', 'Older, 1 spot, by maya']);
   assert.equal(feedCalls(h).length, 1);
   await screen.press('Sort lists');
   assert.equal(screen.button('Recommended'), undefined);
@@ -170,7 +213,7 @@ test('explore: an answer that is not a feed is treated as no answer', async () =
     exploreFeed: async () => ({ error: 'nope' }),
   });
   const screen = await quiet(() => mount(h, 'screens/ExploreScreen.js'));
-  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex']);
+  assert.deepEqual(labels(screen), ['Trending: Just published, 1 spot, by alex']);
 });
 
 // ---------------------------------------------------------------- Opening without a wait
@@ -193,7 +236,7 @@ test('explore: a ranking asked for when the app opened is on the page without an
   assert.equal(explore.peekExploreFeed('audit', 'toronto'), null);
 
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana']);
+  assert.deepEqual(labels(screen), ['Trending: By the water, 3 spots, by ana']);
   assert.equal(feedCalls(h).length, 1);
 });
 
@@ -205,12 +248,12 @@ test('explore: after a restart the saved ranking is shown at once, and a new one
     exploreFeed: () => answer.promise,
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam'], 'shown while the function has not answered');
+  assert.deepEqual(labels(screen), ['Trending: Saved earlier, 3 spots, by sam'], 'shown while the function has not answered');
   assert.equal(feedCalls(h).length, 1);
 
   await act(async () => { answer.resolve({ algo: 'recs-1', lists: [card('n', 'Brand new', 'nia')] }); });
   await flush();
-  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam'], 'the cards do not move under the reader');
+  assert.deepEqual(labels(screen), ['Trending: Saved earlier, 3 spots, by sam'], 'the cards do not move under the reader');
   const explore = h.load('services/explore.js');
   assert.deepEqual(explore.peekExploreFeed('audit', 'vancouver').lists.map(list => list.id), ['n']);
   assert.deepEqual(JSON.parse(h.storage.get('explore.feed.audit')).feed.lists.map(list => list.id), ['n']);
@@ -225,7 +268,7 @@ test('explore: a saved ranking that is a day old, or for another city, is not sh
       exploreFeed: async () => ({ algo: 'recs-1', lists }),
     });
     const screen = await mount(h, 'screens/ExploreScreen.js');
-    assert.deepEqual(labels(screen), ['Featured: By the water, 3 spots, by ana']);
+    assert.deepEqual(labels(screen), ['Trending: By the water, 3 spots, by ana']);
   }
 });
 
@@ -236,11 +279,11 @@ test('explore: a pull to refresh asks again even when a ranking is saved', async
     exploreFeed: async () => ({ algo: 'recs-1', lists: [card('n', 'Brand new', 'nia')] }),
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(labels(screen), ['Featured: Saved earlier, 3 spots, by sam']);
+  assert.deepEqual(labels(screen), ['Trending: Saved earlier, 3 spots, by sam']);
   const refresh = screen.all('ScrollView')[0].props.refreshControl;
   await act(async () => { await refresh.props.onRefresh(); });
   await flush();
-  assert.deepEqual(labels(screen), ['Featured: Brand new, 3 spots, by nia']);
+  assert.deepEqual(labels(screen), ['Trending: Brand new, 3 spots, by nia']);
   assert.notEqual(feedCalls(h).at(-1).nonce, '');
 });
 
@@ -252,11 +295,11 @@ test('explore: when the function was unreachable last time, the newest lists do 
     exploreFeed: () => answer.promise,
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex'], 'shown while the function has not answered');
+  assert.deepEqual(labels(screen), ['Trending: Just published, 1 spot, by alex'], 'shown while the function has not answered');
 
   await act(async () => { answer.resolve({ algo: 'recs-1', lists: [card('a', 'By the water', 'ana')] }); });
   await flush();
-  assert.deepEqual(labels(screen), ['Featured: Just published, 1 spot, by alex'], 'the page does not change under the reader');
+  assert.deepEqual(labels(screen), ['Trending: Just published, 1 spot, by alex'], 'the page does not change under the reader');
   assert.equal(JSON.parse(h.storage.get('explore.feed.audit')).off, false, 'and the ranking is there next time');
 });
 
@@ -288,7 +331,7 @@ test('events: opens and follows from Explore are written as one document when th
   events.setEventsUser('audit');
   const screen = await mount(h, 'screens/ExploreScreen.js');
 
-  await screen.press('Featured: By the water, 3 spots, by ana');
+  await screen.press('Trending: By the water, 3 spots, by ana');
   await screen.press('Follow After dark');
   metrics.track(metrics.EVENTS.impression, { listId: 'a', position: 0, reason: 'personal', source: 'recs' });
   metrics.track(metrics.EVENTS.impression, { listId: 'a', position: 0, reason: 'personal', source: 'recs' });

@@ -11,6 +11,7 @@ import { AccessibilityInfo, Animated, AppState, Easing, PanResponder, StyleSheet
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
+import Art from './Art';
 import { collectionArt } from './covers';
 import PressableScale from './PressableScale';
 import useReduceMotion from '../hooks/useReduceMotion';
@@ -205,7 +206,9 @@ function Slide({ slide, value, shown }) {
     <Animated.View style={[StyleSheet.absoluteFill, styles.slide, { opacity: value.fade }]} pointerEvents="none"
       importantForAccessibility={shown ? 'auto' : 'no-hide-descendants'}>
       {art && (
-        <Animated.Image source={art} resizeMode="cover" style={[StyleSheet.absoluteFill, styles.image, { transform: [{ scale: value.drift }] }]} />
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: value.drift }] }]}>
+          <Art source={art} style={styles.image} />
+        </Animated.View>
       )}
       <LinearGradient pointerEvents="none" style={StyleSheet.absoluteFill} colors={artFade.colors} locations={artFade.locations} />
       <Animated.View style={[styles.words, { opacity: value.words, transform: [{ translateY: rise }] }]}>

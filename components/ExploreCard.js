@@ -1,9 +1,10 @@
-// A public list on Explore: the large featured card ('hero') or a grid tile ('tile').
+// A public list on Explore: the large trending card ('hero') or a grid tile ('tile').
 // Image covers show their picture under a dark fade with white words; colour covers (lists from before images) keep their colour
 // under a soft light wash with dark words, so pastel covers stay readable. The heart in the corner follows the
 // list. Like CollectionCard, it sits beside the card's touchable, so tapping it never opens the list.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ArtBackground } from './Art';
 import { LinearGradient } from 'expo-linear-gradient';
 import { coverBackground } from '../services/listsState';
 import { coverArt } from './covers';
@@ -29,7 +30,7 @@ export default function ExploreCard({ list, variant = 'tile', width, height, fol
         colors={art ? artFade.colors : COLOUR_WASH} locations={art ? artFade.locations : [0, 1]} />
       {hero && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>Featured list</Text>
+          <Text style={styles.badgeText}>Trending list</Text>
         </View>
       )}
       <View style={[styles.words, hero && styles.heroWords]}>
@@ -43,9 +44,9 @@ export default function ExploreCard({ list, variant = 'tile', width, height, fol
   return (
     <View style={[styles.card, { width, minHeight: height }, hero && styles.heroCard]} onLayout={onLayout}>
       <TouchableOpacity style={[styles.touchable, { backgroundColor: coverBackground(list.cover) }]} activeOpacity={0.85}
-        onPress={onPress} accessibilityRole="button" accessibilityLabel={hero ? `Featured: ${label}` : label}>
+        onPress={onPress} accessibilityRole="button" accessibilityLabel={hero ? `Trending: ${label}` : label}>
         {art ? (
-          <ImageBackground source={art} style={styles.fill} imageStyle={styles.image}>{words}</ImageBackground>
+          <ArtBackground source={art} style={styles.fill} imageStyle={styles.image}>{words}</ArtBackground>
         ) : <View style={styles.fill}>{words}</View>}
       </TouchableOpacity>
       <HeartButton style={[styles.heart, hero && styles.heroHeart]} saved={followed} onPress={onToggleFollow}

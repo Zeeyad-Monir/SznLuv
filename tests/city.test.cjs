@@ -382,8 +382,8 @@ test('screens and components read the chosen city, never a hardcoded one', () =>
     const lines = fs.readFileSync(path.join(root, file), 'utf8').split('\n');
     const source = lines.filter(line => {
       if (/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line)) return false;
-      // The static asset registry uses catalogue spot names, including official names that start with Vancouver.
-      return file !== path.join('screens', 'spotImages.js') || !/^\s*(author:|'Vancouver [^']+':)/.test(line);
+      // The static asset registries use catalogue spot names, including official names that start with Vancouver.
+      return !['spotImages.js', 'spotThumbs.js'].some(name => file === path.join('screens', name)) || !/^\s*(author:|'Vancouver [^']+':)/.test(line);
     }).join('\n');
     assert.equal(/DEFAULT_CITY/.test(source), false, `${file} uses DEFAULT_CITY`);
     assert.equal(/['"`>]\s*(Explore |All )?Vancouver\b/.test(source), false, `${file} spells out Vancouver`);

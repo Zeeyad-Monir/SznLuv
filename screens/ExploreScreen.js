@@ -45,6 +45,10 @@ const FOLLOWED_PEOPLE_READ = 10;
 const FOLLOWING_SHOWN = 20;
 // Read for the featured list and the "Most followed" sort; hiding your own and blocked lists still leaves plenty.
 const CANDIDATES = 40;
+// For you is never thinner than this while public lists exist: the trending card and sixteen beneath it.
+// A ranking with fewer (a young index, or lists published in the last few minutes) is topped up with the
+// newest public lists.
+const FOR_YOU_MIN = 17;
 const SAVE_FAILED = 'Couldn’t save. Check your connection.';
 const REFRESH_FAILED = 'Couldn’t refresh. Check your connection.';
 
@@ -97,6 +101,20 @@ function ListGrid({ lists, width, height, followedIds, onOpen, onToggleFollow, f
 
 // A list from the recommendations says its season; any other list's is worked out from its spots.
 const seasonOf = list => (list.season !== undefined ? list.season : listSeason(list));
+
+const followerCount = list => Math.max(0, Number(list.followerCount) || 0);
+
+// The ranked lists, then the newest of `others` that aren't ranked or already followed, up to FOR_YOU_MIN.
+function topUp(ranked, others, followedIds) {
+  if (ranked.length >= FOR_YOU_MIN) return ranked;
+  const taken = new Set(ranked.map(list => list.id));
+  const extras = sortLists(others, 'newest').filter(list => {
+    if (taken.has(list.id) || followedIds.has(list.id)) return false;
+    taken.add(list.id);
+    return true;
+  });
+  return [...ranked, ...extras.slice(0, FOR_YOU_MIN - ranked.length)];
+}
 
 const toggled = (ids, id, on) => {
   const next = new Set(ids);
@@ -246,7 +264,7 @@ export default function ExploreScreen({ navigation }) {
       : { status: 'off', lists: [], shown: PAGE }));
     const { chip: chipNow, sort: sortNow } = view.current;
     const rest = chipNow === FOLLOWING ? await loadFollowing(current)
-      : answered && sortNow === RECOMMENDED ? true : await startBrowse();
+      : answered && sortNow === RECOMMENDED && answered.lists.length >= FOR_YOU_MIN ? true : await startBrowse();
     const [blockedNow, pointers] = await sides;
     return blockedNow.status === 'fulfilled' && pointers.status === 'fulfilled' && rest;
   }, [loadBrowse, loadFollowing, uid, city.id]);
@@ -261,11 +279,12 @@ export default function ExploreScreen({ navigation }) {
   }, [refreshAll]));
 
   // Changing the chip or the sort reads what that view needs, if this visit hasn't read it yet.
+  const thinRanking = recs.status === 'ready' && recs.lists.length < FOR_YOU_MIN;
   useEffect(() => {
     if (recs.status === 'loading') return;
     if (chip === FOLLOWING) { if (!loaded.current.following) loadFollowing(); }
-    else if (!(recs.status === 'ready' && sort.sort === RECOMMENDED) && !loaded.current.browse) loadBrowse();
-  }, [chip, sort.sort, recs.status, loadBrowse, loadFollowing]);
+    else if (!(recs.status === 'ready' && sort.sort === RECOMMENDED && !thinRanking) && !loaded.current.browse) loadBrowse();
+  }, [chip, sort.sort, recs.status, thinRanking, loadBrowse, loadFollowing]);
 
   // Re-tapping the Explore slot goes back to the top and into the search field.
   useEffect(() => {
@@ -359,11 +378,12 @@ export default function ExploreScreen({ navigation }) {
   const byFollowers = sort.sort === 'followed';
   const usingRecs = sort.sort === RECOMMENDED && recs.status === 'ready';
   // The server already left out blocked people; this covers someone blocked since the feed was fetched.
-  const ranked = usingRecs ? hide(recs.lists) : [];
-  // Recommended: the best match for this person. Otherwise the most followed list, as before; older public
-  // lists may carry no cityId, so no city filter there.
+  const ranked = usingRecs ? topUp(hide(recs.lists), hide([...candidates.lists, ...feed.lists]), loadedFollowedIds) : [];
+  // The trending card. Recommended: the most followed list on the page, the best match first among equals.
+  // Otherwise the most followed list, as before; older public lists may carry no cityId, so no city filter there.
   const featured = chip !== FOR_YOU ? undefined
-    : usingRecs ? ranked[0] : mostFollowed(candidates.lists, { viewerUid: uid, blocked, count: 1 })[0];
+    : usingRecs ? [...ranked].sort((a, b) => followerCount(b) - followerCount(a))[0]
+      : mostFollowed(candidates.lists, { viewerUid: uid, blocked, count: 1 })[0];
   // Where the grid's lists come from, and whether that source is still loading or failed.
   const source = chip === FOLLOWING
     ? { status: following.status, lists: sortLists(hide(following.lists), sort.sort === 'followed' ? 'followed' : 'newest'), more: false }

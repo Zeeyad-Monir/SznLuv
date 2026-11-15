@@ -1,21 +1,22 @@
 // The cream spot card from the season screens, for lists: heart, name, where it is, an optional note.
 // In edit mode the heart gives way to move and remove controls and the note becomes tappable.
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Art from './Art';
 import HeartButton from './HeartButton';
 import StoragePhoto from './StoragePhoto';
 import SpotName from './SpotName';
 import { cardShadow, colors, text } from './theme';
-import spotImages from '../screens/spotImages';
+import spotThumbs from '../screens/spotThumbs';
 
-// Custom spots supply an authorized Storage photo. Catalogue spots use their bundled photo.
+// Custom spots supply an authorized Storage photo. Catalogue spots use the small copy of their bundled photo.
 export default function SpotCard({
   spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
   const disabled = spot.missing;
-  const bundledPhoto = !spot.own && Object.hasOwn(spotImages, spot.name) && spotImages[spot.name];
+  const bundledPhoto = !spot.own && Object.hasOwn(spotThumbs, spot.name) && spotThumbs[spot.name];
   const toggleSave = () => onToggleSave?.();
 
   const actions = editing
@@ -46,7 +47,7 @@ export default function SpotCard({
         onAccessibilityAction={runAction}
       >
         {bundledPhoto
-          ? <Image source={bundledPhoto} style={styles.thumb} resizeMode="cover" accessible={false} />
+          ? <Art source={bundledPhoto} style={styles.thumb} />
           : <StoragePhoto key={thumbnail?.path} path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
         <View style={styles.words}>
           <SpotName style={text.cardName}>{spot.name}</SpotName>

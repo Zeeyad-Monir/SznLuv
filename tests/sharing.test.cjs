@@ -273,8 +273,8 @@ test('explore: shows the newest lists from other people, never your own or a blo
   assert.deepEqual(screen.texts().slice(0, 3), ['Explore', 'For you', 'Following']);
   assert.ok(screen.texts().includes('New in Vancouver'));
   // With no follows yet, the featured list is simply the newest; it isn't repeated in the grid.
-  assert.deepEqual(cards(screen), ['Featured: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
-  await screen.press('Featured: Golden Hour, 1 spot, by maya');
+  assert.deepEqual(cards(screen), ['Trending: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
+  await screen.press('Trending: Golden Hour, 1 spot, by maya');
   assert.deepEqual(h.navigations.at(-1), ['ListScreen', { listId: 'new' }]);
 });
 
@@ -289,7 +289,7 @@ test('explore: search waits for a pause, matches title, creator, spot and town, 
   };
 
   await act(async () => screen.all('TextInput')[0].props.onChangeText('gold'));
-  assert.deepEqual(cards(screen), ['Featured: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'], 'nothing changes mid-typing');
+  assert.deepEqual(cards(screen), ['Trending: Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex'], 'nothing changes mid-typing');
   await act(async () => { t.mock.timers.tick(300); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   assert.deepEqual(cards(screen), ['Golden Hour, 1 spot, by maya']);
@@ -328,7 +328,7 @@ test('explore: loads twenty at a time', async () => {
   const h = createHarness({ documents: { ...base, ...many } });
   const screen = await mount(h, 'screens/ExploreScreen.js');
   assert.equal(cards(screen).length, 20);
-  assert.deepEqual(cards(screen).slice(0, 2), ['Featured: List 24, 1 spot, by maya', 'List 23, 1 spot, by maya']);
+  assert.deepEqual(cards(screen).slice(0, 2), ['Trending: List 24, 1 spot, by maya', 'List 23, 1 spot, by maya']);
   await screen.press('Load more');
   assert.equal(cards(screen).length, 25);
   assert.equal(screen.button('Load more'), undefined);
@@ -345,7 +345,7 @@ test('explore: the most followed list is featured; season chips filter the rest;
     },
   });
   const screen = await mount(h, 'screens/ExploreScreen.js');
-  assert.deepEqual(cards(screen), ['Featured: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
+  assert.deepEqual(cards(screen), ['Trending: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
 
   await screen.press('Winter');
   assert.deepEqual(screen.button('Winter').props.accessibilityState, { selected: true });
@@ -360,7 +360,7 @@ test('explore: the most followed list is featured; season chips filter the rest;
   await screen.press('Most followed');
   await screen.press('Apply');
   assert.ok(screen.texts().includes('Most followed'));
-  assert.deepEqual(cards(screen), ['Featured: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
+  assert.deepEqual(cards(screen), ['Trending: Pumpkin picks, 2 spots, by alex', 'Skate night, 1 spot, by maya', 'Orchard day, 1 spot, by maya']);
   assert.equal(screen.button('Load more'), undefined);
 });
 
@@ -399,7 +399,7 @@ test('explore: pulling down reloads the page, keeps what it showed if that fails
 
   h.documents.set('publicLists/fresh', someoneElse('Fresh picks', [farm], 'alex-uid', 'alex', 60));
   await pull();
-  assert.deepEqual(cards(screen), ['Featured: Fresh picks, 1 spot, by alex', 'Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
+  assert.deepEqual(cards(screen), ['Trending: Fresh picks, 1 spot, by alex', 'Golden Hour, 1 spot, by maya', 'Farm days, 1 spot, by alex']);
   assert.equal(refresh().props.refreshing, false);
 
   options.readError = 'unavailable';

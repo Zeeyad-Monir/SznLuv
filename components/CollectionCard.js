@@ -2,21 +2,22 @@
 // Tapping the card opens the collection; the heart in the corner keeps it in My lists. The heart sits
 // beside the card's touchable rather than inside it, so tapping the heart never opens the collection.
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ArtBackground } from './Art';
 import HeartButton from './HeartButton';
 import { colors } from './theme';
 
-export default function CollectionCard({ title, count, art, saved, onPress, onToggleSave, accessibilityLabel }) {
+export default function CollectionCard({ title, count, art, tint, saved, onPress, onToggleSave, accessibilityLabel }) {
   return (
     <View style={styles.card}>
-      <TouchableOpacity style={styles.touchable} onPress={onPress} accessible accessibilityRole="button"
+      <TouchableOpacity style={[styles.touchable, tint && { backgroundColor: tint }]} onPress={onPress} accessible accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}>
-        <ImageBackground source={art} style={styles.image} imageStyle={styles.imageInner}>
+        <ArtBackground source={art} style={styles.image} imageStyle={styles.imageInner}>
           <View style={styles.words}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{count} Active Ideas</Text>
           </View>
-        </ImageBackground>
+        </ArtBackground>
       </TouchableOpacity>
       <HeartButton style={styles.heart} saved={saved} onPress={onToggleSave} size={24} hitSlop={6} idleColor={colors.muted}
         label={saved ? `Remove ${title} collection from My lists` : `Save ${title} collection to My lists`} />

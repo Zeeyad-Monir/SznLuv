@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.zeeyad.sznluv",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SznLuv uses your location to find nearby date spots and show directions to venues.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app requires location access for enhanced navigation features."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app requires location access for enhanced navigation features.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -49,7 +50,9 @@
           "microphonePermission": false
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-font",
+      "expo-asset"
     ],
     "owner": "zeeyad_monir"
   }

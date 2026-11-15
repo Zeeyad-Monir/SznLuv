@@ -105,12 +105,16 @@ for (const [season, categories, expectedNames, categorySizes] of [
     assert.ok(!spots.some(spot => spot.placeholderAddress));
 
     const { default: photos, spotPhotoCredits: credits } = h.load('screens/spotImages.js');
+    // A card draws the small copy of the photo; the detail page keeps the full one.
+    const { default: thumbs } = h.load('screens/spotThumbs.js');
     for (const spot of spots) {
       assert.ok(existsSync(photos[spot.name]), spot.name);
       assert.match(String(photos[spot.name]), new RegExp(`Seasonal/${key}/.+\\.jpg$`));
       assert.ok(credits[spot.name]?.licenseUrl && credits[spot.name]?.sourceUrl, spot.name);
       const card = screen.button(`View details for ${spot.name}`);
-      assert.ok(card?.findAllByType('Image').some(image => image.props.source === photos[spot.name]), spot.name);
+      assert.ok(existsSync(thumbs[spot.name]), spot.name);
+      assert.match(String(thumbs[spot.name]), new RegExp(`thumbs/Seasonal/${key}/.+\\.jpg$`));
+      assert.ok(card?.findAllByType('Image').some(image => image.props.source === thumbs[spot.name]), spot.name);
     }
 
     await screen.press('Map');
