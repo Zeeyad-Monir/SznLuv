@@ -183,15 +183,44 @@ test('signing in stays on Login while the profile loads, then swaps to the app w
   assert.ok(!routes().includes('Login'), 'signed-in routes replace Login once the profile is ready');
   await act(async () => renderer.unmount());
 });
-test('a cold start with a saved session shows the cream spinner, not Login', async () => {
+test('a cold start with a saved session shows the launch screen, not Login', async () => {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
   const h = createHarness({ user: { uid: 'audit', email: 'codex.audit.render@example.com' }, beforeRead: () => gate });
   const renderer = await h.render('App.js', { app: true });
+  const launch = () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Loading SznLuv').length > 0;
   assert.equal(renderer.root.findAllByType(h.Screen).length, 0);
   assert.equal(renderer.root.findAllByType('ActivityIndicator').length, 1);
+  assert.ok(launch(), 'the name and tagline, not a bare spinner');
   await act(async () => { release(); await gate; });
+  assert.ok(!launch(), 'the app replaces it once the profile and pictures are in');
   await act(async () => renderer.unmount());
+});
+test('the launch screen stays until the pictures are in, and one failed picture does not end the wait', async () => {
+  let finish;
+  const slow = new Promise(resolve => { finish = resolve; });
+  let asked = 0;
+  // The first picture fails outright; another is still on its way.
+  const prefetch = () => { asked += 1; return asked === 1 ? Promise.reject(new Error('offline')) : asked === 2 ? slow : Promise.resolve(true); };
+  const h = createHarness({ user: { uid: 'audit', email: 'codex.audit.render@example.com' }, prefetch });
+  const renderer = await h.render('App.js', { app: true });
+  await flush();
+  const launch = () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Loading SznLuv').length > 0;
+  assert.ok(asked > 100, 'every cover and thumbnail is asked for on its own');
+  assert.ok(launch(), 'the profile is ready but a picture is not');
+  assert.equal(renderer.root.findAllByType(h.Screen).length, 0);
+  await act(async () => { finish(true); await slow; });
+  await flush();
+  assert.ok(!launch());
+  assert.ok(renderer.root.findAllByType(h.Screen).some(node => node.props.name === 'Main'));
+  await act(async () => renderer.unmount());
+});
+test('pictures that never arrive hold the launch screen only up to the limit', async () => {
+  const h = createHarness({ prefetch: () => new Promise(() => {}) });
+  const { loadPictures } = h.load('services/preloadArt.js');
+  const started = Date.now();
+  await loadPictures(['a', 'b'], 40);
+  assert.ok(Date.now() - started >= 35 && Date.now() - started < 1000);
 });
 test('restored auth without a profile exposes account recovery instead of Home', async () => {
   const h = createHarness({ user: { uid: 'incomplete', email: 'codex.audit.render@example.com' }, documents: {} });

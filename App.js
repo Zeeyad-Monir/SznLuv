@@ -1,7 +1,7 @@
 // App.js
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, ActivityIndicator, StyleSheet, AppState } from 'react-native';
+import { View, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer, DefaultTheme, StackActions, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { CityContext } from './contexts/CityContext';
 import { findCity } from './services/catalogue';
 import { CITY_FIELD, selectedCityFrom, unavailableCityFrom, withTimeout } from './services/cityPreference';
 import AccountAccessScreen from './screens/AccountAccessScreen';
+import LaunchScreen from './components/LaunchScreen';
 import { sessionAccess } from './services/sessionAccess';
 import { firebaseErrorMessage } from './services/firebaseErrors';
 import { setMetricsSink } from './services/metrics';
@@ -170,13 +171,14 @@ export default function App() {
 
   const access = sessionAccess({ initializing, user, registering, registrationError, profile });
 
-  // While a sign-in's profile loads, stay on Login so the swap to Home is one smooth dissolve.
+  // Home waits for its pictures as well as the profile, so it opens complete (services/preloadArt.js).
+  const waiting = access === 'loading' || (access === 'home' && !artReady);
+  // While a sign-in waits, stay on Login so the swap to Home is one smooth dissolve. Opening the app already
+  // signed in shows the launch screen instead.
   // Only held when coming from auth: after a blocked retry, Login would be the wrong screen.
   const heldOnAuth = useRef(false);
-  if (access !== 'loading') heldOnAuth.current = access === 'auth';
-  const settled = access === 'loading' && heldOnAuth.current ? 'auth' : access;
-  // Home waits for its pictures (two seconds at most, and no time at all once they are cached), so it opens complete.
-  const shown = settled === 'home' && !artReady ? 'loading' : settled;
+  if (!waiting) heldOnAuth.current = access === 'auth';
+  const shown = waiting ? (heldOnAuth.current ? 'auth' : 'loading') : access;
 
   // A link can arrive at launch or while the app is open. It waits until someone is signed in:
   // tapped while signed out, it opens right after login.
@@ -196,14 +198,7 @@ export default function App() {
     return onPendingLink(openPendingLink);
   }, [signedIn]);
 
-  // Show loading spinner if app is initializing
-  if (shown === 'loading') {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#333333" />
-      </View>
-    );
-  }
+  if (shown === 'loading') return <LaunchScreen />;
 
   // Main app navigator with conditional rendering based on auth state
   return (
@@ -244,15 +239,8 @@ export default function App() {
   );
 }
 
-// Style for loading screen
 const styles = StyleSheet.create({
   app: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFF5E4',
   },
 });
