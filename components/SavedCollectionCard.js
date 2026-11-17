@@ -26,7 +26,7 @@ export default function SavedCollectionCard({ item, width, height, onPress, onTo
           <Text style={styles.count}>{count}</Text>
         </ArtBackground>
       </PressableScale>
-      <HeartButton style={styles.heart} saved={saved} size={20} hitSlop={8} idleColor={colors.ink}
+      <HeartButton style={styles.heart} saved={saved} size={20} hitSlop={8} color={colors.savedHeart} idleColor={colors.ink}
         label={saved ? `Remove ${collection.title} collection from Saved` : `Save ${collection.title} collection`}
         onPress={onToggle} />
     </View>

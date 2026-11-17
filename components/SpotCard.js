@@ -1,6 +1,7 @@
 // The cream spot card from the season screens, for lists: heart, name, where it is, an optional note.
 // In edit mode the heart gives way to move and remove controls and the note becomes tappable.
-// `style` can recolour the card for one page; its size and spacing stay the same everywhere.
+// `style` can recolour the card for one page. `variant="saved"` is the Saved pages' own look (ivory, a thin
+// edge, more room inside); every other page gets the default, which that variant never changes.
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -13,10 +14,12 @@ import spotThumbs from '../screens/spotThumbs';
 
 // Custom spots supply an authorized Storage photo. Catalogue spots use the small copy of their bundled photo.
 export default function SpotCard({
-  spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress, style,
+  spot, note, saved = false, thumbnail, onPress, onToggleSave, onLongPress, style, variant,
   editing = false, canMoveUp = false, canMoveDown = false, onMoveUp, onMoveDown, onRemove, onNotePress,
 }) {
   const disabled = spot.missing;
+  const look = variant === 'saved' ? savedLook : null;
+  const hasHeart = !editing && !!onToggleSave && !disabled;
   const bundledPhoto = !spot.own && Object.hasOwn(spotThumbs, spot.name) && spotThumbs[spot.name];
   const toggleSave = () => onToggleSave?.();
 
@@ -32,13 +35,17 @@ export default function SpotCard({
   })[nativeEvent.actionName]?.();
 
   return (
-    <View style={[styles.card, style, disabled && styles.cardMissing]}>
-      {!editing && onToggleSave && !disabled && (
-        <HeartButton style={styles.heart} saved={saved} onPress={toggleSave} hitSlop={0}
+    <View style={[styles.card, look?.card, style, disabled && styles.cardMissing]}>
+      {hasHeart && (
+        <HeartButton style={[styles.heart, look?.heart]} saved={saved} onPress={toggleSave} hitSlop={0}
+          size={look?.heartSize} color={look?.heartColor}
           label={saved ? `Remove ${spot.name} from favourites` : `Save ${spot.name}`} />
       )}
       <TouchableOpacity
-        style={[styles.content, !editing && !note && styles.fixed, !editing && onToggleSave && !disabled && styles.withHeart]}
+        style={[
+          styles.content, look?.content, !editing && !note && !look && styles.fixed,
+          hasHeart && styles.withHeart, hasHeart && look?.withHeart,
+        ]}
         onPress={onPress}
         onLongPress={onLongPress}
         disabled={disabled || editing}
@@ -48,15 +55,17 @@ export default function SpotCard({
         onAccessibilityAction={runAction}
       >
         {bundledPhoto
-          ? <Art source={bundledPhoto} style={styles.thumb} />
-          : <StoragePhoto key={thumbnail?.path} path={thumbnail?.path} style={styles.thumb} placeholderIcon="place" />}
+          ? <Art source={bundledPhoto} style={[styles.thumb, look?.thumb]} />
+          : <StoragePhoto key={thumbnail?.path} path={thumbnail?.path} style={[styles.thumb, look?.thumb]} placeholderIcon="place" />}
         <View style={styles.words}>
-          <SpotName style={text.cardName}>{spot.name}</SpotName>
-          {!!spot.meta && <Text style={[text.meta, styles.meta]} numberOfLines={1}>{spot.meta}</Text>}
+          <SpotName style={look?.name ?? text.cardName} numberOfLines={look ? 2 : 1}>{spot.name}</SpotName>
+          {!!spot.meta && <Text style={[text.meta, styles.meta, look?.meta]} numberOfLines={1}>{spot.meta}</Text>}
           {!editing && !!note && <Text style={[text.body, styles.note]} numberOfLines={3}>{note}</Text>}
         </View>
 
-        {!editing && !disabled && <Icon name="chevron-right" size={18} color="#000" style={styles.chevron} />}
+        {!editing && !disabled && (
+          <Icon name="chevron-right" size={look ? 22 : 18} color={look ? colors.spotMeta : '#000'} style={[styles.chevron, look?.chevron]} />
+        )}
       </TouchableOpacity>
 
       {editing && (
@@ -108,3 +117,25 @@ const styles = StyleSheet.create({
   tools: { flexDirection: 'row' },
   tool: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });
+
+// The Saved pages' card. The page there is plain cream, so the card is lighter than it and edged, with a faint
+// warm shadow. A long name takes a second line, and larger text sizes make the card taller instead of clipping.
+const savedLook = {
+  heartSize: 22,
+  heartColor: colors.savedHeart,
+  ...StyleSheet.create({
+    card: {
+      backgroundColor: colors.savedCard, borderRadius: 16, borderWidth: 1, borderColor: colors.savedCardBorder,
+      shadowColor: '#5A3E22', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 1,
+    },
+    // 88 points holds a two-line name and its place, so short and long names make cards of one height.
+    content: { minHeight: 88, paddingVertical: 12, paddingRight: 12 },
+    withHeart: { paddingLeft: 54 },
+    // Still a 44-point target, centred however tall the card grows.
+    heart: { top: '50%', marginTop: -22, left: 6 },
+    thumb: { width: 56, height: 56, borderRadius: 12, marginRight: 14 },
+    name: { fontSize: 18, lineHeight: 22, fontWeight: '700', letterSpacing: -0.2, color: colors.spotInk },
+    meta: { marginTop: 2, fontSize: 14, lineHeight: 18, fontWeight: '500', color: colors.spotMeta },
+    chevron: { marginLeft: 10 },
+  }),
+};

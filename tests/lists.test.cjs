@@ -450,6 +450,10 @@ test('spot card: opens the spot, saves with the heart, and offers the save to Vo
   assert.deepEqual(log, ['open', 'save', 'save']);
   const shown = renderer.root.findAllByType('Text').filter(node => node.props.testID !== 'spot-name-probe');
   assert.deepEqual(shown.map(node => node.props.children), ['Aldor Family Farm', 'Langley · Fall', 'Go around 7.']);
+  // Without the Saved variant the card keeps the shared look, so list and collection pages are untouched by it.
+  const { colors } = h.load('components/theme.js');
+  const frame = Object.assign({}, ...[renderer.root.findAllByType('View')[0].props.style].flat(Infinity).filter(Boolean));
+  assert.deepEqual([frame.backgroundColor, frame.borderRadius, frame.borderWidth], [colors.card, 14, undefined]);
 });
 
 test('spot card: edit mode swaps the heart for note, move and remove controls', async () => {

@@ -14,7 +14,7 @@ export function popHeart(scale) {
   ]).start();
 }
 
-export default function HeartButton({ saved, onPress, label, size = 23, idleColor = colors.heartIdle, style, hitSlop = 11 }) {
+export default function HeartButton({ saved, onPress, label, size = 23, color = colors.heart, idleColor = colors.heartIdle, style, hitSlop = 11 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const press = () => {
     if (!saved) popHeart(scale);
@@ -24,7 +24,7 @@ export default function HeartButton({ saved, onPress, label, size = 23, idleColo
     <TouchableOpacity style={style} hitSlop={hitSlop} onPress={press}
       accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!saved }}>
       <Animated.View style={{ transform: [{ scale }] }}>
-        <Icon name={saved ? 'favorite' : 'favorite-border'} size={size} color={saved ? colors.heart : idleColor} />
+        <Icon name={saved ? 'favorite' : 'favorite-border'} size={size} color={saved ? color : idleColor} />
       </Animated.View>
     </TouchableOpacity>
   );

@@ -7,8 +7,11 @@ const colors = {
   library: '#F5E7D8',
   profile: '#FAF3E0',
   card: '#FFF8DC',
-  // The Saved pages' spot cards: `card` 2.5% darker, so they sit just apart from the cream page.
-  savedCard: '#F9F2D7',
+  // The Saved pages' spot cards: warm ivory, lighter than the cream page, with a thin beige edge to define them.
+  savedCard: '#FFFCF6',
+  savedCardBorder: '#EADCC8',
+  // The heart on those cards: plainly red, a little softer than `heart` so it doesn't outweigh the name.
+  savedHeart: '#E5484D',
   field: '#FFF9F1',
   fieldBorder: '#00000020',
   label: '#C2B697',

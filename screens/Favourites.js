@@ -200,7 +200,7 @@ function Saved({ onExplore }) {
     <>
       <SavedControls state={savedQuery} placeholder="Search your saved" sheetOpen={sheetOpen} setSheetOpen={setSheetOpen} style={styles.controls} />
 
-      <SavedSectionHeader title="Saved Spots" subtitle={spotCount}
+      <SavedSectionHeader title="Saved Spots" subtitle={spotCount} style={styles.spotsHeader}
         viewAllCount={spots.length} onViewAll={() => go('SavedSpots')} />
       <View style={styles.addOwn}>{addOwn}</View>
       {spotBody}
@@ -336,7 +336,9 @@ const styles = StyleSheet.create({
   carouselContent: { paddingHorizontal: GUTTER, paddingVertical: 4, gap: CAROUSEL_GAP },
   // The spots above end with their own 16-point gap, so 8 more makes 24 above the line as below it.
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, marginTop: 8, marginBottom: 24 },
-  addOwn: { marginBottom: 16 },
+  // The heading sits a little further from the add button than the button does from the first card.
+  spotsHeader: { marginBottom: 23 },
+  addOwn: { marginBottom: 20 },
   hint: {
     minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderRadius: 14,
     backgroundColor: colors.field, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.fieldBorder,

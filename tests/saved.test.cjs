@@ -62,12 +62,17 @@ test('saved page: a preview of five spots, with "View all" for the rest', async 
   assert.ok(texts.includes('Aldor Family Farm') && texts.includes('Westham Island Herb Farm'));
   assert.ok(!texts.includes('Hazelmere Pumpkin Patch') && !texts.includes('Maan Farms'), 'only the five most recent are previewed');
   assert.ok(texts.includes('See all 7 spots'));
-  // The Saved colour, with the same 16-point gap between cards as list and collection pages.
+  // The Saved look: ivory with a thin edge, and the same 16-point gap between cards as list and collection pages.
   const { colors } = h.load('components/theme.js');
-  const cards = screen.all('View').map(node => Object.assign({}, ...[node.props.style].flat(Infinity)))
-    .filter(style => style.backgroundColor === colors.savedCard && style.borderRadius === 14);
+  const flat = style => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+  const cards = screen.all('View').map(node => flat(node.props.style))
+    .filter(style => style.backgroundColor === colors.savedCard && style.borderRadius === 16);
   assert.equal(cards.length, 5);
-  assert.ok(cards.every(style => style.marginBottom === 16));
+  assert.ok(cards.every(style => style.marginBottom === 16 && style.borderWidth === 1 && style.borderColor === colors.savedCardBorder));
+  // Long names get a second line here, and the card grows with its words instead of holding one height.
+  const SpotCard = h.load('components/SpotCard.js').default;
+  const rows = screen.all(SpotCard).map(card => flat(card.findAllByType('TouchableOpacity')[1].props.style));
+  assert.ok(rows.every(style => style.minHeight === 88 && style.height === undefined), JSON.stringify(rows[0]));
 
   await screen.press('View all 7 saved spots');
   assert.deepEqual(h.navigations.at(-1), ['SavedSpots']);
